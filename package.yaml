@@ -1,0 +1,48 @@
+
+name: LR
+
+dependencies:
+- base
+- containers
+- pretty
+
+default-extensions:
+- BlockArguments
+- DataKinds
+- DeriveFoldable
+- DeriveFunctor
+- DeriveTraversable
+- DerivingStrategies
+- DerivingVia
+- DuplicateRecordFields
+- FlexibleInstances
+- FunctionalDependencies
+- GADTs
+- GeneralizedNewtypeDeriving
+- ImportQualifiedPost
+- LambdaCase
+- MultiParamTypeClasses
+- NamedFieldPuns
+- OverloadedStrings
+- ScopedTypeVariables
+- TypeApplications
+- TypeOperators
+- TypeSynonymInstances
+- UndecidableInstances
+- ViewPatterns
+
+ghc-options: -freverse-errors -Wall -Wno-orphans
+
+library:
+  source-dirs:
+  - src
+
+executable:
+  dependencies:
+  - base
+  - LR
+
+  source-dirs:
+  - app
+
+  main: Main.hs

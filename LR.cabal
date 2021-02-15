@@ -1,0 +1,55 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: dac5220c217cee10e4d709d5267f30974394c667bff7515701776c22e4f7d4f1
+
+name:           LR
+version:        0.0.0
+build-type:     Simple
+
+library
+  exposed-modules:
+      Action
+      Goto
+      Item
+      LR
+      Map
+      Name
+      Parse
+      Point
+      Pretty
+      Rule
+      S
+      Set
+      Table
+      Tree
+      Util
+  other-modules:
+      Paths_LR
+  hs-source-dirs:
+      src
+  default-extensions: BlockArguments DataKinds DeriveFoldable DeriveFunctor DeriveTraversable DerivingStrategies DerivingVia DuplicateRecordFields FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving ImportQualifiedPost LambdaCase MultiParamTypeClasses NamedFieldPuns OverloadedStrings ScopedTypeVariables TypeApplications TypeOperators TypeSynonymInstances UndecidableInstances ViewPatterns
+  ghc-options: -freverse-errors -Wall -Wno-orphans
+  build-depends:
+      base
+    , containers
+    , pretty
+  default-language: Haskell2010
+
+executable LR
+  main-is: Main.hs
+  other-modules:
+      Paths_LR
+  hs-source-dirs:
+      app
+  default-extensions: BlockArguments DataKinds DeriveFoldable DeriveFunctor DeriveTraversable DerivingStrategies DerivingVia DuplicateRecordFields FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving ImportQualifiedPost LambdaCase MultiParamTypeClasses NamedFieldPuns OverloadedStrings ScopedTypeVariables TypeApplications TypeOperators TypeSynonymInstances UndecidableInstances ViewPatterns
+  ghc-options: -freverse-errors -Wall -Wno-orphans
+  build-depends:
+      LR
+    , base
+    , containers
+    , pretty
+  default-language: Haskell2010
