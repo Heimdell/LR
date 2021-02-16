@@ -1,11 +1,16 @@
 
+-- | A standard S-expr.
 module Tree where
 
 import Name
 import Pretty
 
+-- | S-expr tree.
 data Tree token
-  = Leaf token
+  = -- | atom
+    Leaf token
+
+    -- | branch
   | Join Name [Tree token]
   deriving Show via PP (Tree token)
 

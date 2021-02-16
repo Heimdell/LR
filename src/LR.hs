@@ -1,4 +1,5 @@
-
+-- | A facade for parser.
+--
 module LR
   ( Rule(..)
   , Table(..)

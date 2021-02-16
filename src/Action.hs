@@ -1,34 +1,44 @@
 
+-- | An ACTION function - first component of the LR(1)-table.
+--
 module Action where
 
 import Data.Function (on)
-import Data.List (partition, sortBy, groupBy)
-import Data.List.NonEmpty (NonEmpty (..))
-import Data.List.NonEmpty qualified as NonEmpty
-import Data.Ord (comparing)
+import Data.List (partition)
 
-import Map (Map, (==>))
+import Map (Map)
 import Map qualified as Map
 import Set (Set)
 import Set qualified as Set
 
 import Item
 import Goto
-import Name
 import Point
 import Pretty
-import Rule
 import Util
 
-data Action term result
-  = Shift    (Set (Item1 term result))
+{- | An action for automata.
+-}
+data Action state term result
+  = -- | Push a terminal, move to state.
+    Shift    state
+
+    -- | Reduce with rule, move to @GOTO (rule.name, state)@.
   | Reduce   (Item1 term result)
+
+    -- | Exit the automata with a result.
   | Accept
-  | Conflict (Action term result) (Action term result)
+
+    -- | Not really an action, but possible outcome of automata builder.
+    --
+    --   Represents a conflict between 2 actions.
+  | Conflict (Action state term result) (Action state term result)
+
+    -- | An error node, reports what tokens were expected.
   | Expected (Set term)
   deriving stock (Eq)
 
-instance Pretty term => Pretty (Action term result) where
+instance (Pretty term, Pretty state) => Pretty (Action state term result) where
   pretty = \case
     Shift    state      -> color 2 "Shift"    `indent` pretty state
     Reduce   result     -> color 5 "Reduce"   `indent` pretty result
@@ -39,7 +49,7 @@ instance Pretty term => Pretty (Action term result) where
       <.> "," `indent` pretty right
       <.> ")"
 
-instance Ord term => Semigroup (Action term result) where
+instance (Ord term, Eq state) => Semigroup (Action state term result) where
   Expected left <> Expected right = Expected (left <> right)
   Expected _    <>          right = right
   left          <> Expected _     = left
@@ -48,34 +58,72 @@ instance Ord term => Semigroup (Action term result) where
     | left `eqUpToLookahead` right  = left `mergeLookahead` right
     | otherwise                     = Conflict left right
 
-eqUpToLookahead :: Eq term => Action term result -> Action term result -> Bool
+-- | Check if two `Action`-s are equal up to lookeahead in `Reduce`.
+eqUpToLookahead
+  :: Eq term
+  => Action state term result
+  -> Action state term result
+  -> Bool
 eqUpToLookahead (Reduce left) (Reduce right) = ((==) `on` i1Item) left right
 eqUpToLookahead  _             _             = False
 
-mergeLookahead :: Ord term => Action term result -> Action term result -> Action term result
+-- | Merge `Reduce` with same body but different lookahead.
+mergeLookahead
+  :: Ord term
+  => Action state term result
+  -> Action state term result
+  -> Action state term result
 mergeLookahead (Reduce left) (Reduce right) =
   Reduce left
     { i1Lookahead = i1Lookahead left <> i1Lookahead right
     }
 mergeLookahead _ _ = error "mergeLookahead: can only merge Reduce actions"
 
-instance Ord term => Monoid (Action term result) where
+instance (Ord term, Eq state) => Monoid (Action state term result) where
   mempty = Expected mempty
 
+-- | An ACTION function.
+--
 type Act term result
-  =  Set (Item1 term result)
+  =  State term result
   -> term
-  -> Action term result
+  -> Action (State term result) term result
 
+-- | An ACTION function, memoized.
+--
 type Act' term result
-  = Map (Set (Item1 term result))
-  ( Map term (Action term result)
+  = Map (State term result)
+  ( Map term (Action (State term result) term result)
   )
 
+-- | An ACTION function, with `Int` (state index) as state.
+--
+type Act'' term result
+  = Map (State term result)
+  ( Map term (Action Int term result)
+  )
+
+-- | Construct an ACTION table from GOTO and EOF marker.
+--
+--   The idea is, if we are in state like
+--
+--   > { A -> B . d C, {$}
+--   >   C -> D . B,   {<}
+--   >   S -> . k,     {a, b}
+--   >   F -> g g .,   {d}
+--   > }
+--
+--   ... we are in /all of the productions simultaneously/.
+--
+--   Therefore we should look for productions that contain either given terminal
+--   (to shift), or have ended and have given terminal in lookahead (to reduce).
+--
+--   If the grammar is correct, we will have either of them or both.
+--
 getAction
   :: (Ord term, Pretty term)
-  => Goto term result
-  -> term
+  => Goto term result  -- ^ GOTO function
+  -> term              -- ^ EOF marker
   -> Act term result
 getAction goto eof from term = foldMap decide from
   where
@@ -92,6 +140,8 @@ getAction goto eof from term = foldMap decide from
 
       _ -> Expected mempty
 
+-- | Fill the `Expected` actions with terms that are expected at the point.
+--
 populateExpectedTokens
   :: (Ord term, Pretty term)
   => Act' term result
@@ -106,3 +156,40 @@ populateExpectedTokens = Map.map populate
     isFailure = \case
       Expected {} -> True
       _           -> False
+
+-- -- | Replace `Set`-s of `Item1`-s with `Int`-s.
+-- --
+-- witherActionMap
+--   :: forall term result
+--   .  Ord term
+--   => Act' term result  -- ^ ACTION function (memoized)
+--   -> Set term          -- ^ set of all terminals
+--   -> (Act'' term result, Int)
+-- witherActionMap actions terms = (actions', start')
+--   where
+--     states  = Map.keySet actions
+--     states' = Set.toList states
+--     [start] = filter isStart states'
+--     encode  = Map.fromList $ zip [0..] states'
+--     decode  = Map.fromList $ zip states' $ map (First . Just) [0..]
+
+--     First (Just start') = decode ? start
+
+--     actions' :: Act'' term result
+--     actions' =
+--       flip materialize states \state ->
+--       flip materialize terms  \term  ->
+--         decodeAction (actions ? state ? term)
+
+--     decodeAction
+--       :: Action (State term result) term result
+--       -> Action Int term result
+--     decodeAction = \case
+--       Shift state -> do
+--         let First (Just state') = decode ? state
+--         Shift state'
+
+--       Reduce   rule     -> Reduce rule
+--       Accept            -> Accept
+--       Conflict l r      -> Conflict (decodeAction l) (decodeAction r)
+--       Expected expected -> Expected expected

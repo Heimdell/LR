@@ -1,11 +1,20 @@
 
+-- | A name for entity.
+--
 module Name where
 
 import Data.String (IsString (..))
 
 import Pretty
 
-data Name = Name { raw :: String } | Start
+-- | A name for entity.
+--
+data Name
+  = -- | A name made from string.
+    Name { raw :: String }
+
+    -- | Special name for first production.
+  | Start
   deriving stock (Eq, Ord)
   deriving Show via PP Name
 

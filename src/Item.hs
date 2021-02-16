@@ -1,4 +1,6 @@
 
+{- | A production with * (cursor point) inside of it.
+-}
 module Item where
 
 import Control.Arrow ((&&&))
@@ -16,11 +18,13 @@ import Point
 import Pretty
 import Rule
 
+{- | An LR(0) production that has been started.
+-}
 data Item term result = Item
-  { iName      ::  Name
-  , iBefore    :: [Point term]
-  , iAfter     :: [Point term]
-  , iReduce    :: [result] -> result
+  { iName      ::  Name               -- ^ entity name
+  , iBefore    :: [Point term]        -- ^ already parsed points
+  , iAfter     :: [Point term]        -- ^ points to be parsed
+  , iReduce    :: [result] -> result  -- ^ "semantic action"
   }
   deriving Show via PP (Item term result)
 
@@ -37,9 +41,11 @@ instance Pretty term => Pretty (Item term result) where
       <+> "->" <+> fsep (map pretty before)
       <+> "."  <+> fsep (map pretty after)
 
+{- | An LR(1) production (with lookahead) that has been started.
+-}
 data Item1 term result = Item1
-  { i1Item      :: Item term result
-  , i1Lookahead :: Set term
+  { i1Item      :: Item term result -- ^ an LR(0) production
+  , i1Lookahead :: Set term         -- ^ terms expected after its reduction
   }
   deriving Show via PP (Item1 term result)
 
@@ -53,14 +59,34 @@ instance Pretty term => Pretty (Item1 term result) where
     pretty item
       <.> "," <+> pretty (Set.ShortSet l)
 
-i1Name   :: Item1 term result -> Name
+-- | A type for parser state (a closure of LR(1) productions).
+--
+type State term result = Set (Item1 term result)
+
+{- | A toll for nominativity of haskell type system
+     (a name of LR(1) production).
+-}
+i1Name :: Item1 term result -> Name
+i1Name = iName . i1Item
+
+{- | A toll for nominativity of haskell type system
+     (a semantic action of LR(1) production).
+-}
 i1Reduce :: Item1 term result -> [result] -> result
-i1Name   = iName   . i1Item
 i1Reduce = iReduce . i1Item
 
+{- | Check if production has no mached parts yet.
+-}
+isStartingItem :: Item1 term result -> Bool
+isStartingItem = null . iBefore . i1Item
+
+{- | Size of production in points (terminals + non-terminals).
+-}
 ruleLength :: Item1 term result -> Int
 ruleLength (i1Item -> item) = length (iBefore item <> iAfter item)
 
+{- | "Shift" a production.
+-}
 next :: Item1 term result -> Maybe (Item1 term result)
 next
     item1@Item1
@@ -75,6 +101,8 @@ next
         }
       }
 
+{- | All possible shifts of a production with given lookahead.
+-}
 explode :: Rule term result -> Set term -> NonEmpty (Item1 term result)
 explode (Rule name points reduce) lookeahead =
   explode' (Item1 (Item name [] points reduce) lookeahead)
@@ -82,11 +110,17 @@ explode (Rule name points reduce) lookeahead =
     explode' :: Item1 term result -> NonEmpty (Item1 term result)
     explode' item = maybe (item :| []) (NonEmpty.cons item . explode') (next item)
 
+{- | Current terminal or non-terminal to be parsed.
+-}
 locus :: Item1 term result -> Maybe (Point term)
 locus = listToMaybe . iAfter . i1Item
 
+{- | Firts production of a rule with given lookahead.
+-}
 getFirstState :: Rule term result -> Set term -> Item1 term result
 getFirstState = (NonEmpty.head .) . explode
 
-isStart :: Ord term => Set (Item1 term result) -> Bool
+{- | Check ig production is for `Start` non-terminal.
+-}
+isStart :: Ord term => State term result -> Bool
 isStart = Set.any \item -> i1Name item == Start

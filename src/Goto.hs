@@ -1,40 +1,44 @@
 
+-- | A GOTO function - second component of the LR(1)-table.
+--
 module Goto where
 
-import Data.Function (on)
-import Data.List (partition, sortBy, groupBy)
-import Data.List.NonEmpty (NonEmpty (..))
-import Data.List.NonEmpty qualified as NonEmpty
-import Data.Ord (comparing)
-
-import Map (Map, (==>))
-import Map qualified as Map
+import Map (Map)
 import Set (Set)
 import Set qualified as Set
 
 import Item
-import Name
 import Point
 import Pretty
-import Rule
 import Table
 import Util
 
+-- | GOTO function.
+--
 type Goto term result
-  =  Set (Item1 term result)
+  =  State term result
   -> Point term
-  -> Set (Item1 term result)
+  -> State term result
 
+-- | GOTO function, memoized.
+--
 type Goto' term result
-  = Map (Set (Item1 term result))
+  = Map (State term result)
   ( Map (Point term)
-  ( Set (Item1 term result)))
+  ( State term result))
 
+-- | Generate GOTO function from table, FIRSTS and FOLLOWS.
+--
+--   For each `next` of all productions in the set, we generate a
+--   @GOTO (state, prod.locus) = CLOSURE (prod.next)@
+--
 getGoto
   :: (Ord term, Pretty term)
-  => Table term result
-  -> Firsts term
-  -> Follows term
+  => Table term result  -- ^ parsing table
+  -> Firsts term        -- ^ FIRSTS function (set of first terminals of
+                        -- ^ a production)
+  -> Follows term       -- ^ FOLLOWS function (set of terminals that can go
+                        --   after a production)
   -> Goto term result
 getGoto rules firsts follows (Set.toList -> items) term =
   mconcat
@@ -45,16 +49,18 @@ getGoto rules firsts follows (Set.toList -> items) term =
     , let following = next item
     ]
 
+-- | Generate a set of all possible states for a grammar.
+--
 getItems
   :: forall term result
   .  (Ord term, Pretty term)
-  => Set (Point term)
-  -> Goto term result
-  -> Set (Item1 term result)
-  -> Set (Set (Item1 term result))
+  => Set (Point term)        -- ^ set of terminals and non-terminals
+  -> Goto term result        -- ^ GOTO function
+  -> State term result       -- ^ first state of a parser
+  -> Set (State term result)
 getItems terminals goto firstState
   = close (foldMap collect)
   $ Set.ofOne firstState
   where
-    collect :: Set (Item1 term result) -> Set (Set (Item1 term result))
+    collect :: State term result -> Set (State term result)
     collect items = foldMap (Set.ofOne . goto items) terminals

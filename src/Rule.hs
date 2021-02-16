@@ -1,4 +1,6 @@
 
+-- | A grammar rule.
+--
 module Rule where
 
 import Control.Arrow ((&&&))
@@ -9,10 +11,11 @@ import Name
 import Point
 import Pretty
 
+-- | A rule.
 data Rule term result = Rule
-  { rName   :: Name
-  , rPoints :: [Point term]
-  , rReduce :: [result] -> result
+  { rName   :: Name                -- name of the entity
+  , rPoints :: [Point term]        -- contents of the rule
+  , rReduce :: [result] -> result  -- semantic action
   }
   deriving Show via PP (Rule term result)
 

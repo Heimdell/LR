@@ -1,5 +1,10 @@
 
+{- | The parsring algorithm.
+
+-}
 module Parse where
+
+import Control.Monad (unless)
 
 import Map qualified as Map
 import Set (Set)
@@ -13,23 +18,29 @@ import Pretty
 import Util
 import Table
 
+{- | The core of the parser.
+-}
 parser
   :: forall term token result
   .  (Ord term, Pretty term, Pretty token)
-  => Act' term result
-  -> Goto term result
-  -> (token -> result)
-  -> (token -> term)
-  -> Set (Item1 term result)
-  -> [token]
-  -> Either Doc ([Set (Item1 term result)], [result])
+  => Act' term result   -- ^ ACTION table
+  -> Goto term result   -- ^ GOTO table
+  -> (token -> result)  -- ^ S-expr atom wrapper
+  -> (token -> term)    -- ^ token classifier
+  -> State term result  -- ^ initial state
+  -> [token]            -- ^ token stream
+  -> Either Doc ([State term result], [result])
 parser action goto wrap classify start = (`go` ([start], []))
   where
     go
       :: [token]
-      ->            ([Set (Item1 term result)], [result])
-      -> Either Doc ([Set (Item1 term result)], [result])
+      ->            ([State term result], [result])
+      -> Either Doc ([State term result], [result])
     go input@(token : restInput) (top : items, stack) = do
+      -- traceShowM ("====")
+      -- traceShowM ("token", pretty token)
+      -- traceShowM ("state", top)
+      -- traceShowM ("actions", action ? top)
       case action ? top ? classify token of
         Shift    state -> go restInput (state : top : items, wrap token : stack)
         Accept         -> return       (        top : items,              stack)
@@ -53,18 +64,34 @@ parser action goto wrap classify start = (`go` ([start], []))
     throwExpected
       :: Set term
       -> [token]
-      -> Either Doc ([Set (Item1 term result)], [result])
+      -> Either Doc ([State term result], [result])
     throwExpected set input = Left
       $       "Expected" `indent` pretty (Set.ShortSet set)
       `above` "at"       `indent` pretty (ShortList    input)
 
+{- | Collect a list of conflicts.
+-}
+reviewActions :: Pretty term => Act' term result -> [Doc]
+reviewActions actions = do
+  (`foldMap` Map.toList actions) \(state, decisions) -> do
+    (`foldMap` Map.toList decisions) \(term, action) -> do
+      case action of
+        Conflict {} -> do
+          pure
+            $       "Conflict at state" `indent` pretty state
+            `above` "at token"          `indent` pretty term
+            `above` ":"                 `indent` pretty action
+        _ -> mempty
+
+{- | Run parser, return result or produce an error.
+-}
 parse
   :: (Ord term, Pretty term, Pretty token)
-  => Table term result
-  -> (token -> result)
-  -> (token -> term)
-  -> term
-  -> [token]
+  => Table term result  -- ^ parsing table
+  -> (token -> result)  -- ^ wrapper into an S-expr
+  -> (token -> term)    -- ^ gets token type
+  -> term               -- ^ eof marker
+  -> [token]            -- ^ token stream
   -> Either Doc result
 parse table wrap classify eof input = do
   let firsts'  = getFirsts table
@@ -77,6 +104,13 @@ parse table wrap classify eof input = do
   let action'  = getAction goto' eof
   let action1  = materialize (\s -> materialize (action' s) tokens') items'
   let action2  = populateExpectedTokens action1
+
+  let conflicts = reviewActions action2
+
+  unless (null conflicts) do
+    Left $ vcat conflicts
+
+  -- traceShowM action2
 
   (_, result : _) <- parser action2 goto' wrap classify initial input
   return result
