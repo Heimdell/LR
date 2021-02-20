@@ -4,7 +4,9 @@ name: LR
 dependencies:
 - base
 - containers
+- mtl
 - pretty
+- regex-tdfa
 
 default-extensions:
 - BlockArguments
@@ -41,6 +43,7 @@ executable:
   dependencies:
   - base
   - LR
+  - raw-strings-qq
 
   source-dirs:
   - app

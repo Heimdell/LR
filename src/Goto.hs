@@ -15,17 +15,17 @@ import Util
 
 -- | GOTO function.
 --
-type Goto term result
-  =  State term result
+type Goto term
+  =  State term
   -> Point term
-  -> State term result
+  -> State term
 
 -- | GOTO function, memoized.
 --
-type Goto' term result
-  = Map (State term result)
+type Goto' term
+  = Map (State term)
   ( Map (Point term)
-  ( State term result))
+  ( State term))
 
 -- | Generate GOTO function from table, FIRSTS and FOLLOWS.
 --
@@ -34,12 +34,12 @@ type Goto' term result
 --
 getGoto
   :: (Ord term, Pretty term)
-  => Table term result  -- ^ parsing table
+  => Table term  -- ^ parsing table
   -> Firsts term        -- ^ FIRSTS function (set of first terminals of
                         -- ^ a production)
   -> Follows term       -- ^ FOLLOWS function (set of terminals that can go
                         --   after a production)
-  -> Goto term result
+  -> Goto term
 getGoto rules firsts follows (Set.toList -> items) term =
   mconcat
     [ getClosure rules firsts follows
@@ -52,15 +52,15 @@ getGoto rules firsts follows (Set.toList -> items) term =
 -- | Generate a set of all possible states for a grammar.
 --
 getItems
-  :: forall term result
+  :: forall term
   .  (Ord term, Pretty term)
   => Set (Point term)        -- ^ set of terminals and non-terminals
-  -> Goto term result        -- ^ GOTO function
-  -> State term result       -- ^ first state of a parser
-  -> Set (State term result)
+  -> Goto term        -- ^ GOTO function
+  -> State term       -- ^ first state of a parser
+  -> Set (State term)
 getItems terminals goto firstState
   = close (foldMap collect)
   $ Set.ofOne firstState
   where
-    collect :: State term result -> Set (State term result)
+    collect :: State term -> Set (State term)
     collect items = foldMap (Set.ofOne . goto items) terminals

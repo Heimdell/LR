@@ -5,64 +5,51 @@ import Pretty
 import S
 import Tree
 import LR
+import Lex
+import Point
+import Set qualified
 
-data CST
-  = If   CST CST CST
-  | Add  CST CST
-  | Mult CST CST
-  | Neg  CST
-  | Id   S
-  | Kw   S
-  deriving stock Show
+data Lexeme
+  = Keyword S
+  | Name
+  | Num
+  | Str
+  deriving stock (Eq, Ord, Show)
 
-test :: Table S CST
--- test = Table
-  -- [ Rule  Start ["S"]           (Join "Start")
-  -- , Rule "S"    ["A", "a"]      (Join "S1")
-  -- , Rule "S"    ["b", "A", "c"] (Join "S2")
-  -- , Rule "S"    ["B", "c"]      (Join "S3")
-  -- , Rule "S"    ["b", "B", "a"] (Join "S4")
-  -- , Rule "A"    ["d"]           (Join "A")
-  -- , Rule "B"    ["d"]           (Join "B")
-  -- ]
+instance Pretty Lexeme where
+  pretty = text . show
+
+test :: Table Lexeme
 test = Table
-  [ Rule Start    ["If"]                                    head
-  , Rule "If"     ["if", "If", "then", "If", "else", "If"] (\s -> If   (s !! 1) (s !! 3) (s !! 5))
-  , Rule "If"     ["Expr"]                                  head
-  , Rule "Expr"   ["Expr", "+", "Factor"]                  (\s -> Add  (s !! 0) (s !! 2))
-  , Rule "Expr"   ["Factor"]                                head
-  , Rule "Factor" ["Factor", "*", "Unary"]                 (\s -> Mult (s !! 0) (s !! 2))
-  , Rule "Factor" ["Unary"]                                 head
-  , Rule "Unary"  ["-", "Unary"]                           (Neg . (!! 1))
-  , Rule "Unary"  ["Term"]                                  head
-  , Rule "Term"   ["(", "If", ")"]                         (!! 1)
-  , Rule "Term"   ["id"]                                    head
+  [ Rule  Start      ["Let"]                                           "-Start"
+  , Rule "Let"       [kw "let", "Name", kw "=", "Let", kw ";", "Let"]  "Let"
+  , Rule "Let"       ["Expr"]                                          "-LetExpr"
+  , Rule "Expr"      ["Expr", "Term"]                                  "Expr"
+  , Rule "Expr"      ["Term"]                                          "-ExprTerm"
+  , Rule "Term"      ["Name"]                                          "-Var"
+  , Rule "Term"      [kw "fun", "Name", kw "->", "Let", kw "end"]      "Lam"
+  , Rule "Term"      [kw "\\(", "Expr", kw "\\)"]                      "Group"
+  , Rule "Name"      [name]                                            "-Name"
   ]
 
-wrap :: T -> CST
-wrap (TID s) = Id s
-wrap (TKW s) = Kw s
+kw :: String -> Point Lexeme
+kw s = Term (Keyword $ S s)
 
-reserved = [] :  words "if then else ( ) + * -"
+name :: Point Lexeme
+name = Term Name
 
-data T
-  = TKW S
-  | TID S
+reserved = "\\[ \\] \\{ \\} : , ; fun -> \\( \\) let = in end"
 
-instance Pretty T where
-  pretty = \case
-    TKW s -> color 2 $ pretty s
-    TID s -> color 3 $ pretty s
-
-classify :: T -> S
-classify (TKW s) =  s
-classify (TID _) = "id"
-
-toT :: String -> T
-toT s | elem s reserved = TKW (S s)
-toT s                   = TID (S s)
+keywords :: String -> [(Lexeme, Regex)]
+keywords = map (\s -> (Keyword (S s), token s)) . words
 
 main :: IO ()
 main = do
-  line <- getLine
-  print $ parse test wrap classify "" $ map toT $ words line ++ [""]
+  line <- readFile "test.ml"
+  let
+    Right input = tokenizer
+      (    keywords reserved
+      ++ [(Name, token "[A-Za-z][A-Za-z_$0-9]*")]
+      )
+      line
+  print $ parse test (Keyword "") (input ++ [(Keyword "", "")])

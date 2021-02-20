@@ -20,12 +20,8 @@ data Point term
   deriving stock (Eq, Ord)
   deriving Show via PP (Point term)
 
-instance IsString term => IsString (Point term) where
-  fromString str@(fstChar : _)
-    | isUpper fstChar = NonTerm (Name       str)
-    | otherwise       = Term    (fromString str)
-
-  fromString [] = error "Point.fromString: empty string is not allowed"
+instance IsString (Point term) where
+  fromString = NonTerm . fromString
 
 instance Pretty term => Pretty (Point term) where
   pretty = \case

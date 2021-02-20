@@ -38,7 +38,8 @@ color c s = code (30 + c) <.> s <.> code 0
     code k = zeroWidthText ("\ESC[" ++ show k ++ "m")
 
 -- instance {-# overlaps #-} Pretty String where pretty = text
-instance Pretty Int    where pretty = int
+instance Pretty Char where pretty = char
+instance Pretty Int  where pretty = int
 instance Pretty Bool where pretty b = if b then "True" else "False"
 instance Pretty a => Pretty [a] where pretty ls = "[" `indent` vcat (punctuate "," (map pretty ls)) `above` "]"
 

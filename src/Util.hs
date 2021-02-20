@@ -2,6 +2,8 @@
 -- | A /svalka/.
 module Util (module Util, module Debug.Trace) where
 
+import Data.String (IsString (..))
+
 import Set qualified as Set
 import Set (Set)
 
@@ -88,3 +90,6 @@ dematerialise = (?)
 --
 memoise :: (Ord a, Monoid b) => Set a -> (a -> b) -> (a -> b)
 memoise args f = dematerialise (materialize f args)
+
+instance IsString s => MonadFail (Either s) where
+  fail = Left . fromString

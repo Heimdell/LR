@@ -20,22 +20,22 @@ import Rule
 
 {- | An LR(0) production that has been started.
 -}
-data Item term result = Item
+data Item term = Item
   { iName      ::  Name               -- ^ entity name
   , iBefore    :: [Point term]        -- ^ already parsed points
   , iAfter     :: [Point term]        -- ^ points to be parsed
-  , iReduce    :: [result] -> result  -- ^ "semantic action"
+  , iReduce    :: Name                -- ^ semantic "action"
   }
-  deriving Show via PP (Item term result)
+  deriving Show via PP (Item term)
 
-instance Eq term => Eq (Item term result) where
+instance Eq term => Eq (Item term) where
   (==) = (==) `on` (iName &&& iBefore &&& iAfter)
 
-instance Ord term => Ord (Item term result) where
+instance Ord term => Ord (Item term) where
   compare = compare `on`
     (length . iBefore &&& iName &&& reverse . iBefore &&& iAfter)
 
-instance Pretty term => Pretty (Item term result) where
+instance Pretty term => Pretty (Item term) where
   pretty (Item m (reverse -> before) after _) =
     pretty m
       <+> "->" <+> fsep (map pretty before)
@@ -43,51 +43,47 @@ instance Pretty term => Pretty (Item term result) where
 
 {- | An LR(1) production (with lookahead) that has been started.
 -}
-data Item1 term result = Item1
-  { i1Item      :: Item term result -- ^ an LR(0) production
-  , i1Lookahead :: Set term         -- ^ terms expected after its reduction
+data Item1 term = Item1
+  { i1Item      :: Item term  -- ^ an LR(0) production
+  , i1Lookahead :: Set term   -- ^ terms expected after its reduction
   }
-  deriving Show via PP (Item1 term result)
+  deriving stock (Eq, Ord)
+  deriving Show via PP (Item1 term)
 
-instance Eq term => Eq (Item1 term result) where
-  (==) = (==) `on` (i1Item &&& i1Lookahead)
-instance Ord term => Ord (Item1 term result) where
-  compare = compare `on` (i1Item &&& i1Lookahead)
-
-instance Pretty term => Pretty (Item1 term result) where
+instance Pretty term => Pretty (Item1 term) where
   pretty (Item1 item l) =
     pretty item
       <.> "," <+> pretty (Set.ShortSet l)
 
 -- | A type for parser state (a closure of LR(1) productions).
 --
-type State term result = Set (Item1 term result)
+type State term = Set (Item1 term)
 
 {- | A toll for nominativity of haskell type system
      (a name of LR(1) production).
 -}
-i1Name :: Item1 term result -> Name
+i1Name :: Item1 term -> Name
 i1Name = iName . i1Item
 
 {- | A toll for nominativity of haskell type system
      (a semantic action of LR(1) production).
 -}
-i1Reduce :: Item1 term result -> [result] -> result
+i1Reduce :: Item1 term -> Name
 i1Reduce = iReduce . i1Item
 
 {- | Check if production has no mached parts yet.
 -}
-isStartingItem :: Item1 term result -> Bool
+isStartingItem :: Item1 term -> Bool
 isStartingItem = null . iBefore . i1Item
 
 {- | Size of production in points (terminals + non-terminals).
 -}
-ruleLength :: Item1 term result -> Int
+ruleLength :: Item1 term -> Int
 ruleLength (i1Item -> item) = length (iBefore item <> iAfter item)
 
 {- | "Shift" a production.
 -}
-next :: Item1 term result -> Maybe (Item1 term result)
+next :: Item1 term -> Maybe (Item1 term)
 next
     item1@Item1
       { i1Item = item@Item
@@ -103,24 +99,24 @@ next
 
 {- | All possible shifts of a production with given lookahead.
 -}
-explode :: Rule term result -> Set term -> NonEmpty (Item1 term result)
+explode :: Rule term -> Set term -> NonEmpty (Item1 term)
 explode (Rule name points reduce) lookeahead =
   explode' (Item1 (Item name [] points reduce) lookeahead)
   where
-    explode' :: Item1 term result -> NonEmpty (Item1 term result)
+    explode' :: Item1 term -> NonEmpty (Item1 term)
     explode' item = maybe (item :| []) (NonEmpty.cons item . explode') (next item)
 
 {- | Current terminal or non-terminal to be parsed.
 -}
-locus :: Item1 term result -> Maybe (Point term)
+locus :: Item1 term -> Maybe (Point term)
 locus = listToMaybe . iAfter . i1Item
 
 {- | Firts production of a rule with given lookahead.
 -}
-getFirstState :: Rule term result -> Set term -> Item1 term result
+getFirstState :: Rule term -> Set term -> Item1 term
 getFirstState = (NonEmpty.head .) . explode
 
 {- | Check ig production is for `Start` non-terminal.
 -}
-isStart :: Ord term => State term result -> Bool
+isStart :: Ord term => State term -> Bool
 isStart = Set.any \item -> i1Name item == Start

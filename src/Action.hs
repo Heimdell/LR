@@ -19,12 +19,12 @@ import Util
 
 {- | An action for automata.
 -}
-data Action state term result
+data Action state term
   = -- | Push a terminal, move to state.
     Shift    state
 
     -- | Reduce with rule, move to @GOTO (rule.name, state)@.
-  | Reduce   (Item1 term result)
+  | Reduce   (Item1 term)
 
     -- | Exit the automata with a result.
   | Accept
@@ -32,13 +32,13 @@ data Action state term result
     -- | Not really an action, but possible outcome of automata builder.
     --
     --   Represents a conflict between 2 actions.
-  | Conflict (Action state term result) (Action state term result)
+  | Conflict (Action state term) (Action state term)
 
     -- | An error node, reports what tokens were expected.
   | Expected (Set term)
   deriving stock (Eq)
 
-instance (Pretty term, Pretty state) => Pretty (Action state term result) where
+instance (Pretty term, Pretty state) => Pretty (Action state term) where
   pretty = \case
     Shift    state      -> color 2 "Shift"    `indent` pretty state
     Reduce   result     -> color 5 "Reduce"   `indent` pretty result
@@ -49,7 +49,7 @@ instance (Pretty term, Pretty state) => Pretty (Action state term result) where
       <.> "," `indent` pretty right
       <.> ")"
 
-instance (Ord term, Eq state) => Semigroup (Action state term result) where
+instance (Ord term, Eq state) => Semigroup (Action state term) where
   Expected left <> Expected right = Expected (left <> right)
   Expected _    <>          right = right
   left          <> Expected _     = left
@@ -61,8 +61,8 @@ instance (Ord term, Eq state) => Semigroup (Action state term result) where
 -- | Check if two `Action`-s are equal up to lookeahead in `Reduce`.
 eqUpToLookahead
   :: Eq term
-  => Action state term result
-  -> Action state term result
+  => Action state term
+  -> Action state term
   -> Bool
 eqUpToLookahead (Reduce left) (Reduce right) = ((==) `on` i1Item) left right
 eqUpToLookahead  _             _             = False
@@ -70,37 +70,37 @@ eqUpToLookahead  _             _             = False
 -- | Merge `Reduce` with same body but different lookahead.
 mergeLookahead
   :: Ord term
-  => Action state term result
-  -> Action state term result
-  -> Action state term result
+  => Action state term
+  -> Action state term
+  -> Action state term
 mergeLookahead (Reduce left) (Reduce right) =
   Reduce left
     { i1Lookahead = i1Lookahead left <> i1Lookahead right
     }
 mergeLookahead _ _ = error "mergeLookahead: can only merge Reduce actions"
 
-instance (Ord term, Eq state) => Monoid (Action state term result) where
+instance (Ord term, Eq state) => Monoid (Action state term) where
   mempty = Expected mempty
 
 -- | An ACTION function.
 --
-type Act term result
-  =  State term result
+type Act term
+  =  State term
   -> term
-  -> Action (State term result) term result
+  -> Action (State term) term
 
 -- | An ACTION function, memoized.
 --
-type Act' term result
-  = Map (State term result)
-  ( Map term (Action (State term result) term result)
+type Act' term
+  = Map (State term)
+  ( Map term (Action (State term) term)
   )
 
 -- | An ACTION function, with `Int` (state index) as state.
 --
-type Act'' term result
-  = Map (State term result)
-  ( Map term (Action Int term result)
+type Act'' term
+  = Map (State term)
+  ( Map term (Action Int term)
   )
 
 -- | Construct an ACTION table from GOTO and EOF marker.
@@ -122,9 +122,9 @@ type Act'' term result
 --
 getAction
   :: (Ord term, Pretty term)
-  => Goto term result  -- ^ GOTO function
+  => Goto term  -- ^ GOTO function
   -> term              -- ^ EOF marker
-  -> Act term result
+  -> Act term
 getAction goto eof from term = foldMap decide from
   where
     decide item = case locus item of
@@ -144,8 +144,8 @@ getAction goto eof from term = foldMap decide from
 --
 populateExpectedTokens
   :: (Ord term, Pretty term)
-  => Act' term result
-  -> Act' term result
+  => Act' term
+  -> Act' term
 populateExpectedTokens = Map.map populate
   where
     populate (Map.toList -> mapping) = do
@@ -160,11 +160,11 @@ populateExpectedTokens = Map.map populate
 -- -- | Replace `Set`-s of `Item1`-s with `Int`-s.
 -- --
 -- witherActionMap
---   :: forall term result
+--   :: forall term
 --   .  Ord term
---   => Act' term result  -- ^ ACTION function (memoized)
+--   => Act' term  -- ^ ACTION function (memoized)
 --   -> Set term          -- ^ set of all terminals
---   -> (Act'' term result, Int)
+--   -> (Act'' term, Int)
 -- witherActionMap actions terms = (actions', start')
 --   where
 --     states  = Map.keySet actions
@@ -175,15 +175,15 @@ populateExpectedTokens = Map.map populate
 
 --     First (Just start') = decode ? start
 
---     actions' :: Act'' term result
+--     actions' :: Act'' term
 --     actions' =
 --       flip materialize states \state ->
 --       flip materialize terms  \term  ->
 --         decodeAction (actions ? state ? term)
 
 --     decodeAction
---       :: Action (State term result) term result
---       -> Action Int term result
+--       :: Action (State term) term
+--       -> Action Int term
 --     decodeAction = \case
 --       Shift state -> do
 --         let First (Just state') = decode ? state

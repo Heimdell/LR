@@ -22,12 +22,12 @@ import Util
 
 -- | A table.
 --
-data Table term result = Table
-  { tRules :: [Rule term result]  -- list of rules
+data Table term = Table
+  { tRules :: [Rule term]  -- list of rules
   }
-  deriving Show via PP (Table term result)
+  deriving Show via PP (Table term)
 
-instance Pretty term => Pretty (Table term result) where
+instance Pretty term => Pretty (Table term) where
   pretty = vcat . map pretty . tRules
 
 -- | FIRSTS function.
@@ -39,13 +39,13 @@ type Firsts term = Map Name (Set term)
 -- | Generate FIRSTS function.
 --
 getFirsts
-  :: forall term result
+  :: forall term
   .  (Ord term, Pretty term)
-  => Table term result  -- ^ parsing table
+  => Table term  -- ^ parsing table
   -> Firsts term
 getFirsts table = close (foldMap firstsOfRule (tRules table)) mempty
   where
-    firstsOfRule :: Rule term result -> Firsts term -> Firsts term
+    firstsOfRule :: Rule term -> Firsts term -> Firsts term
     firstsOfRule Rule { rName, rPoints } memo = case rPoints of
       []               -> mempty
       Term    term : _ -> rName ==> Set.ofOne term
@@ -60,10 +60,10 @@ type Follows term = Map Name (Set term)
 --   A set of terminals that can immidiately follow a non-terminal.
 --
 getFollows
-  :: forall term result
+  :: forall term
   .  (Ord term, Pretty term)
   => Firsts term        -- ^ FIRSTS function
-  -> Table term result  -- parsing table
+  -> Table term  -- parsing table
   -> term               -- EOF marker
   -> Follows term
 getFollows firsts (Table rules) eof =
@@ -73,7 +73,7 @@ getFollows firsts (Table rules) eof =
       rule <- rules
       NonEmpty.toList (explode rule mempty)
 
-    followRule :: Item1 term result -> Follows term -> Follows term
+    followRule :: Item1 term -> Follows term -> Follows term
     followRule item memo = case (locus item, locus =<< next item) of
       (Just (NonTerm name), Nothing)              -> name ==> memo ? i1Name item
       (Just (NonTerm name), Just (Term    term))  -> name ==> Set.ofOne term
@@ -83,13 +83,13 @@ getFollows firsts (Table rules) eof =
 -- | Generate CLOSURE function.
 --
 getClosure
-  :: forall term result
+  :: forall term
   .  (Ord term, Pretty term)
-  => Table term result  -- ^ parsing table
+  => Table term  -- ^ parsing table
   -> Firsts term        -- ^ FIRSTS function
   -> Follows term       -- ^ FOLLOWS function
-  -> State term result  -- ^ non-saturated state
-  -> State term result
+  -> State term  -- ^ non-saturated state
+  -> State term
 getClosure (Table rules) firsts follows = joinByItemBody . close (foldMap act)
   where
     act item =
@@ -107,8 +107,8 @@ getClosure (Table rules) firsts follows = joinByItemBody . close (foldMap act)
 
     joinByItemBody
       :: (Ord term, Pretty term)
-      => State term result
-      -> State term result
+      => State term
+      -> State term
     joinByItemBody
       = Set.fromList
       . map mergeItem1s
@@ -123,11 +123,11 @@ getClosure (Table rules) firsts follows = joinByItemBody . close (foldMap act)
 --
 getFirstStateOfTable
   :: (Ord term, Pretty term)
-  => Table term token  -- ^ parsing table
+  => Table term  -- ^ parsing table
   -> Firsts term       -- ^ FIRSTS function
   -> Follows term      -- ^ FOLLOWS function
   -> term              -- ^ EOF marker
-  -> Set (Item1 term token)
+  -> Set (Item1 term)
 getFirstStateOfTable table@(Table rules) firsts follows lookeahead
   = getClosure table firsts follows
   $ Set.fromList
@@ -138,12 +138,12 @@ getFirstStateOfTable table@(Table rules) firsts follows lookeahead
 
 -- | Get set of all points from a table.
 --
-getPoints :: (Ord term, Pretty term) => Table term result -> Set (Point term)
+getPoints :: (Ord term, Pretty term) => Table term -> Set (Point term)
 getPoints = foldMap (Set.fromList . rPoints) . tRules
 
 -- | Get set of all terminals from a table and EOF marker.
 --
-getTerminals :: (Ord term, Pretty term) => Table term result -> term -> Set term
+getTerminals :: (Ord term, Pretty term) => Table term -> term -> Set term
 getTerminals (Table rules) eof = Set.ofOne eof <> foldMap getRuleTerminals rules
   where
     getRuleTerminals = foldMap getPointTerminal . rPoints

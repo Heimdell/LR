@@ -17,32 +17,31 @@ import Point
 import Pretty
 import Util
 import Table
+import Tree
 
 {- | The core of the parser.
 -}
 parser
-  :: forall term token result
+  :: forall term token
   .  (Ord term, Pretty term, Pretty token)
-  => Act' term result   -- ^ ACTION table
-  -> Goto term result   -- ^ GOTO table
-  -> (token -> result)  -- ^ S-expr atom wrapper
-  -> (token -> term)    -- ^ token classifier
-  -> State term result  -- ^ initial state
-  -> [token]            -- ^ token stream
-  -> Either Doc ([State term result], [result])
-parser action goto wrap classify start = (`go` ([start], []))
+  => Act' term   -- ^ ACTION table
+  -> Goto term   -- ^ GOTO table
+  -> State term  -- ^ initial state
+  -> [(term, token)]            -- ^ token stream
+  -> Either Doc ([State term], [Tree token])
+parser action goto start = (`go` ([start], []))
   where
     go
-      :: [token]
-      ->            ([State term result], [result])
-      -> Either Doc ([State term result], [result])
-    go input@(token : restInput) (top : items, stack) = do
+      :: [(term, token)]
+      ->            ([State term], [Tree token])
+      -> Either Doc ([State term], [Tree token])
+    go input@((term, token) : restInput) (top : items, stack) = do
       -- traceShowM ("====")
-      -- traceShowM ("token", pretty token)
+      -- traceShowM ("token", pretty token, pretty term)
       -- traceShowM ("state", top)
       -- traceShowM ("actions", action ? top)
-      case action ? top ? classify token of
-        Shift    state -> go restInput (state : top : items, wrap token : stack)
+      case action ? top ? term of
+        Shift    state -> go restInput (state : top : items, Leaf token : stack)
         Accept         -> return       (        top : items,              stack)
         Expected set   -> throwExpected set input
         Reduce   rule  -> do
@@ -51,7 +50,7 @@ parser action goto wrap classify start = (`go` ([start], []))
           let (taken, rest) = splitAt len stack
           go input
             ( goto top' (NonTerm (i1Name rule)) : top' : items'
-            , i1Reduce rule (reverse taken) : rest
+            , Join (i1Reduce rule) (reverse taken) : rest
             )
         act@Conflict {} -> Left $ "uh-oh," <+> pretty act
 
@@ -63,15 +62,15 @@ parser action goto wrap classify start = (`go` ([start], []))
 
     throwExpected
       :: Set term
-      -> [token]
-      -> Either Doc ([State term result], [result])
+      -> [(term, token)]
+      -> Either Doc ([State term], [Tree token])
     throwExpected set input = Left
       $       "Expected" `indent` pretty (Set.ShortSet set)
       `above` "at"       `indent` pretty (ShortList    input)
 
 {- | Collect a list of conflicts.
 -}
-reviewActions :: Pretty term => Act' term result -> [Doc]
+reviewActions :: Pretty term => Act' term -> [Doc]
 reviewActions actions = do
   (`foldMap` Map.toList actions) \(state, decisions) -> do
     (`foldMap` Map.toList decisions) \(term, action) -> do
@@ -87,13 +86,11 @@ reviewActions actions = do
 -}
 parse
   :: (Ord term, Pretty term, Pretty token)
-  => Table term result  -- ^ parsing table
-  -> (token -> result)  -- ^ wrapper into an S-expr
-  -> (token -> term)    -- ^ gets token type
+  => Table term -- ^ parsing table
   -> term               -- ^ eof marker
-  -> [token]            -- ^ token stream
-  -> Either Doc result
-parse table wrap classify eof input = do
+  -> [(term, token)]            -- ^ token stream
+  -> Either Doc (Tree token)
+parse table eof input = do
   let firsts'  = getFirsts table
   let follows' = getFollows firsts' table eof
   let initial  = getFirstStateOfTable table firsts' follows' eof
@@ -112,8 +109,5 @@ parse table wrap classify eof input = do
 
   -- traceShowM action2
 
-  (_, result : _) <- parser action2 goto' wrap classify initial input
+  (_, result : _) <- parser action2 goto' initial input
   return result
-
-instance MonadFail (Either Doc) where
-  fail s = Left $ "fail:" <+> text s

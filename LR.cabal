@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: dac5220c217cee10e4d709d5267f30974394c667bff7515701776c22e4f7d4f1
+-- hash: def8953235bc0ded87257dc3b92fdf7b0ea0e17b661eafd9180a25bab3cd4284
 
 name:           LR
 version:        0.0.0
@@ -13,8 +13,10 @@ build-type:     Simple
 library
   exposed-modules:
       Action
+      Exts
       Goto
       Item
+      Lex
       LR
       Map
       Name
@@ -36,7 +38,9 @@ library
   build-depends:
       base
     , containers
+    , mtl
     , pretty
+    , regex-tdfa
   default-language: Haskell2010
 
 executable LR
@@ -51,5 +55,8 @@ executable LR
       LR
     , base
     , containers
+    , mtl
     , pretty
+    , raw-strings-qq
+    , regex-tdfa
   default-language: Haskell2010
