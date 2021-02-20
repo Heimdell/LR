@@ -18,31 +18,33 @@ import Pretty
 import Util
 import Table
 import Tree
+import Term
 
 {- | The core of the parser.
 -}
 parser
   :: forall term token
   .  (Ord term, Pretty term, Pretty token)
-  => Act' term   -- ^ ACTION table
-  -> Goto term   -- ^ GOTO table
-  -> State term  -- ^ initial state
+  => Act'  (Term term)   -- ^ ACTION table
+  -> Goto  (Term term)   -- ^ GOTO table
+  -> State (Term term)  -- ^ initial state
   -> [(term, token)]            -- ^ token stream
-  -> Either Doc ([State term], [Tree token])
+  -> Either Doc ([State (Term term)], [Tree token])
 parser action goto start = (`go` ([start], []))
   where
     go
       :: [(term, token)]
-      ->            ([State term], [Tree token])
-      -> Either Doc ([State term], [Tree token])
+      ->            ([State (Term term)], [Tree token])
+      -> Either Doc ([State (Term term)], [Tree token])
     go input@((term, token) : restInput) (top : items, stack) = do
-      -- traceShowM ("====")
+      -- traceShowM ("")
       -- traceShowM ("token", pretty token, pretty term)
       -- traceShowM ("state", top)
-      -- traceShowM ("actions", action ? top)
-      case action ? top ? term of
+      -- traceShowM ("actions", pretty $ action ? top)
+      -- traceShowM ("next", pretty $ action ? top ? Next term)
+      case action ? top ? Next term of
         Shift    state -> go restInput (state : top : items, Leaf token : stack)
-        Accept         -> return       (        top : items,              stack)
+        Accept         -> throwExpected (Set.ofOne Eof) input
         Expected set   -> throwExpected set input
         Reduce   rule  -> do
           let len = ruleLength rule
@@ -54,16 +56,28 @@ parser action goto start = (`go` ([start], []))
             )
         act@Conflict {} -> Left $ "uh-oh," <+> pretty act
 
-    go [] (top : _, _) =
-      throwExpected (Map.keySet (action ? top)) []
+    go [] (top : items, stack) =
+      case action ? top ? Eof of
+        Accept          -> return (top : items, stack)
+        Expected set    -> throwExpected set []
+        Reduce   rule  -> do
+          let len = ruleLength rule
+          let top' : items' = drop len (top : items)
+          let (taken, rest) = splitAt len stack
+          go []
+            ( goto top' (NonTerm (i1Name rule)) : top' : items'
+            , Join (i1Reduce rule) (reverse taken) : rest
+            )
+        act@Conflict {} -> Left $ "uh-oh," <+> pretty act
+        _               -> throwExpected (Map.keySet (action ? top)) []
 
     go _ _ =
       error "parser: automata is corrupted"
 
     throwExpected
-      :: Set term
+      :: Set (Term term)
       -> [(term, token)]
-      -> Either Doc ([State term], [Tree token])
+      -> Either Doc ([State (Term term)], [Tree token])
     throwExpected set input = Left
       $       "Expected" `indent` pretty (Set.ShortSet set)
       `above` "at"       `indent` pretty (ShortList    input)
@@ -87,18 +101,17 @@ reviewActions actions = do
 parse
   :: (Ord term, Pretty term, Pretty token)
   => Table term -- ^ parsing table
-  -> term               -- ^ eof marker
-  -> [(term, token)]            -- ^ token stream
+  -> [(term, token)]   -- ^ token stream
   -> Either Doc (Tree token)
-parse table eof input = do
-  let firsts'  = getFirsts table
-  let follows' = getFollows firsts' table eof
-  let initial  = getFirstStateOfTable table firsts' follows' eof
-  let goto'    = getGoto table firsts' follows'
-  let points'  = getPoints table
-  let items'   = getItems points' goto' initial
-  let tokens'  = getTerminals table eof
-  let action'  = getAction goto' eof
+parse table input = do
+  let firsts'  = getFirsts            table
+  let follows' = getFollows           table firsts'
+  let initial  = getFirstStateOfTable table firsts' follows'
+  let goto'    = getGoto              table firsts' follows'
+  let points'  = getPoints            table
+  let items'   = getItems             points' goto' initial
+  let tokens'  = getTerminals         table
+  let action'  = getAction            goto'
   let action1  = materialize (\s -> materialize (action' s) tokens') items'
   let action2  = populateExpectedTokens action1
 
@@ -108,6 +121,7 @@ parse table eof input = do
     Left $ vcat conflicts
 
   -- traceShowM action2
+  -- error "!"
 
   (_, result : _) <- parser action2 goto' initial input
   return result

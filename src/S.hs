@@ -16,4 +16,4 @@ instance IsString S where
   fromString = S
 
 instance Pretty S where
-  pretty = color 2 . text . unS
+  pretty = text . unS

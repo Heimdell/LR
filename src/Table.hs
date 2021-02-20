@@ -19,6 +19,7 @@ import Point
 import Pretty
 import Rule
 import Util
+import Term
 
 -- | A table.
 --
@@ -42,13 +43,13 @@ getFirsts
   :: forall term
   .  (Ord term, Pretty term)
   => Table term  -- ^ parsing table
-  -> Firsts term
+  -> Firsts (Term term)
 getFirsts table = close (foldMap firstsOfRule (tRules table)) mempty
   where
-    firstsOfRule :: Rule term -> Firsts term -> Firsts term
+    firstsOfRule :: Rule term -> Firsts (Term term) -> Firsts (Term term)
     firstsOfRule Rule { rName, rPoints } memo = case rPoints of
       []               -> mempty
-      Term    term : _ -> rName ==> Set.ofOne term
+      Term    term : _ -> rName ==> Set.ofOne (Next term)
       NonTerm name : _ -> rName ==> memo ? name
 
 -- | FOLLOWS function.
@@ -62,18 +63,17 @@ type Follows term = Map Name (Set term)
 getFollows
   :: forall term
   .  (Ord term, Pretty term)
-  => Firsts term        -- ^ FIRSTS function
-  -> Table term  -- parsing table
-  -> term               -- EOF marker
-  -> Follows term
-getFollows firsts (Table rules) eof =
-  close (foldMap followRule states) (Start ==> Set.ofOne eof)
+  => Table term  -- parsing table
+  -> Firsts (Term term)        -- ^ FIRSTS function
+  -> Follows (Term term)
+getFollows (Table rules) firsts =
+  close (foldMap followRule states) (Start ==> Set.ofOne Eof)
   where
     states = do
       rule <- rules
       NonEmpty.toList (explode rule mempty)
 
-    followRule :: Item1 term -> Follows term -> Follows term
+    followRule :: Item1 (Term term) -> Follows (Term term) -> Follows (Term term)
     followRule item memo = case (locus item, locus =<< next item) of
       (Just (NonTerm name), Nothing)              -> name ==> memo ? i1Name item
       (Just (NonTerm name), Just (Term    term))  -> name ==> Set.ofOne term
@@ -86,10 +86,10 @@ getClosure
   :: forall term
   .  (Ord term, Pretty term)
   => Table term  -- ^ parsing table
-  -> Firsts term        -- ^ FIRSTS function
-  -> Follows term       -- ^ FOLLOWS function
-  -> State term  -- ^ non-saturated state
-  -> State term
+  -> Firsts (Term term)        -- ^ FIRSTS function
+  -> Follows (Term term)       -- ^ FOLLOWS function
+  -> State (Term term)  -- ^ non-saturated state
+  -> State (Term term)
 getClosure (Table rules) firsts follows = joinByItemBody . close (foldMap act)
   where
     act item =
@@ -107,8 +107,8 @@ getClosure (Table rules) firsts follows = joinByItemBody . close (foldMap act)
 
     joinByItemBody
       :: (Ord term, Pretty term)
-      => State term
-      -> State term
+      => State (Term term)
+      -> State (Term term)
     joinByItemBody
       = Set.fromList
       . map mergeItem1s
@@ -124,29 +124,28 @@ getClosure (Table rules) firsts follows = joinByItemBody . close (foldMap act)
 getFirstStateOfTable
   :: (Ord term, Pretty term)
   => Table term  -- ^ parsing table
-  -> Firsts term       -- ^ FIRSTS function
-  -> Follows term      -- ^ FOLLOWS function
-  -> term              -- ^ EOF marker
-  -> Set (Item1 term)
-getFirstStateOfTable table@(Table rules) firsts follows lookeahead
+  -> Firsts (Term term)       -- ^ FIRSTS function
+  -> Follows (Term term)      -- ^ FOLLOWS function
+  -> Set (Item1 (Term term))
+getFirstStateOfTable table@(Table rules) firsts follows
   = getClosure table firsts follows
   $ Set.fromList
-  [ getFirstState rule (Set.ofOne lookeahead)
+  [ getFirstState rule (Set.ofOne Eof)
   | rule <- rules
   , rName rule == Start
   ]
 
 -- | Get set of all points from a table.
 --
-getPoints :: (Ord term, Pretty term) => Table term -> Set (Point term)
-getPoints = foldMap (Set.fromList . rPoints) . tRules
+getPoints :: (Ord term, Pretty term) => Table term -> Set (Point (Term term))
+getPoints = foldMap (Set.fromList . (map.fmap) Next . rPoints) . tRules
 
 -- | Get set of all terminals from a table and EOF marker.
 --
-getTerminals :: (Ord term, Pretty term) => Table term -> term -> Set term
-getTerminals (Table rules) eof = Set.ofOne eof <> foldMap getRuleTerminals rules
+getTerminals :: (Ord term, Pretty term) => Table term -> Set (Term term)
+getTerminals (Table rules) = Set.ofOne Eof <> foldMap getRuleTerminals rules
   where
     getRuleTerminals = foldMap getPointTerminal . rPoints
     getPointTerminal = \case
-      Term    term -> Set.ofOne term
+      Term    term -> Set.ofOne (Next term)
       NonTerm _    -> mempty

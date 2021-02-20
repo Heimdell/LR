@@ -17,11 +17,13 @@ data Point term
 
     -- | Non-terminal
   | NonTerm Name
-  deriving stock (Eq, Ord)
+  deriving stock (Eq, Ord, Functor)
   deriving Show via PP (Point term)
 
-instance IsString (Point term) where
-  fromString = NonTerm . fromString
+instance IsString term => IsString (Point term) where
+  fromString str@(fstChar : _)
+    | isUpper fstChar = NonTerm (fromString str)
+    | otherwise       = Term    (fromString str)
 
 instance Pretty term => Pretty (Point term) where
   pretty = \case

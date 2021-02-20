@@ -12,6 +12,7 @@ import Point
 import Pretty
 import Table
 import Util
+import Term
 
 -- | GOTO function.
 --
@@ -35,11 +36,11 @@ type Goto' term
 getGoto
   :: (Ord term, Pretty term)
   => Table term  -- ^ parsing table
-  -> Firsts term        -- ^ FIRSTS function (set of first terminals of
+  -> Firsts (Term term)        -- ^ FIRSTS function (set of first terminals of
                         -- ^ a production)
-  -> Follows term       -- ^ FOLLOWS function (set of terminals that can go
+  -> Follows (Term term)       -- ^ FOLLOWS function (set of terminals that can go
                         --   after a production)
-  -> Goto term
+  -> Goto (Term term)
 getGoto rules firsts follows (Set.toList -> items) term =
   mconcat
     [ getClosure rules firsts follows

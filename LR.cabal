@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: def8953235bc0ded87257dc3b92fdf7b0ea0e17b661eafd9180a25bab3cd4284
+-- hash: 957e6b1e9fda117c2c9fc7934cb2c950f83cbf8e437b51c76afce6bbd521ef54
 
 name:           LR
 version:        0.0.0
@@ -27,6 +27,7 @@ library
       S
       Set
       Table
+      Term
       Tree
       Util
   other-modules:

@@ -17,6 +17,7 @@ import Name
 import Point
 import Pretty
 import Rule
+import Term
 
 {- | An LR(0) production that has been started.
 -}
@@ -99,11 +100,11 @@ next
 
 {- | All possible shifts of a production with given lookahead.
 -}
-explode :: Rule term -> Set term -> NonEmpty (Item1 term)
+explode :: Rule term -> Set (Term term) -> NonEmpty (Item1 (Term term))
 explode (Rule name points reduce) lookeahead =
-  explode' (Item1 (Item name [] points reduce) lookeahead)
+  explode' (Item1 (Item name [] ((map.fmap) Next points) reduce) lookeahead)
   where
-    explode' :: Item1 term -> NonEmpty (Item1 term)
+    explode' :: Item1 (Term term) -> NonEmpty (Item1 (Term term))
     explode' item = maybe (item :| []) (NonEmpty.cons item . explode') (next item)
 
 {- | Current terminal or non-terminal to be parsed.
@@ -113,7 +114,7 @@ locus = listToMaybe . iAfter . i1Item
 
 {- | Firts production of a rule with given lookahead.
 -}
-getFirstState :: Rule term -> Set term -> Item1 term
+getFirstState :: Rule term -> Set (Term term) -> Item1 (Term term)
 getFirstState = (NonEmpty.head .) . explode
 
 {- | Check ig production is for `Start` non-terminal.

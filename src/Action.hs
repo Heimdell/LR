@@ -16,6 +16,7 @@ import Goto
 import Point
 import Pretty
 import Util
+import Term
 
 {- | An action for automata.
 -}
@@ -122,10 +123,9 @@ type Act'' term
 --
 getAction
   :: (Ord term, Pretty term)
-  => Goto term  -- ^ GOTO function
-  -> term              -- ^ EOF marker
-  -> Act term
-getAction goto eof from term = foldMap decide from
+  => Goto (Term term)  -- ^ GOTO function
+  -> Act (Term term)
+getAction goto from term = foldMap decide from
   where
     decide item = case locus item of
       Just (Term term')
@@ -134,7 +134,7 @@ getAction goto eof from term = foldMap decide from
 
       Nothing
         | i1Lookahead item ? term ->
-          if isStart from && term == eof
+          if isStart from && term == Eof
           then Accept
           else Reduce item
 
