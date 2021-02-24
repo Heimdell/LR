@@ -103,7 +103,7 @@ parse
   => Table term -- ^ parsing table
   -> [(term, token)]   -- ^ token stream
   -> Either Doc (Tree token)
-parse table input = do
+parse table = do
   let firsts'  = getFirsts            table
   let follows' = getFollows           table firsts'
   let initial  = getFirstStateOfTable table firsts' follows'
@@ -117,11 +117,11 @@ parse table input = do
 
   let conflicts = reviewActions action2
 
-  unless (null conflicts) do
-    Left $ vcat conflicts
+  if null conflicts
+  then do
+    \input -> do
+      (_, result : _) <- parser action2 goto' initial input
+      return result
+  else do
+    const $ Left $ vcat conflicts
 
-  -- traceShowM action2
-  -- error "!"
-
-  (_, result : _) <- parser action2 goto' initial input
-  return result
