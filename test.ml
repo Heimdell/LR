@@ -1,6 +1,6 @@
 
-let x =
-  let y = s ;
-  let z = y ;
-  z ;
+let x = \p ->
+  let y = \s -> s;
+  let z = y;
+  z p;
 x
