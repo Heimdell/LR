@@ -4,32 +4,34 @@ import Prelude hiding (lex)
 import S
 import LR
 import Lex
+import Exts
 
-test :: Table S
-test = Table
-  [ Rule  Start      ["Struct"]                                     "Start"
-  , Rule "Struct"    ["\\\\", "Name", "->", "Struct"]               "Lam"              -- \s -> s s
-  , Rule "Struct"    ["let", "Name", "=", "Struct", ";", "Struct"]  "Let"              -- let id = \x -> x; id 42
-  , Rule "Struct"    ["Add"]                                       "-LetExpr"
-  , Rule "Add"       ["Add", "\\-", "Unary"]                        "Minus"            -- foo x - b
-  , Rule "Add"       ["Add", "\\+", "Unary"]                        "Plus"             -- x + sum ys
-  , Rule "Add"       ["Unary"]                                     "-Add"
-  , Rule "Unary"     ["\\-", "Unary"]                               "Negate"           -- -x
-  , Rule "Unary"     ["\\+", "Unary"]                               "Noop"             -- +y
-  , Rule "Unary"     ["Expr"]                                      "-U"
-  , Rule "Expr"      ["Expr", "Term"]                               "Call"             -- sum xs
-  , Rule "Expr"      ["Term"]                                      "-ExprTerm"
-  , Rule "Term"      ["Name"]                                       "Var"
-  , Rule "Term"      ["\\(", "Struct", "\\)"]                       "Group"            -- (let x = 1; x)
-  , Rule "Name"      ["?[A-Za-z][A-Za-z_$0-9-]*"]                   "Name"             -- foo-bar
+test :: ETable S
+test = ETable
+  [ ERule  Start      ["Struct"]                                     "Start"
+  , ERule "Struct"    ["\\\\", "Name", "->", "Struct"]               "Lam"              -- \s -> s s
+  , ERule "Struct"    ["let", "Name", "=", "Struct", ";", "Struct"]  "Let"              -- let id = \x -> x; id 42
+  , ERule "Struct"    ["Add"]                                       "-LetExpr"
+  , ERule "Add"       ["Add", "\\-", "Unary"]                        "Minus"            -- foo x - b
+  , ERule "Add"       ["Add", "\\+", "Unary"]                        "Plus"             -- x + sum ys
+  , ERule "Add"       ["Unary"]                                     "-Add"
+  , ERule "Unary"     ["\\-", "Unary"]                               "Negate"           -- -x
+  , ERule "Unary"     ["\\+", "Unary"]                               "Noop"             -- +y
+  , ERule "Unary"     ["Expr"]                                      "-U"
+  , ERule "Expr"      ["Expr", "Term"]                               "Call"             -- sum xs
+  , ERule "Expr"      ["Term"]                                      "-ExprTerm"
+  , ERule "Term"      ["Name"]                                       "Var"
+  , ERule "Term"      ["\\(", "Struct", "\\)"]                       "Group"            -- (let x = 1; x)
+  , ERule "Name"      ["?[A-Za-z][A-Za-z_$0-9-]*"]                   "Name"             -- foo-bar
   ]
 
 main :: IO ()
 main = do
   line <- readFile "test.ml"
-  case tokenize test line of
+  let test' = compileETable test
+  case tokenize test' line of
     Right input -> do
-      print (parse test input)
+      print (parse test' input)
 
     Left err -> do
       error (show err)
