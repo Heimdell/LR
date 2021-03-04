@@ -10,6 +10,7 @@ test :: ETable S
 test = ETable
   [ ERule  Start      ["Struct"]                                     "Start"
   , ERule "Struct"    ["\\\\", "Name", "->", "Struct"]               "Lam"              -- \s -> s s
+  , ERule "Struct"    ["Add", "<\\|", "Struct"]                      "Pipe"              -- \s -> s s
   , ERule "Struct"    ["let", "Name", "=", "Struct", ";", "Struct"]  "Let"              -- let id = \x -> x; id 42
   , ERule "Struct"    ["Add"]                                       "-LetExpr"
   , ERule "Add"       ["Add", "\\-", "Unary"]                        "Minus"            -- foo x - b

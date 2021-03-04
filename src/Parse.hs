@@ -6,6 +6,7 @@ module Parse where
 
 import Control.Monad (unless)
 
+import Map ((==>))
 import Map qualified as Map
 import Set (Set)
 import Set qualified as Set
@@ -84,17 +85,21 @@ parser action goto start = (`go` ([start], []))
 
 {- | Collect a list of conflicts.
 -}
-reviewActions :: Pretty term => Act' term -> [Doc]
+reviewActions :: (Ord term, Pretty term) => Act' term -> [Doc]
 reviewActions actions = do
-  (`foldMap` Map.toList actions) \(state, decisions) -> do
-    (`foldMap` Map.toList decisions) \(term, action) -> do
-      case action of
-        Conflict {} -> do
-          pure
-            $       "Conflict at state" `indent` pretty state
-            `above` "at token"          `indent` pretty term
-            `above` ":"                 `indent` pretty action
-        _ -> mempty
+  let
+    errorSet =
+      (`foldMap` Map.toList actions) \(state, decisions) -> do
+        (`foldMap` Map.toList decisions) \(term, action) -> do
+          case action of
+            Conflict {} -> (state, action) ==> Set.ofOne term
+            _ -> mempty
+
+  flip map (Map.toList errorSet) \((state, action), terms)
+    ->      "Conflict at state" `indent` pretty state
+    `above` "at tokens"         `indent` pretty terms
+    `above` ":"                 `indent` pretty action
+
 
 {- | Run parser, return result or produce an error.
 -}
@@ -124,4 +129,3 @@ parse table = do
       return result
   else do
     const $ Left $ vcat conflicts
-

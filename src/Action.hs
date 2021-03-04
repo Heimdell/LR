@@ -37,7 +37,7 @@ data Action state term
 
     -- | An error node, reports what tokens were expected.
   | Expected (Set term)
-  deriving stock (Eq)
+  deriving stock (Eq, Ord)
 
 instance (Pretty term, Pretty state) => Pretty (Action state term) where
   pretty = \case
