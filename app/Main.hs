@@ -9,6 +9,7 @@ test :: Table S
 test = Table
   [ Rule  Start      ["Struct"]                                     "Start"
   , Rule "Struct"    ["\\\\", "Name", "->", "Struct"]               "Lam"              -- \s -> s s
+  , Rule "Struct"    ["Expr", "<\\|", "Struct"]                     "Feed"              -- \s -> s s
   , Rule "Struct"    ["let", "Name", "=", "Struct", ";", "Struct"]  "Let"              -- let id = \x -> x; id 42
   , Rule "Struct"    ["Add"]                                       "-LetExpr"
   , Rule "Add"       ["Add", "\\-", "Unary"]                        "Minus"            -- foo x - b

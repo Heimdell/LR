@@ -1,6 +1,6 @@
 
 let x = \p ->
-  let y = \s -> s;
+  let y = foo <| \s -> s bar;
   let z = y;
   z p;
 x
