@@ -27,7 +27,7 @@ parser
   :: forall term token
   .  (Ord term, Pretty term, Pretty token)
   => Act'  (Term term)   -- ^ ACTION table
-  -> Goto  (Term term)   -- ^ GOTO table
+  -> Goto' (Term term)   -- ^ GOTO table
   -> State (Term term)  -- ^ initial state
   -> [(term, token)]            -- ^ token stream
   -> Either Doc ([State (Term term)], [Tree token])
@@ -52,7 +52,7 @@ parser action goto start = (`go` ([start], []))
           let top' : items' = drop len (top : items)
           let (taken, rest) = splitAt len stack
           go input
-            ( goto top' (NonTerm (i1Name rule)) : top' : items'
+            ( (goto ? top' ? NonTerm (i1Name rule)) : top' : items'
             , Join (i1Reduce rule) (reverse taken) : rest
             )
         act@Conflict {} -> Left $ "uh-oh," <+> pretty act
@@ -66,7 +66,7 @@ parser action goto start = (`go` ([start], []))
           let top' : items' = drop len (top : items)
           let (taken, rest) = splitAt len stack
           go []
-            ( goto top' (NonTerm (i1Name rule)) : top' : items'
+            ( (goto ? top' ? NonTerm (i1Name rule)) : top' : items'
             , Join (i1Reduce rule) (reverse taken) : rest
             )
         act@Conflict {} -> Left $ "uh-oh," <+> pretty act
@@ -109,23 +109,26 @@ parse
   -> [(term, token)]   -- ^ token stream
   -> Either Doc (Tree token)
 parse table = do
+  let tokens'  = getTerminals         table
   let firsts'  = getFirsts            table
   let follows' = getFollows           table firsts'
   let initial  = getFirstStateOfTable table firsts' follows'
-  let goto'    = getGoto              table firsts' follows'
   let points'  = getPoints            table
-  let items'   = getItems             points' goto' initial
-  let tokens'  = getTerminals         table
+  let goto'    = getGoto              table firsts' follows'
+  let items'   = getItems             goto'
   let action'  = getAction            goto'
-  let action1  = materialize (\s -> materialize (action' s) tokens') items'
+  let action1  = materialize items' $ materialize tokens' . action'
   let action2  = populateExpectedTokens action1
+  goto' `seq` traceShow goto' do
+   items' `seq` traceShow items' do
 
-  let conflicts = reviewActions action2
+    let conflicts = reviewActions action2
 
-  if null conflicts
-  then do
-    \input -> do
-      (_, result : _) <- parser action2 goto' initial input
-      return result
-  else do
-    const $ Left $ vcat conflicts
+    if null conflicts
+    then do
+      \input -> do
+        traceShowM (Map.size action2)
+        (_, result : _) <- parser action2 goto' initial input
+        return result
+    else do
+      const $ Left $ vcat conflicts

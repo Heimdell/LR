@@ -3,7 +3,8 @@
 --
 module Goto where
 
-import Map (Map)
+import Map (Map, (==>))
+import Map qualified as Map
 import Set (Set)
 import Set qualified as Set
 
@@ -34,34 +35,39 @@ type Goto' term
 --   @GOTO (state, prod.locus) = CLOSURE (prod.next)@
 --
 getGoto
-  :: (Ord term, Pretty term)
+  :: forall term
+  .  (Ord term, Pretty term)
   => Table term  -- ^ parsing table
   -> Firsts (Term term)        -- ^ FIRSTS function (set of first terminals of
                         -- ^ a production)
   -> Follows (Term term)       -- ^ FOLLOWS function (set of terminals that can go
                         --   after a production)
-  -> Goto (Term term)
-getGoto rules firsts follows (Set.toList -> items) term =
-  mconcat
-    [ getClosure rules firsts follows
-    $ possible Set.ofOne following
-    | item <- items
-    , locus item == Just term
-    , let following = next item
-    ]
+  -> Goto' (Term term)
+getGoto table firsts follows = close collect (getFirstStateOfTable table firsts follows ==> mempty)
+  where
+    collect :: Goto' (Term term) -> Goto' (Term term)
+    collect = foldMap move . Map.keySet
+
+    move :: State (Term term) -> Goto' (Term term)
+    move states = states ==> foldMap step states
+      where
+        step :: Item1 (Term term) -> Map (Point (Term term)) (State (Term term))
+        step item =
+          case locus item of
+            Just term -> do
+              let following = next item
+              term ==>
+                ( getClosure table firsts follows
+                $ possible Set.ofOne following
+                )
+            Nothing -> do
+              mempty
 
 -- | Generate a set of all possible states for a grammar.
 --
 getItems
   :: forall term
   .  (Ord term, Pretty term)
-  => Set (Point term)        -- ^ set of terminals and non-terminals
-  -> Goto term        -- ^ GOTO function
-  -> State term       -- ^ first state of a parser
+  => Goto' term        -- ^ GOTO function
   -> Set (State term)
-getItems terminals goto firstState
-  = close (foldMap collect)
-  $ Set.ofOne firstState
-  where
-    collect :: State term -> Set (State term)
-    collect items = foldMap (Set.ofOne . goto items) terminals
+getItems = Map.keySet

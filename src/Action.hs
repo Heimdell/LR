@@ -123,14 +123,14 @@ type Act'' term
 --
 getAction
   :: (Ord term, Pretty term)
-  => Goto (Term term)  -- ^ GOTO function
+  => Goto' (Term term)  -- ^ GOTO function
   -> Act (Term term)
 getAction goto from term = foldMap decide from
   where
     decide item = case locus item of
       Just (Term term')
         | term == term' ->
-          Shift (goto from (Term term))
+          Shift (goto ? from ? Term term)
 
       Nothing
         | i1Lookahead item ? term ->

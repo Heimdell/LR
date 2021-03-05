@@ -78,8 +78,8 @@ possible = maybe mempty
 
 -- | Memoize a function into map, given set of all inputs.
 --
-materialize :: Ord a => (a -> b) -> Set a -> Map a b
-materialize f (Set.toList -> keys') = Map.fromList $ zip keys' (map f keys')
+materialize :: Ord a => Set a -> (a -> b) -> Map a b
+materialize (Set.toList -> keys') f = Map.fromList $ zip keys' (map f keys')
 
 -- | Make a normal function out of memoized.
 --
@@ -89,7 +89,7 @@ dematerialise = (?)
 -- | Memoize a function, given set of all inputs.
 --
 memoise :: (Ord a, Monoid b) => Set a -> (a -> b) -> (a -> b)
-memoise args f = dematerialise (materialize f args)
+memoise = (dematerialise .) . materialize
 
 instance IsString s => MonadFail (Either s) where
   fail = Left . fromString

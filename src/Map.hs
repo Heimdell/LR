@@ -85,6 +85,9 @@ foldrWithKey f z (Map m) = Impl.foldrWithKey f z m
 null :: Map k v -> Bool
 null (Map m) = Impl.null m
 
+size :: Map k v -> Int
+size (Map m) = Impl.size m
+
 infixr 7 ==>
 
 instance (Pretty k, Pretty v) => Pretty (Map k v) where
