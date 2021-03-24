@@ -17,6 +17,7 @@ default-extensions:
 - DerivingStrategies
 - DerivingVia
 - DuplicateRecordFields
+- FlexibleContexts
 - FlexibleInstances
 - FunctionalDependencies
 - GADTs
@@ -26,8 +27,12 @@ default-extensions:
 - MultiParamTypeClasses
 - NamedFieldPuns
 - OverloadedStrings
+- RankNTypes
+- RecursiveDo
 - ScopedTypeVariables
+- StandaloneDeriving
 - TypeApplications
+- TypeFamilies
 - TypeOperators
 - TypeSynonymInstances
 - UndecidableInstances
