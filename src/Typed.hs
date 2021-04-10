@@ -4,11 +4,11 @@ module Typed where
 import Control.Applicative
 import Control.Monad.State
 import Control.Monad.Writer
-import Control.Monad.List
 
 import Data.Proxy
 import Data.String (IsString (..))
 import Data.Typeable
+import Data.Traversable
 
 import Pretty
 import Set
@@ -106,17 +106,17 @@ instance Pretty l => Pretty (TPoint' l t f) where
   pretty (T'          l  r) = pretty l <+> pretty r
   pretty (NT' (Entity e) r) = pretty e <+> pretty r
 
-type M  l t = ListT (WriterT [SomeRule l t] (State Int))
-type M' l t =        WriterT [SomeRule l t] (State Int)
+type M' l t = WriterT [SomeRule l t] (State Int)
 
 grammar :: M' l t (TPoint l t f) -> (Int, [SomeRule l t])
 grammar = flip evalState 0 . runWriterT . fmap (eNum . fromNT)
+
 
 fromNT (NT nt) = nt
 
 rule :: (Ord l, Pretty l) => (f -> g) -> TPoint l t f -> M' l t (TPoint l t g)
 rule ctor pt = do
-  pts <- runListT $ point pt
+  pts <- point pt
   e   <- newRule $ TRule' $ Set.fromList $ (fmap.fmap) ctor pts
   return (NT e)
 
@@ -129,65 +129,64 @@ newRule r = do
   counter <- get
   tell [SomeRule r (Entity counter)]
   modify (+ 1)
-  if counter == 5 then traceShowM (counter) else return ()
   return (Entity counter)
 
 point
   :: forall f g l t
   .  (Ord l, Pretty l)
   => TPoint l t f
-  -> M l t (SomePoint l t f)
+  -> M' l t [SomePoint l t f]
 point p = case p of
-  Keyword    t  -> return $ SomePoint (K'  t Stop') (const ())
-  T          t  -> return $ SomePoint (T'  t Stop') fst
-  NT         g  -> return $ SomePoint (NT' g Stop') fst
+  Keyword    t  -> return [SomePoint (K'  t Stop') (const ())]
+  T          t  -> return [SomePoint (T'  t Stop') fst]
+  NT         g  -> return [SomePoint (NT' g Stop') fst]
   Plus       p  -> do
-    SomePoint p' back <- point p
-    e <- newRule $ TRule' $ Set.ofOne $ SomePoint p' back
-    rec
-      let pt1 = (NT' e (NT' e1 Stop'))
-      let pt2 = (NT' e         Stop')
-
-      e1 <- newRule $ TRule' $ Set.fromList
-        [ SomePoint pt1 \(f, (fs, ())) ->  f : fs
-        , SomePoint pt2 \(f,      ())  -> [f]
-        ]
-    return (SomePoint (NT' e1 Stop') fst)
+    sps <- point p
+    for sps \sp -> do
+      e  <- newRule $ TRule' $ Set.ofOne sp
+      rec
+        e1 <- newRule $ TRule' $ Set.fromList
+          [ SomePoint (NT' e (NT' e1 Stop')) \(f, (fs, ())) ->  f : fs
+          , SomePoint (NT' e         Stop')  \(f,      ())  -> [f]
+          ]
+      return (SomePoint (NT' e1 Stop') fst)
 
   Star p -> do
     e <- point (Plus p)
-    return e <|> return (SomePoint Stop' (const []))
+    return $ e ++ [SomePoint Stop' (const [])]
 
   Opt p -> do
-    e <- point p
-    return (fmap Just e) <|> return (SomePoint Stop' (const Nothing))
+    es <- point p
+    return $ (fmap.fmap) Just es ++ [SomePoint Stop' (const Nothing)]
 
   Or l r -> do
     e1 <- point l
     e2 <- point r
-    return e1 <|> return e2
+    return $ e1 ++ e2
 
   And l r -> do
-    el <- point l
-    SomePoint e2 back2 <- point r
-    e <- newRule $ TRule' $ Set.ofOne el
-    return (SomePoint (NT' e e2) \(f, g) -> (f, back2 g))
+    els <- point l
+    concat <$> for els \el -> do
+      els2 <- point r
+      for els2 \(SomePoint e2 back2) -> do
+        e <- newRule $ TRule' $ Set.ofOne el
+        return (SomePoint (NT' e e2) \(f, g) -> (f, back2 g))
 
   Before l r -> do
-    SomePoint e back <- point (And l r)
-    return (SomePoint e (snd . back))
+    sps <- point (And l r)
+    return $ (fmap.fmap) snd sps
 
   After l r -> do
-    SomePoint e back <- point (And l r)
-    return (SomePoint e (fst . back))
+    sps <- point (And l r)
+    return $ (fmap.fmap) fst sps
 
   SepBy f sep -> do
-    SomePoint e back <- point (Opt (SepBy1 f sep))
-    return (SomePoint e (maybe [] id . back))
+    sp <- point (Opt (SepBy1 f sep))
+    return $ (fmap.fmap) (maybe [] id) sp
 
   SepBy1 f sep -> do
-    SomePoint e back <- point (And f (Star (And sep f)))
-    return (SomePoint e ((\(x, xs) -> x : fmap snd xs) . back))
+    sp <- point (And f (Star (And sep f)))
+    return $ (fmap.fmap) (\(x, xs) -> x : fmap snd xs) sp
 
 (<#>) :: TPoint l t f -> TPoint l t g -> TPoint l t (f, g)
 (<#>) = And
