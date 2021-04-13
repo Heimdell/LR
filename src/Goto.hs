@@ -38,10 +38,10 @@ getGoto
   :: forall term
   .  (Ord term, Pretty term)
   => Table term  -- ^ parsing table
-  -> Firsts (Term term)        -- ^ FIRSTS function (set of first terminals of
-                        -- ^ a production)
-  -> Follows (Term term)       -- ^ FOLLOWS function (set of terminals that can go
-                        --   after a production)
+  -> Firsts (Term term)   -- ^ FIRSTS function (set of first terminals of
+                          --   a production)
+  -> Follows (Term term)  -- ^ FOLLOWS function (set of terminals that can go
+                          --   after a production)
   -> Goto' (Term term)
 getGoto table firsts follows = close collect (getFirstStateOfTable table firsts follows ==> mempty)
   where
