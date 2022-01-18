@@ -3,6 +3,8 @@
 --
 module Goto where
 
+import Data.Foldable (fold)
+
 import Map (Map, (==>))
 import Map qualified as Map
 import Set (Set)
@@ -46,7 +48,10 @@ getGoto
 getGoto table firsts follows = close collect (getFirstStateOfTable table firsts follows ==> mempty)
   where
     collect :: Goto' (Term term) -> Goto' (Term term)
-    collect = foldMap move . Map.keySet
+    collect = foldMap move . fullKeySet
+
+    fullKeySet :: Goto' (Term term) -> Set (State (Term term))
+    fullKeySet m = Map.keySet m <> (foldMap . foldMap) Set.ofOne m
 
     move :: State (Term term) -> Goto' (Term term)
     move states = states ==> foldMap step states
