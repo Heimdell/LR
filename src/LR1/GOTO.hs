@@ -1,23 +1,24 @@
 module LR1.GOTO where
-import LR1.Fixpoint (one, Get ((?)), set)
-import qualified LR1.State as State
-import qualified LR1.Grammar as Grammar
-import qualified LR1.FIRST as FIRST
--- import Control.Lens hiding (set, index)
-import qualified LR1.Map as Map
+
 import Control.Monad (foldM)
-import qualified Data.Set as Set
-import qualified LR1.Item as Item
-import qualified LR1.Point as Point
-import Data.Set (Set)
 import Control.Monad.State qualified as MTL
-import Data.Traversable (for)
 import Data.Function (on, (&))
-import Data.Maybe (mapMaybe, fromJust)
 import Data.List (groupBy, sortBy)
-import GHC.Generics (Generic)
+import Data.Maybe (mapMaybe, fromJust)
+import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
+import Data.Traversable (for)
+import GHC.Generics (Generic)
+
+import LR1.FIRST   qualified as FIRST
+import LR1.Fixpoint (one, Get ((?)), set)
+import LR1.Grammar qualified as Grammar
+import LR1.Item    qualified as Item
+import LR1.Map     qualified as Map
+import LR1.Point   qualified as Point
+import LR1.State   qualified as State
 
 newtype T = GOTO
   { unwrap :: Map.T State.Index (Map.T Point.T State.Index)

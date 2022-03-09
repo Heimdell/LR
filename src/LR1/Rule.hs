@@ -1,9 +1,10 @@
 module LR1.Rule where
 
-import LR1.NonTerm qualified as NonTerm
-import LR1.Point qualified as Point
 import Data.Text (Text)
 import Data.Text qualified as Text
+
+import LR1.NonTerm qualified as NonTerm
+import LR1.Point   qualified as Point
 
 data T = Rule
   { entity :: NonTerm.T

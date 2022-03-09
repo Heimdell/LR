@@ -4,9 +4,7 @@ dependencies:
   - mtl
   - containers
   - exceptions
-  # - monoidal-containers
   - text
-  # - lens
 
 default-extensions:
   - AllowAmbiguousTypes

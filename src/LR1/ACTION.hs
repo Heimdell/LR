@@ -1,22 +1,20 @@
 module LR1.ACTION where
 
-import Data.Text (Text)
-import qualified LR1.NonTerm as NonTerm
-import LR1.Fixpoint ((==>), Get ((?)))
-import qualified LR1.Term as Term
--- import Control.Lens ( (&), use, uses )
-import qualified LR1.State as State
-import qualified LR1.Item as Item
-import qualified LR1.Point as Point
-import qualified LR1.GOTO as GOTO
-import qualified LR1.Map as Map
-import Data.Traversable (for)
-import qualified Data.Text as Text
-import GHC.Generics (Generic)
-import Control.Monad.State as MTL
+import Control.Monad.State qualified as MTL
 import Data.Function ((&))
--- import Data.List (nub, intercalate, sort)
--- import Data.Maybe (fromJust)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Traversable (for)
+import GHC.Generics (Generic)
+
+import LR1.Fixpoint ((==>), Get ((?)))
+import LR1.GOTO    qualified as GOTO
+import LR1.Item    qualified as Item
+import LR1.Map     qualified as Map
+import LR1.NonTerm qualified as NonTerm
+import LR1.Point   qualified as Point
+import LR1.State   qualified as State
+import LR1.Term    qualified as Term
 
 data Action
   = Accept
@@ -83,7 +81,7 @@ dump header (ACTION goto) = do
       & Map.toList
       & (fmap.fmap) Map.toList
   stateList <- for asList \(srcIndex, dests) -> do
-    srcState <- gets ((Map.! srcIndex) . State.indices)
+    srcState <- MTL.gets ((Map.! srcIndex) . State.indices)
     return (srcState, dests)
 
   let
@@ -108,45 +106,6 @@ conflicts (ACTION actions) =
 
 expected :: LR1.ACTION.T -> State.Index -> Map.T Term.T Action
 expected (ACTION actions) index = actions Map.! index
-
--- showTables :: GOTO.T -> LR1.ACTION.T -> [(Int, Int)] -> [Int] -> State.Reg -> String
--- showTables goto action rename reterm reg = do
---   let indices = reg^.State.indices.to Map.keys
---   unlines
---     ( intercalate "\t" ("states" : map show terms ++ map show nonTerms)
---     : map row indices
---     )
---   where
---     terms = action & unwrap & foldMap Map.keys & nub & perm
---     nonTerms = goto & GOTO.unwrap & foldMap Map.keys & nub & filter Point.isEntity
-
---     re = fromJust . flip lookup rename
---     unre = fromJust . flip lookup (map swap rename)
-
---     swap (a, b) = (b, a)
-
---     row :: State.Index -> [Char]
---     row ix =
---       intercalate "\t"
---         ( show ix
---         : map (t ix) terms ++ map (n ix) nonTerms
---         )
-
---     n :: Int -> Point.T -> String
---     n ix tr = case Map.lookup (unre ix) (GOTO.unwrap goto) >>= Map.lookup tr of
---       Just s -> show (re s)
---       _      -> "."
-
---     t :: Int -> Term.T -> String
---     t ix tr = case Map.lookup (unre ix) (unwrap action) >>= Map.lookup tr of
---       Just Accept -> "acc"
---       Just (Shift st) -> "s" <> show (re st)
---       Just Reduce {} -> "r"
---       _              -> "."
-
---     perm :: [Term.T] -> [Term.T]
---     perm items = [items !! (reterm !! i) | i <- [0 .. length items - 1]]
-
 
 instance Show Action where
   show = \case

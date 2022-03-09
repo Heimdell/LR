@@ -1,8 +1,8 @@
 module LR1.NonTerm where
 
-import Data.Text (Text)
-import qualified Data.Text as Text
 import Data.String (IsString (fromString))
+import Data.Text (Text)
+import Data.Text qualified as Text
 
 data T
   = NonTerm Text

@@ -1,23 +1,21 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module LR1.State where
 
-import qualified LR1.Item as Item
-import Data.Set (Set)
-import Data.Function (on, (&))
-import LR1.Fixpoint (fixpoint, one, Get ((?)))
-import qualified Control.Monad.State as MTL
-import qualified LR1.Grammar as Grammar
-import qualified LR1.FIRST as FIRST
-import qualified Data.Set as Set
-import qualified LR1.Point as Point
--- import Control.Lens (makeLenses, uses, use, (+=))
--- import Control.Lens.Operators ((%=))
-import qualified LR1.Map as Map
-import Data.List (groupBy, sortOn)
-import LR1.Item (T(lookahead))
-import qualified LR1.Term as Term
 import Control.Arrow ((&&&))
+import Control.Monad.State qualified as MTL
+import Data.Function (on, (&))
+import Data.List (groupBy, sortOn)
+import Data.Set (Set)
+import Data.Set qualified as Set
 import GHC.Generics (Generic)
+
+import LR1.FIRST   qualified as FIRST
+import LR1.Fixpoint (fixpoint, one, Get ((?)))
+import LR1.Grammar qualified as Grammar
+import LR1.Item    qualified as Item
+import LR1.Map     qualified as Map
+import LR1.Point   qualified as Point
+import LR1.Term    qualified as Term
 
 type Index = Int
 
@@ -89,7 +87,7 @@ normalize items =
   items
     & Set.toList
     & groupBy ((==) `on` (Item.entity &&& Item.label &&& Item.pos))
-    & fmap do \list@(item : _) -> item { lookahead = Set.unions $ fmap Item.lookahead list }
+    & fmap do \list@(item : _) -> item { Item.lookahead = Set.unions $ fmap Item.lookahead list }
     & Set.fromList
 
 register :: HasReg m => LR1.State.T -> m (Index, Bool)

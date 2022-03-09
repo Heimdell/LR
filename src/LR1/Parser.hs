@@ -1,17 +1,19 @@
 module LR1.Parser where
-import qualified LR1.State as State
-import qualified LR1.Term as Term
-import qualified LR1.ACTION as ACTION
-import qualified LR1.GOTO as GOTO
-import Data.Text (Text)
+
 import Control.Monad (foldM, unless)
-import LR1.Fixpoint (Get((?)))
-import qualified LR1.Point as Point
-import qualified Data.Text as Text
-import Data.Tree
-import Control.Monad.Catch
-import qualified LR1.Map as Map
+import Control.Monad.Catch qualified as MTL
 import Data.Data (Typeable)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Tree (Tree (..), drawTree)
+
+import LR1.ACTION qualified as ACTION
+import LR1.Fixpoint (Get((?)))
+import LR1.GOTO   qualified as GOTO
+import LR1.Map    qualified as Map
+import LR1.Point  qualified as Point
+import LR1.State  qualified as State
+import LR1.Term   qualified as Term
 
 data ParseTree a
   = Leaf a
@@ -27,9 +29,9 @@ instance Show a => Show (ParseTree a) where
 
 data Expected a = Expected [Term.T] Term.T a
   deriving stock (Show)
-  deriving anyclass (Exception)
+  deriving anyclass (MTL.Exception)
 
-run :: forall a m. (Show a, Typeable a) => (State.HasReg m, MonadThrow m) => GOTO.T -> ACTION.T -> [(Term.T, a)] -> m ([State.Index], [ParseTree a])
+run :: forall a m. (Show a, Typeable a) => (State.HasReg m, MTL.MonadThrow m) => GOTO.T -> ACTION.T -> [(Term.T, a)] -> m ([State.Index], [ParseTree a])
 run goto action = foldM consume ([0], [])
   where
     consume :: ([State.Index], [ParseTree a]) -> (Term.T, a) -> m ([State.Index], [ParseTree a])
@@ -37,7 +39,7 @@ run goto action = foldM consume ([0], [])
       let expected = ACTION.expected action top
 
       unless (Map.member term expected) do
-        throwM $ Expected (Map.keys expected) term a
+        MTL.throwM $ Expected (Map.keys expected) term a
 
       case action ? (top, term) of
         ACTION.Accept -> do

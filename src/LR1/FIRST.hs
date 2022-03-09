@@ -1,17 +1,18 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module LR1.FIRST where
 
-import LR1.Fixpoint (Get ((?)), fixpoint, (==>), one)
-import LR1.NonTerm qualified as NonTerm
-import Data.Set (Set)
-import LR1.Term qualified as Term
-import LR1.Map qualified as Map
-import Data.Function ((&))
 import Data.Foldable (toList)
-import LR1.Grammar qualified as Grammar
+import Data.Function ((&))
+import Data.Set (Set)
 import Data.Set qualified as Set
-import LR1.Rule qualified as Rule
-import LR1.Point qualified as Point
+
+import LR1.Fixpoint (Get ((?)), fixpoint, (==>), one)
+import LR1.Grammar qualified as Grammar
+import LR1.Map     qualified as Map
+import LR1.NonTerm qualified as NonTerm
+import LR1.Point   qualified as Point
+import LR1.Rule    qualified as Rule
+import LR1.Term    qualified as Term
 
 newtype T = FIRST
   { unwrap :: Map.T NonTerm.T (Set Term.T)

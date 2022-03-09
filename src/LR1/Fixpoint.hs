@@ -1,15 +1,16 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module LR1.Fixpoint where
 
-import LR1.Map qualified as Map
-import Data.Set qualified as Set
-import Data.Set (Set)
-import Data.Function ((&))
-import Data.Maybe (fromMaybe)
-import Data.Functor ((<&>))
 import Control.Applicative (Applicative(liftA2))
+import Data.Function ((&))
+import Data.Functor ((<&>))
+import Data.List qualified as List
+import Data.Maybe (fromMaybe)
+import Data.Set (Set)
+import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import qualified Data.List as List
+
+import LR1.Map qualified as Map
 
 (==>) :: k -> v -> Map.T k v
 (==>) = (Map.==>)

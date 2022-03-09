@@ -1,8 +1,9 @@
 module LR1.Position where
 
-import LR1.Point qualified as Point
-import LR1.Rule qualified as Rule
 import Data.List (uncons)
+
+import LR1.Point qualified as Point
+import LR1.Rule  qualified as Rule
 
 data T = Position
   { before :: []    Point.T

@@ -1,15 +1,16 @@
 module LR1.Item where
 
-import LR1.NonTerm qualified as NonTerm
-import Data.Text (Text)
-import Data.Set (Set)
-import LR1.Term qualified as Term
-import LR1.Position qualified as Position
-import qualified Data.Text as Text
-import Data.Function ((&))
 import Data.Foldable (toList)
-import qualified LR1.Rule as Rule
-import qualified LR1.Point as Point
+import Data.Function ((&))
+import Data.Set (Set)
+import Data.Text (Text)
+import Data.Text qualified as Text
+
+import LR1.NonTerm  qualified as NonTerm
+import LR1.Point    qualified as Point
+import LR1.Position qualified as Position
+import LR1.Rule     qualified as Rule
+import LR1.Term     qualified as Term
 
 data T = Item
   { entity    :: NonTerm.T

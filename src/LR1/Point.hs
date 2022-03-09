@@ -1,10 +1,11 @@
 module LR1.Point where
 
-import LR1.Term qualified as Term
-import LR1.NonTerm qualified as NonTerm
 import Data.String (IsString (fromString))
 import Data.Text (Text)
-import qualified LR1.Lexeme as Lexeme
+
+import LR1.Lexeme  qualified as Lexeme
+import LR1.NonTerm qualified as NonTerm
+import LR1.Term    qualified as Term
 
 data T
   = Term Term.T

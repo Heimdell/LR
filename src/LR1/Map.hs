@@ -7,9 +7,7 @@
 --
 module LR1.Map where
 
-import qualified Data.Map as Impl
-import Data.Set (Set)
-import Data.Set qualified as Set
+import Data.Map qualified as Impl
 
 -- | A wrapper.
 --
