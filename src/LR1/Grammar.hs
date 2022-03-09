@@ -1,11 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module LR1.Grammar where
 
-import LR1.Fixpoint (Map, one, (==>), Get ((?)))
+import LR1.Fixpoint (one, (==>), Get ((?)))
 import LR1.NonTerm qualified as NonTerm
 import LR1.Rule qualified as Rule
 import Data.Set (Set)
-import Data.Map.Monoidal qualified as Map
+import LR1.Map qualified as Map
 import Data.Function ((&))
 import Data.Text (Text)
 import LR1.Point qualified as Point
@@ -13,7 +13,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Foldable as Set
 
 data T = Grammar
-  { rules :: Map NonTerm.T (Set Rule.T)
+  { rules :: Map.T NonTerm.T (Set Rule.T)
   , order :: [] Rule.T
   }
 

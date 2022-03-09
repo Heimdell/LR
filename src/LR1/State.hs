@@ -4,15 +4,15 @@ module LR1.State where
 import qualified LR1.Item as Item
 import Data.Set (Set)
 import Data.Function (on, (&))
-import LR1.Fixpoint (Map, fixpoint, one, Get ((?)))
+import LR1.Fixpoint (fixpoint, one, Get ((?)))
 import qualified Control.Monad.State as MTL
 import qualified LR1.Grammar as Grammar
 import qualified LR1.FIRST as FIRST
 import qualified Data.Set as Set
 import qualified LR1.Point as Point
-import Control.Lens (makeLenses, uses, use, (+=))
-import Control.Lens.Operators ((%=))
-import qualified Data.Map.Monoidal as Map
+-- import Control.Lens (makeLenses, uses, use, (+=))
+-- import Control.Lens.Operators ((%=))
+import qualified LR1.Map as Map
 import Data.List (groupBy, sortOn)
 import LR1.Item (T(lookahead))
 import qualified LR1.Term as Term
@@ -41,19 +41,19 @@ instance Show LR1.State.T where
       <> foldMap (\item -> "  " <> show item <> "\n") set
 
 data Reg = Reg
-  { _states  :: Map LR1.State.T Index
-  , _indices :: Map Index LR1.State.T
-  , _counter :: Index
+  { states  :: Map.T LR1.State.T Index
+  , indices :: Map.T Index LR1.State.T
+  , counter :: Index
   }
 
 emptyReg :: Reg
 emptyReg = Reg
-  { _states  = Map.empty
-  , _indices = Map.empty
-  , _counter = 0
+  { states  = Map.empty
+  , indices = Map.empty
+  , counter = 0
   }
 
-makeLenses ''Reg
+-- makeLenses ''Reg
 
 type HasReg m = MTL.MonadState Reg m
 
@@ -94,21 +94,23 @@ normalize items =
 
 register :: HasReg m => LR1.State.T -> m (Index, Bool)
 register state = do
-  uses states (Map.lookup state) >>= \case
+  MTL.gets (Map.lookup state . states) >>= \case
     Nothing -> do
-      index <- use counter
+      index <- MTL.gets counter
       let state1 = state { index }
-      states  %= Map.insert state1 index
-      indices %= Map.insert index state1
-      counter += 1
+      MTL.modify \Reg {states, indices, counter} -> Reg
+        { states  = Map.insert state1 index states
+        , indices = Map.insert index state1 indices
+        , counter = 1 + counter
+        }
       return (index, True)
 
     Just n -> do
       return (n, False)
 
 instance Show Reg where
-  show Reg {_states} = do
-    Map.keys _states
+  show Reg {states} = do
+    Map.keys states
       & sortOn index
       & fmap show
       & unlines

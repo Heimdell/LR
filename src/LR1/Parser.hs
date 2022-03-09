@@ -10,7 +10,7 @@ import qualified LR1.Point as Point
 import qualified Data.Text as Text
 import Data.Tree
 import Control.Monad.Catch
-import qualified Data.Map.Monoidal as Map
+import qualified LR1.Map as Map
 import Data.Data (Typeable)
 
 data ParseTree a

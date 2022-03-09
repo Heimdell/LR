@@ -2,17 +2,19 @@ module LR1.ACTION where
 
 import Data.Text (Text)
 import qualified LR1.NonTerm as NonTerm
-import LR1.Fixpoint (Map, (==>), Get ((?)))
+import LR1.Fixpoint ((==>), Get ((?)))
 import qualified LR1.Term as Term
-import Control.Lens ( (&), use, uses )
+-- import Control.Lens ( (&), use, uses )
 import qualified LR1.State as State
 import qualified LR1.Item as Item
 import qualified LR1.Point as Point
 import qualified LR1.GOTO as GOTO
-import qualified Data.Map.Monoidal as Map
+import qualified LR1.Map as Map
 import Data.Traversable (for)
 import qualified Data.Text as Text
 import GHC.Generics (Generic)
+import Control.Monad.State as MTL
+import Data.Function ((&))
 -- import Data.List (nub, intercalate, sort)
 -- import Data.Maybe (fromJust)
 
@@ -36,7 +38,7 @@ instance Monoid Action where
   mempty = Empty
 
 newtype T = ACTION
-  { unwrap :: Map State.Index (Map Term.T Action)
+  { unwrap :: Map.T State.Index (Map.T Term.T Action)
   }
   deriving newtype (Semigroup, Monoid, Generic)
 
@@ -45,7 +47,7 @@ instance Get LR1.ACTION.T (State.Index, Term.T) Action where
 
 make :: forall m. State.HasReg m => GOTO.T -> m LR1.ACTION.T
 make goto = do
-  states <- use State.indices
+  states <- MTL.gets State.indices
   return $ foldMap getActions states
   where
     getActions :: State.T -> LR1.ACTION.T
@@ -67,7 +69,7 @@ make goto = do
           _ ->
             mempty
       where
-        reduceOn :: Term.T -> Map Term.T Action
+        reduceOn :: Term.T -> Map.T Term.T Action
         reduceOn t = t ==> Reduce
           { label  = Item.label  item
           , entity = Item.entity item
@@ -81,7 +83,7 @@ dump header (ACTION goto) = do
       & Map.toList
       & (fmap.fmap) Map.toList
   stateList <- for asList \(srcIndex, dests) -> do
-    srcState <- uses State.indices (Map.! srcIndex)
+    srcState <- gets ((Map.! srcIndex) . State.indices)
     return (srcState, dests)
 
   let
@@ -104,7 +106,7 @@ conflicts (ACTION actions) =
     isConflict Conflict {} = True
     isConflict _           = False
 
-expected :: LR1.ACTION.T -> State.Index -> Map Term.T Action
+expected :: LR1.ACTION.T -> State.Index -> Map.T Term.T Action
 expected (ACTION actions) index = actions Map.! index
 
 -- showTables :: GOTO.T -> LR1.ACTION.T -> [(Int, Int)] -> [Int] -> State.Reg -> String

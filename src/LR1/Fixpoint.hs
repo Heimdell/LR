@@ -1,9 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module LR1.Fixpoint where
 
-import Data.Map.Monoidal qualified as Map
+import LR1.Map qualified as Map
 import Data.Set qualified as Set
-import Data.Map.Monoidal (MonoidalMap)
 import Data.Set (Set)
 import Data.Function ((&))
 import Data.Maybe (fromMaybe)
@@ -12,15 +11,13 @@ import Control.Applicative (Applicative(liftA2))
 import GHC.Generics (Generic)
 import qualified Data.List as List
 
-type Map = MonoidalMap
-
-mmap :: (Ord k) => [(k, a)] -> Map k a
-mmap = Map.fromList
-
-(==>) :: (Ord k) => k -> a -> Map k a
-(==>) = Map.singleton
+(==>) :: k -> v -> Map.T k v
+(==>) = (Map.==>)
 
 infixr 7 ==>
+
+mmap :: (Ord k) => [(k, a)] -> Map.T k a
+mmap = Map.fromList
 
 set :: (Ord k) => [k] -> Set k
 set = Set.fromList
@@ -34,7 +31,7 @@ class (Monoid d, Eq d) => Diff d where
 instance Ord k => Diff (Set k) where
   diff = Set.difference
 
-instance (Ord k, Diff v) => Diff (Map k v) where
+instance (Ord k, Diff v) => Diff (Map.T k v) where
   diff part known
     = part
     & Map.mapWithKey do \k v -> v `diff` (known ? k)
@@ -45,7 +42,7 @@ class (Ord k) => Get w k v | w -> k v where
 
 infixl 8 ?
 
-instance (Ord k, Monoid v) => Get (Map k v) k v where
+instance (Ord k, Monoid v) => Get (Map.T k v) k v where
   m ? k = Map.lookup k m & fromMaybe mempty
 
 fixpoint :: (Diff a) => a -> (a -> a) -> a
@@ -74,9 +71,9 @@ instance (Applicative m, Semigroup v) => Semigroup (MonoM m v) where
 instance (Applicative m, Monoid v) => Monoid (MonoM m v) where
   mempty = pure mempty
 
-deriving stock instance (Generic a, Generic b) => Generic (Map a b)
+deriving stock instance (Generic a, Generic b) => Generic (Map.T a b)
 
-newtype PMap k v = PMap { unPMap :: Map k v }
+newtype PMap k v = PMap { unPMap :: Map.T k v }
 
 instance (Show k, Show v) => Show (PMap k v) where
   show m = m

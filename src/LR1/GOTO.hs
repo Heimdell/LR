@@ -1,18 +1,18 @@
 module LR1.GOTO where
-import LR1.Fixpoint (Map, one, Get ((?)), set)
+import LR1.Fixpoint (one, Get ((?)), set)
 import qualified LR1.State as State
 import qualified LR1.Grammar as Grammar
 import qualified LR1.FIRST as FIRST
-import Control.Lens hiding (set, index)
-import qualified Data.Map.Monoidal as Map
+-- import Control.Lens hiding (set, index)
+import qualified LR1.Map as Map
 import Control.Monad (foldM)
 import qualified Data.Set as Set
 import qualified LR1.Item as Item
 import qualified LR1.Point as Point
 import Data.Set (Set)
-
+import Control.Monad.State qualified as MTL
 import Data.Traversable (for)
-import Data.Function (on)
+import Data.Function (on, (&))
 import Data.Maybe (mapMaybe, fromJust)
 import Data.List (groupBy, sortBy)
 import GHC.Generics (Generic)
@@ -20,7 +20,7 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 
 newtype T = GOTO
-  { unwrap :: Map State.Index (Map Point.T State.Index)
+  { unwrap :: Map.T State.Index (Map.T Point.T State.Index)
   }
   deriving stock (Show, Generic)
 
@@ -48,9 +48,9 @@ make grammar first = do
       let
         goto'
           | Map.member index goto = goto
-          | otherwise             = goto & at index ?~ Map.empty
+          | otherwise             = Map.insert index Map.empty goto
 
-      materialized <- uses State.indices (Map.! index)
+      materialized <- MTL.gets ((Map.! index) . State.indices)
 
       let
         -- Group all items in the state by the entity at the locus
@@ -84,7 +84,7 @@ make grammar first = do
       let goto' = Map.adjust (Map.insert point nextIndex) index goto
       return (pool', GOTO goto')
 
-expected :: LR1.GOTO.T -> State.Index -> Map Point.T State.Index
+expected :: LR1.GOTO.T -> State.Index -> Map.T Point.T State.Index
 expected (GOTO goto) index = goto Map.! index
 
 dump :: State.HasReg m => Text -> LR1.GOTO.T -> m String
@@ -94,9 +94,9 @@ dump header (GOTO goto) = do
       & Map.toList
       & (fmap.fmap) Map.toList
   stateList <- for asList \(srcIndex, dests) -> do
-    srcState <- uses State.indices (Map.! srcIndex)
+    srcState <- MTL.gets ((Map.! srcIndex) . State.indices)
     destStates <- for dests \(point, destIndex) -> do
-      destState <- uses State.indices (Map.! destIndex)
+      destState <- MTL.gets ((Map.! destIndex) . State.indices)
       return (point, destState)
     return (srcState, destStates)
 
