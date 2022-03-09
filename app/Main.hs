@@ -1,42 +1,70 @@
 
-import Prelude hiding (lex)
+import Data.Function ((&))
 
-import S
-import LR
-import Lex
-import Exts
-import Pretty
+import LR1.Grammar qualified as Grammar
+import LR1.FIRST qualified as FIRST
+import LR1.Item qualified as Item
+import LR1.State qualified as State
+import LR1.Term qualified as Term
+import LR1.GOTO qualified as GOTO
+import LR1.ACTION qualified as ACTION
+import LR1.Lexeme qualified as Lexeme
+import LR1.Parser qualified as Parser
+import LR1.NonTerm (T(Start))
+import LR1.Point (e, cat)
+import Data.Set qualified as Set
+import Control.Monad.State
+import LR1.Fixpoint (one)
+import Data.Text qualified as Text
+import Data.Text (Text)
+import Data.Monoid
+import Text.Read
 
-test :: ETable S
-test = ETable
-  [ ERule  Start      ["Struct"]                                     "Start"
-  , ERule "Struct"    ["\\\\", "Name", "->", "Struct"]               "Lam"              -- \s -> s s
-  , ERule "Struct"    ["fixity", EOpt $ EOr ["left", "right", "none"], "Number", EPlus "Op", ";", "Struct"] "fixity"
-  , ERule "Struct"    ["let", "Name", "=", "Struct", ";", "Struct"]  "Let"              -- let id = \x -> x; id 42
-  , ERule "Struct"    ["Unary", "Op", "Struct"]                      "Soup"              -- \s -> s s
-  , ERule "Struct"    ["Unary"]                                     "-LetExpr"
-  , ERule "Unary"     ["Op", "Unary"]                                "Noop"             -- +y
-  , ERule "Unary"     ["Expr"]                                      "-U"
-  , ERule "Expr"      ["Expr", "Term"]                               "Call"             -- sum xs
-  , ERule "Expr"      ["Term"]                                      "-ExprTerm"
-  , ERule "Term"      ["Name"]                                       "Var"
-  , ERule "Term"      ["Number"]                                     "Var"
-  , ERule "Term"      ["\\(", "Struct", "\\)"]                       "Group"            -- (let x = 1; x)
-  , ERule "Term"      [  "{", EOpt $ ESeq ["Field",  EMult $ ESeq [",", "Field"]],    "}"]                       "Record"            -- (let x = 1; x)
-  , ERule "Term"      ["\\[", EOpt $ ESeq ["Struct", EMult $ ESeq [",", "Struct"]], "\\]"]                       "Record"            -- (let x = 1; x)
-  , ERule "Field"     ["Name", "=", "Struct"]                        "Field"
-  , ERule "Name"      ["?[A-Za-z][A-Za-z_$0-9-]*"]                   "Name"             -- foo-bar
-  , ERule "Op"        ["?[-+\\|><!~@#$%^&*=\\\\/\\?.,]+"]            "Op"             -- foo-bar
-  , ERule "Number"    ["?[-+]?([0-9]*[.])?[0-9]+([eE][-+]?\\d+)?"]    "Num"             -- foo-bar
-  ]
-
-main :: IO ()
 main = do
-  line <- readFile "test.ml"
-  let test' = compileETable test
-  case tokenize test' line of
-    Right input -> do
-      print $ either id pretty $ parse test' input
+  let
+    grammar = Grammar.empty
+      & Grammar.add Start    "start"  [e "Expr"]
+      & Grammar.add "Expr"   "plus"   [e "Expr", "+", e "Factor"]
+      & Grammar.add "Expr"   "factor" [e "Factor"]
+      & Grammar.add "Factor" "mult"   [e "Factor", "*", e "Term"]
+      & Grammar.add "Factor" "term"   [e "Term"]
+      & Grammar.add "Term"   "grp"    ["(", e "Expr", ")"]
+      & Grammar.add "Term"   "num"    [cat "num"]
 
-    Left err -> do
-      error (show err)
+    first = FIRST.make grammar
+
+  print grammar
+
+  flip runStateT State.emptyReg $ do
+    -- build tables
+    goto   <- GOTO.make grammar first
+    action <- ACTION.make goto
+
+    let conflicts = ACTION.conflicts action
+
+    -- check conflicts
+    unless (null $ ACTION.unwrap conflicts) do
+      log <- ACTION.dump "CONFLICTS" conflicts
+      liftIO $ putStrLn log
+      error "conflicts"
+
+    -- lexing
+    let
+      t = Term.Term . Lexeme.Concrete
+      d = Term.Term . Lexeme.Category
+
+      lexer = (<> [(Term.EndOfStream, "")]) .  map lex . words
+
+      lex s
+        | Just (n :: Int) <- readMaybe s = (d "num", s)
+        | otherwise                      = (t (Text.pack s), s)
+
+    -- lex input
+    let input = lexer "1 * 2 + 3 * ( 4 + 5 ) * 6"
+    liftIO $ print input
+
+    -- run parser
+    res <- Parser.run goto action input
+    liftIO $ print res
+
+  return ()

@@ -1,56 +1,63 @@
-
-name: LR
-
+name: LR1
 dependencies:
-- base
-- containers
-- mtl
-- pretty
-- regex-tdfa
+  - base
+  - mtl
+  - containers
+  - exceptions
+  - monoidal-containers
+  - text
+  - lens
 
 default-extensions:
-- BlockArguments
-- DataKinds
-- DeriveFoldable
-- DeriveFunctor
-- DeriveTraversable
-- DerivingStrategies
-- DerivingVia
-- DuplicateRecordFields
-- FlexibleContexts
-- FlexibleInstances
-- FunctionalDependencies
-- GADTs
-- GeneralizedNewtypeDeriving
-- ImportQualifiedPost
-- LambdaCase
-- MultiParamTypeClasses
-- NamedFieldPuns
-- OverloadedStrings
-- RankNTypes
-- RecursiveDo
-- ScopedTypeVariables
-- StandaloneDeriving
-- TypeApplications
-- TypeFamilies
-- TypeOperators
-- TypeSynonymInstances
-- UndecidableInstances
-- ViewPatterns
+  - AllowAmbiguousTypes
+  - ApplicativeDo
+  - BlockArguments
+  - ConstraintKinds
+  - DataKinds
+  - DeriveAnyClass
+  - DeriveFoldable
+  - DeriveFunctor
+  - DeriveGeneric
+  - DeriveTraversable
+  - DerivingStrategies
+  - DerivingVia
+  - DuplicateRecordFields
+  - EmptyCase
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - GeneralizedNewtypeDeriving
+  - ImportQualifiedPost
+  - KindSignatures
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - OverloadedStrings
+  - PatternSynonyms
+  - RankNTypes
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - TemplateHaskell
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - TypeSynonymInstances
+  - UndecidableInstances
+  - ViewPatterns
+  - QuasiQuotes
 
-ghc-options: -freverse-errors -Wall -Wno-orphans
-
+ghc-options: -Wall -freverse-errors
 library:
   source-dirs:
-  - src
+    - src
 
-executable:
-  dependencies:
-  - base
-  - LR
-  - raw-strings-qq
+executables:
+  lr-test:
+    main: Main.hs
+    source-dirs:
+      - app
 
-  source-dirs:
-  - app
-
-  main: Main.hs
+    dependencies:
+      - LR1
