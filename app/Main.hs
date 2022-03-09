@@ -60,7 +60,10 @@ main = do
         | otherwise                      = (t (Text.pack s), s)
 
     -- lex input
-    let input = lexer "1 * 2 + 3 * ( 4 + 5 ) * 6"
+    liftIO $ print "Input something, like \"1 * 2 + 3 * ( 4 + 5 ) * 6\""
+    str <- liftIO $ getLine
+
+    let input = lexer str
     liftIO $ print input
 
     -- run parser
