@@ -29,6 +29,8 @@ data Rule t a where
   E :: Entity a -> Rule t (a -> b) -> Rule t b
   R :: a                           -> Rule t a
 
+infixr 2 `T`, `C`, `E`
+
 fresh :: MTL.MonadState Int m => m String
 fresh = do
   MTL.modify (+ 1)

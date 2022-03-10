@@ -29,32 +29,24 @@ main = do
   let
     (grammar, mapping, proxy) = Typed.grammar mdo
       start <- Typed.clauseS
-        [ E expr (R id) ]
+        [ expr `E` R id ]
 
       expr <- Typed.clause
-        [ E expr (T "+" (E factor (R \a _ b -> Plus a b)))
-        , E factor (R id)
+        [ expr   `E` "+" `T` factor `E` R \a _ b -> Plus a b
+        , factor `E` R id
         ]
 
       factor <- Typed.clause
-        [ E factor (T "*" (E term (R \a _ b -> Mult a b)))
-        , E term   (R id)
+        [ factor `E` "*" `T` term `E` R \a _ b -> Mult a b
+        , term   `E` R id
         ]
 
       term <- Typed.clause
-        [ T "(" (E expr (T ")" (R \_ a _ -> a)))
-        , C "num" (R id)
+        [ "(" `T` expr `E` ")" `T` R \_ a _ -> a
+        , "num" `C` R id
         ]
 
       return start
-    -- grammar = Grammar.empty
-    --   & Grammar.add Start    "start"  [e "Expr"]
-    --   & Grammar.add "Expr"   "plus"   [e "Expr", "+", e "Factor"]
-    --   & Grammar.add "Expr"   "factor" [e "Factor"]
-    --   & Grammar.add "Factor" "mult"   [e "Factor", "*", e "Term"]
-    --   & Grammar.add "Factor" "term"   [e "Term"]
-    --   & Grammar.add "Term"   "grp"    ["(", e "Expr", ")"]
-    --   & Grammar.add "Term"   "num"    [cat "num"]
 
     first = FIRST.make grammar
 
