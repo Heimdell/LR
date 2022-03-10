@@ -25,10 +25,12 @@ newtype Entity a = Entity NonTerm.T
 
 data Rule t a where
   T  :: Rule t (t -> a) -> Term.T   -> Rule t a
-  -- T_ :: Rule t       a  -> Term.T   -> Rule t a
+  T_ :: Rule t       a  -> Term.T   -> Rule t a
   C  :: Rule t (t -> a) -> Text     -> Rule t a
   E  :: Rule t (a -> b) -> Entity a -> Rule t b
   R  :: a                           -> Rule t a
+
+infixl 9 `T`, `T_`, `C`, `E`
 
 noWrap :: Rule t (a -> a)
 noWrap = R id
@@ -69,26 +71,26 @@ toPoints :: Rule t a -> ([Point.T], Func.T)
 toPoints = \case
   T k t -> do
     case toPoints k of
-      (pts, Func.Func f) ->
-        (Point.Term t : pts, Func.Func f)
+      (pts, Func.Func f args) ->
+        (Point.Term t : pts, Func.Func f (True : args))
 
-  -- T_ k t -> do
-  --   case toPoints k of
-  --     (pts, Func.Func f) ->
-  --       (Point.Term t : pts, Func.Func (unsafeCoerce (const f))
+  T_ k t -> do
+    case toPoints k of
+      (pts, Func.Func f args) ->
+        (Point.Term t : pts, Func.Func f (False : args))
 
   C k t -> do
     case toPoints k of
-      (pts, Func.Func f) ->
-        (Point.Term (Term.Term (Lexeme.Category t)) : pts, Func.Func f)
+      (pts, Func.Func f args) ->
+        (Point.Term (Term.Term (Lexeme.Category t)) : pts, Func.Func f (True : args))
 
   E k (Entity e) -> do
     case toPoints k of
-      (pts, Func.Func f) ->
-        (Point.NonTerm e : pts, Func.Func f)
+      (pts, Func.Func f args) ->
+        (Point.NonTerm e : pts, Func.Func f (True : args))
 
   R a -> do
-    ([], Func.Func (unsafeCoerce a))
+    ([], Func.Func (unsafeCoerce a) [])
 
 grammar
   :: forall a

@@ -3,8 +3,10 @@ module LR1.Func where
 import GHC.Types (Any)
 import Unsafe.Coerce (unsafeCoerce)
 
-newtype T = Func Any
+data T = Func Any [Bool]
 
 call :: T -> [a] -> b
-call f [] = unsafeCoerce f
-call f (a : as) = call (f `unsafeCoerce` a) as
+call (Func f _) [] = unsafeCoerce f
+call (Func f (True : rest)) (a : as) = call (Func (f `unsafeCoerce` a) rest) as
+call (Func f (_    : rest)) (_ : as) = call (Func f rest) as
+call _ _ = error "?"

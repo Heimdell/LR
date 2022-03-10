@@ -19,17 +19,17 @@ import LR1.Typed   qualified as Typed
 import LR1.Typed (Rule (..), clause, clauseS, noWrap)
 
 data Expr
-  = Plus   Expr String Factor
+  = Plus   Expr Factor
   | Factor Factor
   deriving stock Show
 
 data Factor
-  = Mult Factor String Term
+  = Mult Factor Term
   | Term Term
   deriving stock Show
 
 data Term
-  = Expr String Expr String
+  = Expr Expr
   | Num  String
   deriving stock Show
 
@@ -40,17 +40,17 @@ main = do
       start <- Typed.clauseS @Expr expr
 
       expr <- Typed.clause @Expr
-        [ R Plus   `E` expr `T` "+" `E` factor
+        [ R Plus   `E` expr `T_` "+" `E` factor
         , R Factor `E` factor
         ]
 
       factor <- Typed.clause @Factor
-        [ R Mult `E` factor `T` "*" `E` term
+        [ R Mult `E` factor `T_` "*" `E` term
         , R Term `E` term
         ]
 
       term <- Typed.clause @Term
-        [ R Expr `T` "(" `E` expr `T` ")"
+        [ R Expr `T_` "(" `E` expr `T_` ")"
         , R Num  `C` "num"
         ]
 
