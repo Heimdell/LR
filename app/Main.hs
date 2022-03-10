@@ -16,11 +16,20 @@ import LR1.Point (e, cat)
 import LR1.State   qualified as State
 import LR1.Term    qualified as Term
 import LR1.Typed   qualified as Typed
-import LR1.Typed (Rule (..), clause, clauseS)
+import LR1.Typed (Rule (..), clause, clauseS, noWrap)
 
-data AST
-  = Plus AST AST
-  | Mult AST AST
+data Expr
+  = Plus   Expr Factor
+  | Factor Factor
+  deriving stock Show
+
+data Factor
+  = Mult Factor Term
+  | Term Term
+  deriving stock Show
+
+data Term
+  = Expr Expr
   | Num  String
   deriving stock Show
 
@@ -28,22 +37,21 @@ main :: IO ()
 main = do
   let
     (grammar, mapping, proxy) = Typed.grammar mdo
-      start <- Typed.clauseS
-        [ E expr (R id) ]
+      start <- Typed.clauseS @Expr expr
 
-      expr <- Typed.clause
-        [ E expr (T "+" (E factor (R \a _ b -> Plus a b)))
-        , E factor (R id)
+      expr <- Typed.clause @Expr
+        [ E expr (T "+" (E factor (R \b _ a -> Plus a b)))
+        , E factor (R Factor)
         ]
 
-      factor <- Typed.clause
-        [ E factor (T "*" (E term (R \a _ b -> Mult a b)))
-        , E term   (R id)
+      factor <- Typed.clause @Factor
+        [ E factor (T "*" (E term (R \b _ a -> Mult a b)))
+        , E term   (R Term)
         ]
 
-      term <- Typed.clause
-        [ T "(" (E expr (T ")" (R \_ a _ -> a)))
-        , C "num" (R id)
+      term <- Typed.clause @Term
+        [ T "(" (E expr (T ")" (R \_ a _ -> Expr a)))
+        , C "num" (R Num)
         ]
 
       return start
@@ -85,6 +93,6 @@ main = do
 
     -- run parser
     res <- Parser.run goto action input
-    liftIO $ print $ Parser.reduce proxy mapping Num res
+    liftIO $ print $ Parser.reduce proxy mapping res
 
   return ()

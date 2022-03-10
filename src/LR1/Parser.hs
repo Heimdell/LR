@@ -3,7 +3,6 @@ module LR1.Parser where
 import Control.Monad (foldM, unless)
 import Control.Monad.Catch qualified as MTL
 import Data.Data (Typeable)
-import Data.Function ((&))
 import Data.Map (Map, (!))
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
@@ -18,16 +17,17 @@ import LR1.Point  qualified as Point
 import LR1.State  qualified as State
 import LR1.Term   qualified as Term
 import LR1.Func   qualified as Func
+import Unsafe.Coerce (unsafeCoerce)
 
 data ParseTree a
   = Leaf a
   | Join Text [ParseTree a]
   deriving stock Functor
 
-reduce :: Proxy b -> Map Text Func.T -> (a -> b) -> ParseTree a -> b
-reduce p ctors tok = \case
-  Leaf a -> tok a
-  Join f args -> Func.call (ctors ! f) (map (reduce p ctors tok) args)
+reduce :: Proxy b -> Map Text Func.T -> ParseTree a -> b
+reduce p ctors = \case
+  Leaf a -> unsafeCoerce a
+  Join f args -> Func.call (ctors ! f) (map (reduce p ctors) args)
 
 instance Show a => Show (ParseTree a) where
   show = drawTree . toTree . fmap show
@@ -58,7 +58,7 @@ run goto action = fmap (head . snd) <$> foldM consume ([0], [])
           let top' : states' = drop n (top : states)
           let (taken, rest) = splitAt n values
           let states'' = goto ? (top', Point.NonTerm t) : top' : states'
-          let values'  = Join txt (reverse taken) : rest
+          let values'  = Join txt taken : rest
           consume (states'', values') (term, a)
 
         ACTION.Shift n -> do
