@@ -24,10 +24,10 @@ data ParseTree a
   | Join Text [ParseTree a]
   deriving stock Functor
 
-reduce :: Proxy b -> Map Text Func.T -> ParseTree a -> b
-reduce p ctors = \case
+reduce :: (Proxy b, Map Text Func.T) -> ParseTree a -> b
+reduce (p, ctors) = \case
   Leaf a -> unsafeCoerce a
-  Join f args -> Func.call (ctors ! f) (map (reduce p ctors) args)
+  Join f args -> Func.call (ctors ! f) (map (reduce (p, ctors)) args)
 
 instance Show a => Show (ParseTree a) where
   show = drawTree . toTree . fmap show

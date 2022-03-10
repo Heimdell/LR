@@ -36,7 +36,7 @@ data Term
 main :: IO ()
 main = do
   let
-    (grammar, mapping, proxy) = Typed.grammar mdo
+    (grammar, mapping) = Typed.grammar mdo
       start <- Typed.clauseS @Expr expr
 
       expr <- Typed.clause @Expr
@@ -86,13 +86,13 @@ main = do
 
     -- lex input
     liftIO $ putStrLn "Input something, like \"1 * 2 + 3 * ( 4 + 5 ) * 6\""
-    str <- liftIO $ getLine
+    str <- liftIO getLine
 
     let input = lexer str
     liftIO $ print input
 
     -- run parser
     res <- Parser.run goto action input
-    liftIO $ print $ Parser.reduce proxy mapping res
+    liftIO $ print $ Parser.reduce mapping res
 
   return ()

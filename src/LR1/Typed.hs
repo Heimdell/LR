@@ -95,7 +95,7 @@ toPoints = \case
 grammar
   :: forall a
   .  MTL.StateT Int (MTL.Writer ([Rule.T], Map Text Func.T)) (Entity a)
-  -> (Grammar.T, Map Text Func.T, Proxy a)
-grammar action = (g, m, Proxy)
+  -> (Grammar.T, (Proxy a, Map Text Func.T))
+grammar action = (g, (Proxy, m))
   where
     (g, m) = Arrow.first Grammar.fromRules $ MTL.execWriter (MTL.evalStateT action 0)
