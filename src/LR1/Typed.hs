@@ -24,13 +24,13 @@ import LR1.Lexeme  qualified as Lexeme
 newtype Entity a = Entity NonTerm.T
 
 data Rule t a where
-  T  :: Rule t (t -> a) -> Term.T   -> Rule t a
-  T_ :: Rule t       a  -> Term.T   -> Rule t a
-  C  :: Rule t (t -> a) -> Text     -> Rule t a
-  E  :: Rule t (a -> b) -> Entity a -> Rule t b
-  R  :: a                           -> Rule t a
+  (:>) :: Rule t (t -> a) -> Term.T   -> Rule t a
+  (:.) :: Rule t       a  -> Term.T   -> Rule t a
+  (:?) :: Rule t (t -> a) -> Text     -> Rule t a
+  (:!) :: Rule t (a -> b) -> Entity a -> Rule t b
+  R    :: a                           -> Rule t a
 
-infixl 9 `T`, `T_`, `C`, `E`
+infixl 9 :>, :., :?, :!
 
 noWrap :: Rule t (a -> a)
 noWrap = R id
@@ -58,7 +58,7 @@ clauseS :: forall a m. (MTL.MonadState Int m, MTL.MonadWriter ([Rule.T], Map Tex
 clauseS ent = do
   name <- fresh
   let entity = NonTerm.Start
-  let (points, f) = toPoints (noWrap `E` ent)
+  let (points, f) = toPoints (noWrap :! ent)
   let label       = Text.pack name
   MTL.tell
     ( [Rule.Rule {entity, label, points}]
@@ -69,22 +69,22 @@ clauseS ent = do
 
 toPoints :: Rule t a -> ([Point.T], Func.T)
 toPoints = \case
-  T k t -> do
+  k :> t -> do
     case toPoints k of
       (pts, Func.Func f args) ->
         (Point.Term t : pts, Func.Func f (True : args))
 
-  T_ k t -> do
+  k :. t -> do
     case toPoints k of
       (pts, Func.Func f args) ->
         (Point.Term t : pts, Func.Func f (False : args))
 
-  C k t -> do
+  k :? t -> do
     case toPoints k of
       (pts, Func.Func f args) ->
         (Point.Term (Term.Term (Lexeme.Category t)) : pts, Func.Func f (True : args))
 
-  E k (Entity e) -> do
+  k :! (Entity e) -> do
     case toPoints k of
       (pts, Func.Func f args) ->
         (Point.NonTerm e : pts, Func.Func f (True : args))
