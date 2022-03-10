@@ -58,7 +58,7 @@ run goto action = fmap (head . snd) <$> foldM consume ([0], [])
           let top' : states' = drop n (top : states)
           let (taken, rest) = splitAt n values
           let states'' = goto ? (top', Point.NonTerm t) : top' : states'
-          let values'  = Join txt taken : rest
+          let values'  = Join txt (reverse taken) : rest
           consume (states'', values') (term, a)
 
         ACTION.Shift n -> do
