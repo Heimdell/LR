@@ -40,18 +40,18 @@ main = do
       start <- Typed.clauseS @Expr expr
 
       expr <- Typed.clause @Expr
-        [ R Plus   :! expr :. "+" :! factor
-        , R Factor :! factor
+        [ Reduce Plus   :! expr :. "+" :! factor
+        , Reduce Factor :! factor
         ]
 
       factor <- Typed.clause @Factor
-        [ R Mult :! factor :. "*" :! term
-        , R Term :! term
+        [ Reduce Mult :! factor :. "*" :! term
+        , Reduce Term :! term
         ]
 
       term <- Typed.clause @Term
-        [ R Expr :. "(" :! expr :. ")"
-        , R Num  :? "num"
+        [ Reduce Expr :. "(" :! expr :. ")"
+        , Reduce Num  :? "num"
         ]
 
       return start

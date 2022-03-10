@@ -24,16 +24,16 @@ import LR1.Lexeme  qualified as Lexeme
 newtype Entity a = Entity NonTerm.T
 
 data Rule t a where
-  (:>) :: Rule t (t -> a) -> Term.T   -> Rule t a
-  (:.) :: Rule t       a  -> Term.T   -> Rule t a
-  (:?) :: Rule t (t -> a) -> Text     -> Rule t a
-  (:!) :: Rule t (a -> b) -> Entity a -> Rule t b
-  R    :: a                           -> Rule t a
+  (:>)   :: Rule t (t -> a) -> Term.T   -> Rule t a
+  (:.)   :: Rule t       a  -> Term.T   -> Rule t a
+  (:?)   :: Rule t (t -> a) -> Text     -> Rule t a
+  (:!)   :: Rule t (a -> b) -> Entity a -> Rule t b
+  Reduce :: a                           -> Rule t a
 
 infixl 9 :>, :., :?, :!
 
 noWrap :: Rule t (a -> a)
-noWrap = R id
+noWrap = Reduce id
 
 fresh :: MTL.MonadState Int m => m String
 fresh = do
@@ -89,7 +89,7 @@ toPoints = \case
       (pts, Func.Func f args) ->
         (Point.NonTerm e : pts, Func.Func f (True : args))
 
-  R a -> do
+  Reduce a -> do
     ([], Func.Func (unsafeCoerce a) [])
 
 grammar
