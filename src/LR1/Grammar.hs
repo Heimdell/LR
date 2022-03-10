@@ -45,3 +45,6 @@ instance Get LR1.Grammar.T NonTerm.T (Set Rule.T) where
 
 firstRule :: LR1.Grammar.T -> Rule.T
 firstRule grammar = head $ Set.toList $ grammar ? NonTerm.Start
+
+fromRules :: [] Rule.T -> LR1.Grammar.T
+fromRules = foldr addInternal LR1.Grammar.empty

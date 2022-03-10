@@ -15,18 +15,46 @@ import LR1.Parser  qualified as Parser
 import LR1.Point (e, cat)
 import LR1.State   qualified as State
 import LR1.Term    qualified as Term
+import LR1.Typed   qualified as Typed
+import LR1.Typed (Rule (..), clause, clauseS)
+
+data AST
+  = Plus AST AST
+  | Mult AST AST
+  | Num  String
+  deriving stock Show
 
 main :: IO ()
 main = do
   let
-    grammar = Grammar.empty
-      & Grammar.add Start    "start"  [e "Expr"]
-      & Grammar.add "Expr"   "plus"   [e "Expr", "+", e "Factor"]
-      & Grammar.add "Expr"   "factor" [e "Factor"]
-      & Grammar.add "Factor" "mult"   [e "Factor", "*", e "Term"]
-      & Grammar.add "Factor" "term"   [e "Term"]
-      & Grammar.add "Term"   "grp"    ["(", e "Expr", ")"]
-      & Grammar.add "Term"   "num"    [cat "num"]
+    (grammar, mapping, proxy) = Typed.grammar mdo
+      start <- Typed.clauseS
+        [ E expr (R id) ]
+
+      expr <- Typed.clause
+        [ E expr (T "+" (E factor (R \a _ b -> Plus a b)))
+        , E factor (R id)
+        ]
+
+      factor <- Typed.clause
+        [ E factor (T "*" (E term (R \a _ b -> Mult a b)))
+        , E term   (R id)
+        ]
+
+      term <- Typed.clause
+        [ T "(" (E expr (T ")" (R \_ a _ -> a)))
+        , C "num" (R id)
+        ]
+
+      return start
+    -- grammar = Grammar.empty
+    --   & Grammar.add Start    "start"  [e "Expr"]
+    --   & Grammar.add "Expr"   "plus"   [e "Expr", "+", e "Factor"]
+    --   & Grammar.add "Expr"   "factor" [e "Factor"]
+    --   & Grammar.add "Factor" "mult"   [e "Factor", "*", e "Term"]
+    --   & Grammar.add "Factor" "term"   [e "Term"]
+    --   & Grammar.add "Term"   "grp"    ["(", e "Expr", ")"]
+    --   & Grammar.add "Term"   "num"    [cat "num"]
 
     first = FIRST.make grammar
 
@@ -65,6 +93,6 @@ main = do
 
     -- run parser
     res <- Parser.run goto action input
-    liftIO $ print res
+    liftIO $ print $ Parser.reduce proxy mapping Num res
 
   return ()

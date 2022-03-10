@@ -5,6 +5,7 @@ dependencies:
   - containers
   - exceptions
   - text
+  - ghc-prim
 
 default-extensions:
   - AllowAmbiguousTypes
@@ -35,6 +36,7 @@ default-extensions:
   - OverloadedStrings
   - PatternSynonyms
   - RankNTypes
+  - RecursiveDo
   - ScopedTypeVariables
   - StandaloneDeriving
   - TemplateHaskell
