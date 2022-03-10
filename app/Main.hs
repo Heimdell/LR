@@ -29,21 +29,21 @@ main = do
   let
     (grammar, mapping, proxy) = Typed.grammar mdo
       start <- Typed.clauseS
-        [ expr `E` R id ]
+        [ E expr (R id) ]
 
       expr <- Typed.clause
-        [ expr   `E` "+" `T` factor `E` R \a _ b -> Plus a b
-        , factor `E` R id
+        [ E expr (T "+" (E factor (R \a _ b -> Plus a b)))
+        , E factor (R id)
         ]
 
       factor <- Typed.clause
-        [ factor `E` "*" `T` term `E` R \a _ b -> Mult a b
-        , term   `E` R id
+        [ E factor (T "*" (E term (R \a _ b -> Mult a b)))
+        , E term   (R id)
         ]
 
       term <- Typed.clause
-        [ "(" `T` expr `E` ")" `T` R \_ a _ -> a
-        , "num" `C` R id
+        [ T "(" (E expr (T ")" (R \_ a _ -> a)))
+        , C "num" (R id)
         ]
 
       return start
