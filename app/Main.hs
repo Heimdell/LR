@@ -3,7 +3,6 @@ import Data.Maybe (fromMaybe)
 import Text.Read ()
 
 import LR1.Term qualified as Term
-import LR1.Lexeme qualified as Lexeme
 import LR1
 
 data JSON
@@ -16,11 +15,10 @@ data JSON
 lexer :: String -> [(Term.T, (), String)]
 lexer = (<> [(Term.EndOfStream, (), "")]) . map lex' . words
   where
-    t = Term.Term . Lexeme.Concrete
     lex' = \case
-      s@('"'  : _) -> (t "string", (), s)
-      s@('\'' : _) -> (t "string", (), s)
-      s            -> (t (Text.pack s), (), s)
+      s@('"'  : _) -> (Term.Term "string",      (), s)
+      s@('\'' : _) -> (Term.Term "string",      (), s)
+      s            -> (Term.Term (Text.pack s), (), s)
 
 main :: IO ()
 main = do

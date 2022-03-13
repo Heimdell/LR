@@ -3,10 +3,10 @@ module LR1.Term where
 import Data.String (IsString (fromString))
 import GHC.Generics (Generic)
 
-import LR1.Lexeme qualified as Lexeme
+import Data.Text (Text)
 
 data T
-  = Term Lexeme.T
+  = Term Text
   | EndOfStream
   deriving stock (Eq, Ord, Generic)
 
