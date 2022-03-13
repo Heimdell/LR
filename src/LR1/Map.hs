@@ -76,6 +76,8 @@ foldrWithKey f z (Map m) = Impl.foldrWithKey f z m
 null :: LR1.Map.T k v -> Bool
 null (Map m) = Impl.null m
 
+-- | `Impl.size`.
+--
 size :: LR1.Map.T k v -> Int
 size (Map m) = Impl.size m
 
@@ -91,11 +93,17 @@ infixr 7 ==>
 empty :: LR1.Map.T k v
 empty = Map Impl.empty
 
+-- | `(Impl.!)`.
+--
 (!) :: Ord k => LR1.Map.T k v -> k -> v
 Map m ! k = m Impl.! k
 
+-- | `Impl.member`.
+--
 member :: Ord k => k -> LR1.Map.T k v -> Bool
 member k (Map m) = Impl.member k m
 
+-- | `Impl.adjust`.
+--
 adjust :: Ord k => (v -> v) -> k -> LR1.Map.T k v -> LR1.Map.T k v
 adjust f k (Map m) = Map (Impl.adjust f k m)

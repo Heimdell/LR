@@ -1,13 +1,19 @@
+{- |
+  A parsing rule.
+-}
 module LR1.Rule where
 
 import LR1.NonTerm qualified as NonTerm
 import LR1.Point   qualified as Point
-import qualified LR1.Func as Func
+import LR1.Func    qualified as Func
 
+{- |
+  A parsing rule.
+-}
 data T = Rule
-  { entity :: NonTerm.T
-  , points :: [] Point.T
-  , label  :: Func.T
+  { entity :: NonTerm.T   -- ^ Entity it reduces into.
+  , points :: [] Point.T  -- ^ Rule points.
+  , label  :: Func.T      -- ^ Reducing functions.
   }
   deriving stock (Eq, Ord)
 

@@ -1,3 +1,6 @@
+{- |
+  Atomic element of the rule - terminal or non-terminal.
+-}
 module LR1.Point where
 
 import Data.String (IsString (fromString))
@@ -5,9 +8,12 @@ import Data.String (IsString (fromString))
 import LR1.NonTerm qualified as NonTerm
 import LR1.Term    qualified as Term
 
+{- |
+  Element of the rule.
+-}
 data T
-  = Term Term.T
-  | NonTerm NonTerm.T
+  = Term    Term.T     -- ^ A terminal.
+  | NonTerm NonTerm.T  -- ^ A non-terminal (or "entity").
   deriving stock (Eq, Ord)
 
 instance Show LR1.Point.T where
@@ -17,7 +23,3 @@ instance Show LR1.Point.T where
 
 instance IsString LR1.Point.T where
   fromString = Term . fromString
-
-isEntity :: LR1.Point.T -> Bool
-isEntity NonTerm {} = True
-isEntity _          = False

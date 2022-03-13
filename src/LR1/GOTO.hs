@@ -1,10 +1,17 @@
+
+{- |
+  GOTO table, controls state transitions in the parser.
+
+  Answers the question: If we are in state @N@ and we have a point @X@ on top of
+  the stack, which state should we go?
+-}
 module LR1.GOTO where
 
 import Control.Monad (foldM)
 import Control.Monad.State qualified as MTL
 import Data.Function (on, (&))
 import Data.List (groupBy, sortBy)
-import Data.Maybe (mapMaybe, fromJust)
+import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -13,23 +20,27 @@ import Data.Traversable (for)
 import GHC.Generics (Generic)
 
 import LR1.FIRST   qualified as FIRST
-import LR1.Fixpoint (one, Get ((?)), set)
 import LR1.Grammar qualified as Grammar
 import LR1.Item    qualified as Item
 import LR1.Map     qualified as Map
 import LR1.Point   qualified as Point
 import LR1.State   qualified as State
+import LR1.Utils (one, Get ((?)), set)
 
+{- |
+  A map (`State.Index` , `Point.T`) -> `State.Index`.
+-}
 newtype T = GOTO
   { unwrap :: Map.T State.Index (Map.T Point.T State.Index)
   }
   deriving stock (Show, Generic)
 
-newtype Typed t a = Typed T
-
 instance Get LR1.GOTO.T (State.Index, Point.T) State.Index where
   GOTO m ? (i, t) = m Map.! i Map.! t
 
+{- |
+  Generate GOTO table from grammar and FIRST table.
+-}
 make :: forall m. State.HasReg m => Grammar.T -> FIRST.T -> m LR1.GOTO.T
 make grammar first = do
   state0 <- State.firstState grammar first
@@ -60,12 +71,12 @@ make grammar first = do
         -- (entity said item must accept to proceed)
         itemsByNextPoint =
           materialized
-            & State.items               -- get Item set
-            & Set.toList                -- get Item list
-            & mapMaybe Item.uncons      -- select (Locus, Next) from non-reducing Items
-            & sortBy (on compare fst)   -- groupBy can only work with sorted ._.
-            & groupBy (on (==) fst)     -- group into (Locus, Next)
-                                        -- v-- turn [(Locus, Next)] into (Locus, [Next])
+            & State.items                 -- get Item set
+            & Set.toList                  -- get Item list
+            & mapMaybe Item.locusAndNext  -- select (Locus, Next) from non-reducing Items
+            & sortBy (on compare fst)     -- groupBy can only work with sorted ._.
+            & groupBy (on (==) fst)       -- group into (Locus, Next)
+                                          -- v-- turn [(Locus, Next)] into (Locus, [Next])
             & fmap do \pairs@((point, _) : _) -> (point, set (map snd pairs))
 
       -- for each (Locus, [Next]) generate new state as CLOSURE([Next])
@@ -87,9 +98,9 @@ make grammar first = do
       let goto' = Map.adjust (Map.insert point nextIndex) index goto
       return (pool', GOTO goto')
 
-expected :: LR1.GOTO.T -> State.Index -> Map.T Point.T State.Index
-expected (GOTO goto) index = goto Map.! index
-
+{- |
+  Print GOTO table for debug.
+-}
 dump :: State.HasReg m => Text -> LR1.GOTO.T -> m String
 dump header (GOTO goto) = do
   let
@@ -111,6 +122,3 @@ dump header (GOTO goto) = do
     & fmap showBlock
     & (Text.unpack header :)
     & unlines
-
-(!?) :: [(Int, Int)] -> State.T -> State.T
-table !? state = state { State.index = fromJust $ lookup (State.index state) table }

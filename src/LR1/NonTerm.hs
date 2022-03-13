@@ -1,12 +1,19 @@
+
+{- |
+  A nonterminal - or "entity".
+-}
 module LR1.NonTerm where
 
 import Data.String (IsString (fromString))
 import Data.Text (Text)
 import Data.Text qualified as Text
 
+{- |
+  A nonterminal.
+-}
 data T
-  = NonTerm Text
-  | Start
+  = NonTerm Text  -- ^ Named one.
+  | Start         -- ^ Starting one.
   deriving stock (Eq, Ord)
 
 instance Show LR1.NonTerm.T where
