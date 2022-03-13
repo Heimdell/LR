@@ -3,20 +3,19 @@ module LR1.Item where
 import Data.Foldable (toList)
 import Data.Function ((&))
 import Data.Set (Set)
-import Data.Text (Text)
-import Data.Text qualified as Text
 
 import LR1.NonTerm  qualified as NonTerm
 import LR1.Point    qualified as Point
 import LR1.Position qualified as Position
 import LR1.Rule     qualified as Rule
 import LR1.Term     qualified as Term
+import qualified LR1.Func as Func
 
 data T = Item
   { entity    :: NonTerm.T
   , pos       :: Position.T
   , lookahead :: Set Term.T
-  , label     :: Text
+  , label     :: Func.T
   }
   deriving stock (Eq, Ord)
 
@@ -25,7 +24,7 @@ instance Show LR1.Item.T where
       show entity
       <> " = " <> show pos
       <> "    {" <> (lookahead & toList & fmap show & unwords)
-      <> "}    {" <> Text.unpack label <> "}"
+      <> "}    {" <> show label <> "}"
 
 start :: Set Term.T -> Rule.T -> LR1.Item.T
 start lookahead rule@Rule.Rule {entity, label} = Item

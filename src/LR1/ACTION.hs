@@ -15,11 +15,12 @@ import LR1.NonTerm qualified as NonTerm
 import LR1.Point   qualified as Point
 import LR1.State   qualified as State
 import LR1.Term    qualified as Term
+import qualified LR1.Func as Func
 
 data Action
   = Accept
   | Reduce
-      { label  :: Text
+      { label  :: Func.T
       , entity :: NonTerm.T
       , len    :: Int
       }
@@ -39,6 +40,8 @@ newtype T = ACTION
   { unwrap :: Map.T State.Index (Map.T Term.T Action)
   }
   deriving newtype (Semigroup, Monoid, Generic)
+
+newtype Typed t a = Typed T
 
 instance Get LR1.ACTION.T (State.Index, Term.T) Action where
   ACTION m ? (i, t) = m Map.! i Map.! t
@@ -110,7 +113,7 @@ expected (ACTION actions) index = actions Map.! index
 instance Show Action where
   show = \case
     Accept -> "Accept"
-    Reduce {label, entity, len} -> "Reduce " <> Text.unpack label <> "/" <> show len <> " -> " <> show entity
+    Reduce {label, entity, len} -> "Reduce " <> show label <> "/" <> show len <> " -> " <> show entity
     Shift n -> "Shift " <> show n
     Conflict ac ac' -> "Conflict (" <> show ac <> ", " <> show ac' <> ")"
     Empty -> "Empty"

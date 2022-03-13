@@ -5,13 +5,13 @@ import Data.Foldable qualified as Set
 import Data.Function ((&))
 import Data.Maybe (fromMaybe)
 import Data.Set (Set)
-import Data.Text (Text)
 
 import LR1.Fixpoint (one, (==>), Get ((?)))
 import LR1.Map     qualified as Map
 import LR1.NonTerm qualified as NonTerm
 import LR1.Point   qualified as Point
 import LR1.Rule    qualified as Rule
+import qualified LR1.Func as Func
 
 data T = Grammar
   { rules :: Map.T NonTerm.T (Set Rule.T)
@@ -35,7 +35,7 @@ addInternal rule grammar@Grammar {rules, order} =
 empty :: LR1.Grammar.T
 empty = Grammar mempty []
 
-add :: NonTerm.T -> Text -> [] Point.T -> LR1.Grammar.T -> LR1.Grammar.T
+add :: NonTerm.T -> Func.T -> [] Point.T -> LR1.Grammar.T -> LR1.Grammar.T
 add entity label points = addInternal $ Rule.Rule {entity, label, points}
 
 instance Get LR1.Grammar.T NonTerm.T (Set Rule.T) where

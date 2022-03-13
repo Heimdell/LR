@@ -1,98 +1,67 @@
-
-import Data.Function ((&))
-
-import Control.Monad.State
 import Data.Text qualified as Text
-import Text.Read
+import Data.Maybe (fromMaybe)
+import Text.Read ()
 
-import LR1.ACTION  qualified as ACTION
-import LR1.FIRST   qualified as FIRST
-import LR1.GOTO    qualified as GOTO
-import LR1.Grammar qualified as Grammar
-import LR1.Lexeme  qualified as Lexeme
-import LR1.NonTerm (T(Start))
-import LR1.Parser  qualified as Parser
-import LR1.Point (e, cat)
-import LR1.State   qualified as State
-import LR1.Term    qualified as Term
-import LR1.Typed   qualified as Typed
-import LR1.Typed (Rule (..), clause, clauseS, noWrap)
+import LR1.Term qualified as Term
+import LR1.Lexeme qualified as Lexeme
+import LR1
 
-data Expr
-  = Plus   Expr Factor
-  | Factor Factor
+data JSON
+  = Array  [JSON]
+  | Object [(String, JSON)]
+  | String   String
+  | Null
   deriving stock Show
 
-data Factor
-  = Mult Factor Term
-  | Term Term
-  deriving stock Show
-
-data Term
-  = Expr Expr
-  | Num  String
-  deriving stock Show
+lexer :: String -> [(Term.T, (), String)]
+lexer = (<> [(Term.EndOfStream, (), "")]) . map lex' . words
+  where
+    t = Term.Term . Lexeme.Concrete
+    lex' = \case
+      s@('"'  : _) -> (t "string", (), s)
+      s@('\'' : _) -> (t "string", (), s)
+      s            -> (t (Text.pack s), (), s)
 
 main :: IO ()
 main = do
   let
-    (grammar, mapping) = Typed.grammar mdo
-      start <- Typed.clauseS @Expr expr
+    list = fromMaybe []
 
-      expr <- Typed.clause @Expr
-        [ Reduce Plus   :! expr :. "+" :! factor
-        , Reduce Factor :! factor
+    json = LR1.compile $ grammar mdo
+      start <- clauseS @JSON expr
+
+      expr <- clause @JSON
+        [ Reduce Array  &! array
+        , Reduce Object &! object
+        , Reduce String &# "string"
+        , Reduce Null   &. "null"
         ]
 
-      factor <- Typed.clause @Factor
-        [ Reduce Mult :! factor :. "*" :! term
-        , Reduce Term :! term
+      array <- clause @[JSON]
+        [ Reduce list &. "[" &? exprs &. "]"
         ]
 
-      term <- Typed.clause @Term
-        [ Reduce Expr :. "(" :! expr :. ")"
-        , Reduce Num  :? "num"
+      object <- clause @[(String, JSON)]
+        [ Reduce list &. "{" &? pairs &. "}"
         ]
+
+      pair <- clause @(String, JSON)
+        [ Reduce (,) &# "string" &. ":" &! expr
+        ]
+
+      exprs <- sepBy expr ","
+      pairs <- sepBy pair ","
 
       return start
 
-    first = FIRST.make grammar
+  -- lex input
+  putStrLn "Input something, like \"[ 'a' , null , { 'b' : [ ] , 'c' : null } , 'd' ]\""
+  str <- getLine
+  let input = lexer str
+  print input
 
-  print grammar
-
-  flip runStateT State.emptyReg $ do
-    -- build tables
-    goto   <- GOTO.make grammar first
-    action <- ACTION.make goto
-
-    let conflicts = ACTION.conflicts action
-
-    -- check conflicts
-    unless (null $ ACTION.unwrap conflicts) do
-      log' <- ACTION.dump "CONFLICTS" conflicts
-      liftIO $ putStrLn log'
-      error "conflicts"
-
-    -- lexing
-    let
-      t = Term.Term . Lexeme.Concrete
-      d = Term.Term . Lexeme.Category
-
-      lexer = (<> [(Term.EndOfStream, "")]) . map lex' . words
-
-      lex' s
-        | Just (_ :: Int) <- readMaybe s = (d "num", s)
-        | otherwise                      = (t (Text.pack s), s)
-
-    -- lex input
-    liftIO $ putStrLn "Input something, like \"1 * 2 + 3 * ( 4 + 5 ) * 6\""
-    str <- liftIO getLine
-
-    let input = lexer str
-    liftIO $ print input
-
-    -- run parser
-    res <- Parser.run goto action input
-    liftIO $ print $ Parser.reduce mapping res
+  -- run parser
+  res <- LR1.parse json input
+  print res
 
   return ()

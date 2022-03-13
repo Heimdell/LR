@@ -25,6 +25,8 @@ newtype T = GOTO
   }
   deriving stock (Show, Generic)
 
+newtype Typed t a = Typed T
+
 instance Get LR1.GOTO.T (State.Index, Point.T) State.Index where
   GOTO m ? (i, t) = m Map.! i Map.! t
 

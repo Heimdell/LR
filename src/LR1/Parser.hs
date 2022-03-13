@@ -3,11 +3,6 @@ module LR1.Parser where
 import Control.Monad (foldM, unless)
 import Control.Monad.Catch qualified as MTL
 import Data.Data (Typeable)
-import Data.Map (Map, (!))
-import Data.Proxy (Proxy (..))
-import Data.Text (Text)
-import Data.Text qualified as Text
-import Data.Tree (Tree (..), drawTree)
 
 import LR1.ACTION qualified as ACTION
 import LR1.Fixpoint (Get((?)))
@@ -18,51 +13,39 @@ import LR1.State  qualified as State
 import LR1.Term   qualified as Term
 import LR1.Func   qualified as Func
 import Unsafe.Coerce (unsafeCoerce)
+import Data.List (intercalate)
 
-data ParseTree a
-  = Leaf a
-  | Join Text [ParseTree a]
-  deriving stock Functor
-
-reduce :: (Proxy b, Map Text Func.T) -> ParseTree a -> b
-reduce (p, ctors) = \case
-  Leaf a -> unsafeCoerce a
-  Join f args -> Func.call (ctors ! f) (map (reduce (p, ctors)) args)
-
-instance Show a => Show (ParseTree a) where
-  show = drawTree . toTree . fmap show
-    where
-      toTree = \case
-        Leaf a -> Node a []
-        Join t ts -> Node (Text.unpack t) (map toTree ts)
-
-data Expected a = Expected [Term.T] Term.T a
-  deriving stock (Show)
+data Expected a pos = Expected [Term.T] pos Term.T a
   deriving anyclass (MTL.Exception)
 
-run :: forall a m. (Show a, Typeable a) => (State.HasReg m, MTL.MonadThrow m) => GOTO.T -> ACTION.T -> [(Term.T, a)] -> m (ParseTree a)
+instance (Show a, Show pos) => Show (Expected a pos) where
+  show = \case
+    Expected ts pos t a ->
+      "Unexpected term " <> show a <> " (" <> show t <> ") at position " <> show pos <> ", expected any of those: " <> intercalate ", " (map (show.show) ts)
+
+run :: forall a t pos m. (Show t, Typeable t, Show pos, Typeable pos) => (State.HasReg m, MTL.MonadThrow m) => GOTO.T -> ACTION.T -> [(Term.T, pos, t)] -> m a
 run goto action = fmap (head . snd) <$> foldM consume ([0], [])
   where
-    consume :: ([State.Index], [ParseTree a]) -> (Term.T, a) -> m ([State.Index], [ParseTree a])
-    consume (top : states, values) (term, a) = do
+    consume :: ([State.Index], [a]) -> (Term.T, pos, t) -> m ([State.Index], [a])
+    consume (top : states, values) (term, pos, a) = do
       let expected = ACTION.expected action top
 
       unless (Map.member term expected) do
-        MTL.throwM $ Expected (Map.keys expected) term a
+        MTL.throwM $ Expected (Map.keys expected) pos term a
 
       case action ? (top, term) of
         ACTION.Accept -> do
           return (states, values)
 
-        ACTION.Reduce txt t n -> do
-          let top' : states' = drop n (top : states)
-          let (taken, rest) = splitAt n values
-          let states'' = goto ? (top', Point.NonTerm t) : top' : states'
-          let values'  = Join txt (reverse taken) : rest
-          consume (states'', values') (term, a)
+        ACTION.Reduce func entity size -> do
+          let top' : states' = drop size (top : states)
+          let (taken, rest) = splitAt size values
+          let states'' = goto ? (top', Point.NonTerm entity) : top' : states'
+          let values'  = Func.call func (reverse taken) : rest
+          consume (states'', values') (term, pos, a)
 
-        ACTION.Shift n -> do
-          return (n : top : states, Leaf a : values)
+        ACTION.Shift state -> do
+          return (state : top : states, unsafeCoerce a : values)
 
         ACTION.Conflict _ _ -> error "LR(1) parser can't handle conflicts"
         ACTION.Empty -> error "how?"
