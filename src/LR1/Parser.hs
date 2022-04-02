@@ -3,7 +3,7 @@
 -}
 module LR1.Parser where
 
-import Control.Monad (foldM, unless)
+import Control.Monad (unless)
 import Control.Monad.Catch qualified as MTL
 import Data.Data (Typeable)
 import Data.List (intercalate)
@@ -17,6 +17,9 @@ import LR1.Point  qualified as Point
 import LR1.State  qualified as State
 import LR1.Term   qualified as Term
 import LR1.Utils (Get((?)))
+import qualified Control.Monad.RWS as MTL
+import Data.Foldable (for_)
+import qualified Control.Monad.State as MTL
 
 {- |
   Thrown on unexpected terms.
@@ -43,17 +46,24 @@ run
      , Typeable t
      , Show pos
      , Typeable pos
-     , State.HasReg m
+     , MTL.MonadReader (GOTO.T, ACTION.T) m
      , MTL.MonadThrow m
+     , MTL.MonadFail m
      )
-  => GOTO.T              -- ^ GOTO table.
-  -> ACTION.T            -- ^ ACTION table.
-  -> [(Term.T, pos, t)]  -- ^ Lexed output.
+  => [(Term.T, pos, t)]  -- ^ Lexed output.
   -> m a
-run goto action = fmap (head . snd) <$> foldM consume ([0], [])
+run input = do
+  state' <- MTL.execStateT
+    do for_ input consume
+    ([0], [])
+
+  return $ (head . snd) state'
   where
-    consume :: ([State.Index], [a]) -> (Term.T, pos, t) -> m ([State.Index], [a])
-    consume (top : states, values) (term, pos, a) = do
+    consume :: (Term.T, pos, t) -> MTL.StateT ([State.Index], [a]) m ()
+    consume (term, pos, a) = do
+      (top : states, values) <- MTL.get
+      (goto, action) <- MTL.ask
+
       let expected = ACTION.expected action top
 
       unless (Set.member term expected) do
@@ -61,19 +71,19 @@ run goto action = fmap (head . snd) <$> foldM consume ([0], [])
 
       case action ? (top, term) of
         ACTION.Accept -> do
-          return (states, values)
+          MTL.put (states, values)
 
         ACTION.Reduce func entity size -> do
           let top' : states' = drop size (top : states)
-          let (taken, rest) = splitAt size values
-          let states'' = goto ? (top', Point.NonTerm entity) : top' : states'
-          let values'  = Func.call func (reverse taken) : rest
-          consume (states'', values') (term, pos, a)
+          let (taken, rest)  = splitAt size values
+          let top''          = goto ? (top', Point.NonTerm entity)
+          let states''       = top'' : top' : states'
+          let values'        = Func.call func (reverse taken) : rest
+          MTL.put (states'', values')
+          consume (term, pos, a)
 
         ACTION.Shift state -> do
-          return (state : top : states, unsafeCoerce a : values)
+          MTL.put (state : top : states, unsafeCoerce a : values)
 
-        ACTION.Conflict _ _ -> error "LR(1) parser can't handle conflicts"
+        ACTION.Conflict _ _ -> error "LR(1) driver can't handle conflicts"
         ACTION.Empty -> error "how?"
-
-    consume _ _ = error "parser state is corrupted"

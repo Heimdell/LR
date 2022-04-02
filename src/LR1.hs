@@ -101,6 +101,7 @@ import Control.Monad
 import Control.Monad.State (evalStateT, get, evalState)
 import Data.Data (Typeable)
 import Control.Monad.Catch (MonadThrow)
+import Control.Monad.Reader (ReaderT(runReaderT))
 
 {- |
   ACTION/GOTO tables and state registry for parser to use.
@@ -125,7 +126,7 @@ compile (Grammar grammar') = flip evalState State.emptyReg  do
 {- |
   Run parser using prebuilt tables on list of triples (lexemeType, position, lexeme).
 -}
-parse :: (MonadIO m, MonadThrow m, Show t, Typeable t, Show pos, Typeable pos) => Tables t a -> [(Term.T, pos, t)] -> m a
+parse :: (MonadIO m, MonadThrow m, MonadFail m, Show t, Typeable t, Show pos, Typeable pos) => Tables t a -> [(Term.T, pos, t)] -> m a
 parse Tables {action, goto, reg} input = do
   flip evalStateT reg do
     let conflicts = ACTION.conflicts action
@@ -137,4 +138,4 @@ parse Tables {action, goto, reg} input = do
       error "conflicts"
 
     -- lexing
-    Parser.run goto action input
+    runReaderT (Parser.run input) (goto, action)
