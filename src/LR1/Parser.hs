@@ -8,7 +8,6 @@ import Control.Monad.Catch qualified as MTL
 import Data.Data (Typeable)
 import Data.List (intercalate)
 import Data.Set qualified as Set
-import Unsafe.Coerce (unsafeCoerce)
 
 import LR1.ACTION qualified as ACTION
 import LR1.Func   qualified as Func
@@ -20,6 +19,7 @@ import LR1.Utils (Get((?)))
 import qualified Control.Monad.RWS as MTL
 import Data.Foldable (for_)
 import qualified Control.Monad.State as MTL
+import Data.Dynamic
 
 {- |
   Thrown on unexpected terms.
@@ -41,7 +41,7 @@ instance (Show a, Show pos) => Show (Expected a pos) where
   `error`.
 -}
 run
-  :: forall a t pos m
+  :: forall t pos m
   .  ( Show t
      , Typeable t
      , Show pos
@@ -49,9 +49,10 @@ run
      , MTL.MonadReader (GOTO.T, ACTION.T) m
      , MTL.MonadThrow m
      , MTL.MonadFail m
+     , MTL.MonadIO m
      )
   => [(Term.T, pos, t)]  -- ^ Lexed output.
-  -> m a
+  -> m Dynamic
 run input = do
   state' <- MTL.execStateT
     do for_ input consume
@@ -59,8 +60,9 @@ run input = do
 
   return $ (head . snd) state'
   where
-    consume :: (Term.T, pos, t) -> MTL.StateT ([State.Index], [a]) m ()
+    consume :: (Term.T, pos, t) -> MTL.StateT ([State.Index], [Dynamic]) m ()
     consume (term, pos, a) = do
+      MTL.liftIO $ print (term, pos, a)
       (top : states, values) <- MTL.get
       (goto, action) <- MTL.ask
 
@@ -69,6 +71,7 @@ run input = do
       unless (Set.member term expected) do
         MTL.throwM $ Expected (Set.toList expected) pos term a
 
+      MTL.liftIO $ print (action ? (top, term))
       case action ? (top, term) of
         ACTION.Accept -> do
           MTL.put (states, values)
@@ -78,12 +81,13 @@ run input = do
           let (taken, rest)  = splitAt size values
           let top''          = goto ? (top', Point.NonTerm entity)
           let states''       = top'' : top' : states'
+          MTL.liftIO $ print (func, reverse taken)
           let values'        = Func.call func (reverse taken) : rest
           MTL.put (states'', values')
           consume (term, pos, a)
 
         ACTION.Shift state -> do
-          MTL.put (state : top : states, unsafeCoerce a : values)
+          MTL.put (state : top : states, toDyn a : values)
 
         ACTION.Conflict _ _ -> error "LR(1) driver can't handle conflicts"
         ACTION.Empty -> error "how?"

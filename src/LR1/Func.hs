@@ -3,8 +3,11 @@
 -}
 module LR1.Func where
 
-import GHC.Types (Any)
-import Unsafe.Coerce (unsafeCoerce)
+import Data.Dynamic
+import Data.Proxy
+import qualified Data.List.NonEmpty as NE
+import Data.Typeable (typeRep)
+import Debug.Trace
 
 {- |
   Wrap a function and list of argument manipulators.
@@ -14,7 +17,7 @@ import Unsafe.Coerce (unsafeCoerce)
 
   This is why we have `Act` - argument manipulators.
 -}
-data T = Func Any [Act]
+data T = Func Dynamic [Act]
 
 instance Show LR1.Func.T where
   show (Func _ args) = show =<< args
@@ -22,18 +25,20 @@ instance Show LR1.Func.T where
 {- |
   Argument manipulators.
 -}
-data Act
-  = Id     -- ^ Use argument as-is.
-  | No     -- ^ Insert `Nothing` as next argument.
-  | None   -- ^ Insert `[]` as next argument.
-  | FJust  -- ^ Use next argument wrapped in `Just`.
-  | Drop   -- ^ Ignore next argument.
+data Act where
+  Id :: Act     -- ^ Use argument as-is.
+  No :: Typeable a => Proxy a -> Act     -- ^ Insert `Nothing` as next argument.
+  None :: Typeable a => Proxy a -> Act   -- ^ Insert `[]` as next argument.
+  Some :: Typeable a => Proxy a -> Act   -- ^ Insert `[]` as next argument.
+  FJust :: Act  -- ^ Use next argument wrapped in `Just`.
+  Drop :: Act  -- ^ Ignore next argument.
 
 instance Show Act where
   show = \case
     Id -> "."
-    No -> "-"
-    None -> "0"
+    No _ -> "-"
+    None _ -> "0"
+    Some _ -> "1"
     FJust -> "+"
     Drop -> "_"
 
@@ -57,17 +62,29 @@ instance Ord T where
   This is used in the parser driver module. If you have bypassed the typed
   interface, you can potentially indirecly use that to kill the runtime.
 -}
-call :: T -> [a] -> b
-call (Func f _) [] = unsafeCoerce f
-call (Func f (Id    : rest)) (a : as) = call (Func (f `unsafeCoerce` a) rest) as
-call (Func f (No    : rest)) (a : as) = call (Func (f `unsafeCoerce` Nothing) rest) (a : as)
-call (Func f (None  : rest)) (a : as) = call (Func (f `unsafeCoerce` []) rest) (a : as)
-call (Func f (FJust : rest)) (a : as) = call (Func (f `unsafeCoerce` Just a) rest) as
-call (Func f (Drop  : rest)) (_ : as) = call (Func f rest) as
+call :: T -> [Dynamic] -> Dynamic
+call (Func f _) [] = trace "End"  f
+call (Func f (Id                  : rest)) (a : as) = trace "Id"    $  call (Func (f `dynApp` a)                          rest) as
+call (Func f (No   (_ :: Proxy a) : rest)) (a : as) = trace "No"    $  call (Func (f `dynApp` toDyn (Nothing :: Maybe a)) rest) (a : as)
+call (Func f (None (_ :: Proxy a) : rest)) (a : as) = trace "None"  $  call (Func (f `dynApp` toDyn ([] :: [a]))          rest) (a : as)
+call (Func f (Some (_ :: Proxy a) : rest)) (a : as) = trace "Some"  $  call (Func (f `dynApp` toDyn (neToList a :: [a]))  rest) (a : as)
+call (Func f (FJust               : rest)) (a : as) = trace "FJust" $  call (Func (f `dynApp` toDyn (Just a))             rest)      as
+call (Func f (Drop                : rest)) (_ : as) = trace "Drop"  $  call (Func  f                                      rest)      as
 call _ _ = error "?"
 
 {- |
   Wrap a function.
 -}
-func :: a -> [Act] -> LR1.Func.T
-func = Func . unsafeCoerce
+
+neToList :: forall a. Typeable a => Dynamic -> [a]
+neToList a = NE.toList $ fromDyn a $ error msg
+  where
+    msg = "Expected " <> show (typeRep (Proxy :: Proxy (NE.NonEmpty a))) <> ", got " <> show (dynTypeRep a)
+
+fromDynUnsafe :: forall a. Typeable a => Dynamic -> a
+fromDynUnsafe a = fromDyn a $ error msg
+  where
+    msg = "Expected " <> show (typeRep (Proxy :: Proxy a)) <> ", got " <> show (dynTypeRep a)
+
+func :: Typeable a => a -> [Act] -> LR1.Func.T
+func f = Func (Data.Dynamic.toDyn f)

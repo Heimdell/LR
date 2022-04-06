@@ -4,7 +4,7 @@
 module LR1.Term where
 
 import Data.String (IsString (fromString))
-import Data.Text (Text)
+import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
 
 {- |
@@ -17,7 +17,7 @@ data T
 
 instance Show LR1.Term.T where
   show = \case
-    Term le -> show le
+    Term le -> unpack le
     EndOfStream -> "$"
 
 instance IsString LR1.Term.T where

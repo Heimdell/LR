@@ -3,15 +3,15 @@
 -}
 module LR1.Rule where
 
-import LR1.NonTerm qualified as NonTerm
 import LR1.Point   qualified as Point
 import LR1.Func    qualified as Func
+import Data.Text (Text)
 
 {- |
   A parsing rule.
 -}
 data T = Rule
-  { entity :: NonTerm.T   -- ^ Entity it reduces into.
+  { entity :: Text   -- ^ Entity it reduces into.
   , points :: [] Point.T  -- ^ Rule points.
   , label  :: Func.T      -- ^ Reducing functions.
   }
@@ -22,3 +22,4 @@ instance Show LR1.Rule.T where
     show label
       <> "\t"  <> show entity
       <> " = " <> unwords (map show points)
+      <> " -> " <> show label

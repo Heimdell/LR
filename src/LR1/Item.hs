@@ -9,17 +9,17 @@ import Data.Function ((&))
 import Data.Set (Set)
 
 import LR1.Func     qualified as Func
-import LR1.NonTerm  qualified as NonTerm
 import LR1.Point    qualified as Point
 import LR1.Position qualified as Position
 import LR1.Rule     qualified as Rule
 import LR1.Term     qualified as Term
+import Data.Text (Text)
 
 {- |
   An LR(1) Item, as described in the Dragonbook.
 -}
 data T = Item
-  { entity    :: NonTerm.T   -- ^ Nonterminal it reduces into.
+  { entity    :: Text   -- ^ Nonterminal it reduces into.
   , pos       :: Position.T  -- ^ Rule points and current position.
   , lookahead :: Set Term.T  -- ^ The terminals expected after this rule is done.
   , label     :: Func.T      -- ^ The reducing function.

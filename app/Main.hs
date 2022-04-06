@@ -1,8 +1,8 @@
-import Data.Maybe (fromMaybe)
 
 import LR1.Term qualified as Term
 import LR1
 import Data.String (IsString(fromString))
+import Data.List.NonEmpty qualified as NE
 
 data JSON
   = Array  [JSON]
@@ -22,7 +22,8 @@ lexer = (<> [(Term.EndOfStream, (), "")]) . map lex' . words
 main :: IO ()
 main = do
   let
-    list = fromMaybe []
+    list Nothing = []
+    list (Just (x NE.:| xs)) = x : xs
 
     json = LR1.compile $ LR1.grammar mdo
       expr <- LR1.clause @JSON

@@ -31,7 +31,6 @@ import LR1.Func    qualified as Func
 import LR1.GOTO    qualified as GOTO
 import LR1.Item    qualified as Item
 import LR1.Map     qualified as Map
-import LR1.NonTerm qualified as NonTerm
 import LR1.Point   qualified as Point
 import LR1.State   qualified as State
 import LR1.Term    qualified as Term
@@ -47,7 +46,7 @@ data Action
     -- | Squash `len` items in both state & value stacks into `entity`, push it back.
   | Reduce
       { label  :: Func.T     -- ^ reducer function
-      , entity :: NonTerm.T  -- ^ an entity to be reduced into
+      , entity :: Text   -- ^ an entity to be reduced into
       , len    :: Int        -- ^ count of items to take
       }
 
@@ -83,8 +82,8 @@ instance Get LR1.ACTION.T (State.Index, Term.T) Action where
 
 {- | Generate ACTION table from GOTO table.
 -}
-make :: forall m. State.HasReg m => GOTO.T -> m LR1.ACTION.T
-make goto = do
+make :: forall m. State.HasReg m => Text -> GOTO.T -> m LR1.ACTION.T
+make s goto = do
   states <- MTL.gets State.indices
   return $ foldMap getActions states
   where
@@ -95,7 +94,7 @@ make goto = do
     getRuleActions index item =
       ACTION $ index ==>
         case Item.locus item of
-          Nothing | Item.entity item == NonTerm.Start ->
+          Nothing | Item.entity item == s ->
             foldMap (==> Accept) (Item.lookahead item)
 
           Nothing ->

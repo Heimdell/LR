@@ -5,7 +5,7 @@ dependencies:
   - containers
   - exceptions
   - text
-  - ghc-prim
+  # - megaparsec
 
 default-extensions:
   - AllowAmbiguousTypes

@@ -91,6 +91,7 @@ module LR1
   ) where
 import LR1.ETyped (Grammar (Grammar), grammar, clause, (&!), (&.), (&*), (&#), (&?), Rule(Reduce), sepBy)
 import LR1.Term qualified as Term
+import qualified LR1.Grammar as Grammar
 import qualified LR1.FIRST as FIRST
 import qualified LR1.State as State
 import qualified LR1.GOTO as GOTO
@@ -102,6 +103,8 @@ import Control.Monad.State (evalStateT, get, evalState)
 import Data.Data (Typeable)
 import Control.Monad.Catch (MonadThrow)
 import Control.Monad.Reader (ReaderT(runReaderT))
+import qualified LR1.Func as Func
+import Debug.Trace (traceShowM)
 
 {- |
   ACTION/GOTO tables and state registry for parser to use.
@@ -117,16 +120,18 @@ data Tables t a = Tables
 -}
 compile :: Grammar t a -> Tables t a
 compile (Grammar grammar') = flip evalState State.emptyReg  do
+  -- traceShowM grammar'
   let first = FIRST.make grammar'
+  -- traceShowM first
   goto   <- GOTO.make grammar' first
-  action <- ACTION.make goto
+  action <- ACTION.make (Grammar.s grammar') goto
   reg    <- get
   return Tables {goto, action, reg}
 
 {- |
   Run parser using prebuilt tables on list of triples (lexemeType, position, lexeme).
 -}
-parse :: (MonadIO m, MonadThrow m, MonadFail m, Show t, Typeable t, Show pos, Typeable pos) => Tables t a -> [(Term.T, pos, t)] -> m a
+parse :: (MonadIO m, MonadThrow m, MonadFail m, Show t, Typeable t, Show pos, Typeable pos, Typeable a) => Tables t a -> [(Term.T, pos, t)] -> m a
 parse Tables {action, goto, reg} input = do
   flip evalStateT reg do
     let conflicts = ACTION.conflicts action
@@ -138,4 +143,5 @@ parse Tables {action, goto, reg} input = do
       error "conflicts"
 
     -- lexing
-    runReaderT (Parser.run input) (goto, action)
+    dyn <- runReaderT (Parser.run input) (goto, action)
+    return $ Func.fromDynUnsafe dyn
