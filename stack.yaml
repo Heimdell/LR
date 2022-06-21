@@ -1,4 +1,6 @@
-resolver: lts-18.27
+resolver: nightly-2022-05-05
 
 extra-deps:
-- monoidal-containers-0.6.2.0@sha256:124941d70df5e2928b4c6db605a1d0464e68c2c6b02e426db24a40194d43821d,2219
+- shower-0.2.0.2@sha256:2c2b1cd25e4330f03ba68631b37d4346bf42644bc8e9a7a819ce605acc72bb34,1473
+
+allow-newer: true
