@@ -2,60 +2,122 @@ module AST where
 
 import Data.Text qualified as Text
 import Data.Text (Text)
-import Data.String (IsString (fromString))
+import Data.Scientific
+
+data Module = Module QName [Import] [Toplevel]
+  deriving stock (Show, Eq, Ord)
+
+data Import = Import
+  { from   :: [Name]
+  , rename :: Maybe [Name]
+  , names  :: Maybe [Name]
+  }
+  deriving stock (Show, Eq, Ord)
+
+data Toplevel
+  = TopDecl Private Decl
+  | NewType Private NewType
+  deriving stock (Show, Eq, Ord)
+
+data Private = Private | Public
+  deriving stock (Show, Eq, Ord)
+
+data NewType
+  = Opaque Name [TArg] [Variant]
+  deriving stock (Show, Eq, Ord)
+
+data Variant
+  = Variant Ctor [TField]
+  deriving stock (Show, Eq, Ord)
+
+data TField = TField Field Type
+  deriving stock (Show, Eq, Ord)
+
+data TArg = TArg Name (Maybe Kind)
+  deriving stock (Show, Eq, Ord)
+
+data Kind = Star | KArr Kind Kind
+  deriving stock (Show, Eq, Ord)
 
 data Prog
-  = Var Name
-  | Lam Name Prog
+  = Var QName
   | App Prog Prog
-  | Con Constant
-  | Let Name Prog Prog
+  | Lam [Arg] Prog
+
   | Ann Prog Type
-  deriving stock (Eq, Ord)
 
-instance Show Prog where
-  show = \case
-    Var n     -> show n
-    Lam n p   -> sexp "LAM" [show n, show p]
-    App f x   -> sexp ""    [show f, show x]
-    Con c     -> show c
-    Let x e b -> sexp "LET" [show x, show e, show b]
-    Ann p t   -> sexp "HAS-TYPE" [show p, show t]
+  | Get Prog Field
+  | Upd Prog [RDecl]
 
-sexp :: String -> [String] -> String
-sexp h t = "(" ++ h ++ " " ++ unwords t ++ ")"
+  | Inj  Ctor [RDecl]
+  | Mtc  Prog [Alt]
 
-op :: String -> String -> String -> String
-op l op' r = "(" ++ unwords [l, op', r] ++ ")"
+  | Let [Decl] Prog
+  | List [ListElem]
+  | Con Constant
+  deriving stock (Show, Eq, Ord)
 
-data Constant
-  = Unit
-  deriving stock (Eq, Ord)
+data ListElem
+  = Elem   Prog
+  | Spread Prog
+  deriving stock (Show, Eq, Ord)
 
-instance Show Constant where
-  show Unit = "UNIT"
+data RDecl
+  = Decl Decl
+  | Capt Name
+  deriving stock (Show, Eq, Ord)
+
+data Decl
+  = Val Name (Maybe Type) Prog
+  deriving stock (Show, Eq, Ord)
 
 data Type
-  = TVar Name
+  = TCon QName
+  | TVar Name
+  | TApp Type Type
   | TArr Type Type
-  | TFun Name Type
-  | TCon Name
-  deriving stock (Eq, Ord)
+  deriving stock (Show, Eq, Ord)
 
-instance Show Type where
-  show = \case
-    TArr l r -> op (show l) "~>" (show r)
-    TFun n t -> sexp "A" [show n, show t]
-    TVar t   -> show t
-    TCon t   -> show t
+data QName = QName [Name] Name
+  deriving stock (Show, Eq, Ord)
 
-data Name = Name { index :: Int, raw :: Text }
+data Name = Name Text Int
   deriving stock (Eq, Ord)
 
 fromText :: Text -> Name
-fromText = Name 0
+fromText = (`Name` 0)
 
-instance IsString Name where fromString = fromText . fromString
 instance Show Name where
-  show (Name 0 r) = Text.unpack r
-  show (Name n r) = Text.unpack r <> "'" <> show n
+  show (Name x 0) = Text.unpack x
+  show (Name x i) = Text.unpack x <> "'" <> show i
+
+data Ctor  = Ctor  QName deriving stock (Show, Eq, Ord)
+data Field = Field Name  deriving stock (Show, Eq, Ord)
+
+data Arg = Arg Name (Maybe Type) | Fix Name (Maybe Type)
+  deriving stock (Show, Eq, Ord)
+
+data Alt = Alt Pat (Maybe Prog) Prog
+  deriving stock (Show, Eq, Ord)
+
+data Pat
+  = PVar Name
+  | PPrj Ctor [PDecl]
+  | PList [PListElem]
+  | PCon Constant
+  deriving stock (Show, Eq, Ord)
+
+data PListElem
+  = PElem Pat
+  | PSpread Pat
+  deriving stock (Show, Eq, Ord)
+
+data PDecl
+  = PDecl Name Pat
+  | PCapt Name
+  deriving stock (Show, Eq, Ord)
+
+data Constant
+  = Number Scientific
+  | String Text
+  deriving stock (Show, Eq, Ord)
