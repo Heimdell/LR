@@ -77,7 +77,7 @@ arith = mdo
 
   app <- rule "App"
     [ Pos !* app !* term :=> \_ f x -> App f x
-    , Pos !* term         :=> pass
+    , Pos !* term        :=> pass
     ]
 
   term <- rule "Term"
@@ -85,7 +85,8 @@ arith = mdo
     , Pos !. "(" !* prog !. ":" !* type_ !. ")"     :=> \_ _ p _ t _ -> Ann p t
     , Pos !* qName                                  :=> \_ n         -> Var n
     , Pos !. "\\" !* args !. "=>" !* prog           :=> \_ _ as _ b  -> Lam as b
-    , Pos !* aCtor !. "{"           !. "}"          :=> \_ c _ _     -> Inj c []
+    , Pos !* aCtor                                  :=> \_ c         -> Inj c []
+    -- , Pos !* aCtor !. "{"           !. "}"          :=> \_ c _ _     -> Inj c []
     , Pos !* aCtor !. "{" !* rdecls !. "}"          :=> \_ c _ rd _  -> Inj c rd
     , Pos !* term !. "." !* field                   :=> \_ t _ f     -> Get t f
     , Pos !* term !. "with" !. "{" !* rdecls !. "}" :=> \_ t _ _ f _ -> Upd t f
@@ -127,7 +128,8 @@ arith = mdo
     ]
 
   pat <- rule "Pat"
-    [ Pos !* aCtor !. "{"           !. "}" :=> \_ c _    _ -> PPrj c []
+    [ Pos !* aCtor                         :=> \_ c        -> PPrj c []
+    -- , Pos !* aCtor !. "{"           !. "}" :=> \_ c _    _ -> PPrj c []
     , Pos !* aCtor !. "{" !* pdecls !. "}" :=> \_ c _ ds _ -> PPrj c ds
     , Pos !* constant                      :=> \_ c        -> PCon c
     , Pos !* name                          :=> \_ n        -> PVar n

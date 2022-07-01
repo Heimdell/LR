@@ -121,3 +121,7 @@ data Constant
   = Number Scientific
   | String Text
   deriving stock (Show, Eq, Ord)
+
+data QType
+  = Forall [Name] Type
+  deriving stock (Show, Eq, Ord)

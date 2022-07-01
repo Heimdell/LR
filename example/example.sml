@@ -66,7 +66,7 @@ local def fold
   = \f, z, list =>
     case list of
     | Cons { head = x, tail } => f x (fold f z tail)
-    | Nil  {}                 => z
+    | Nil                     => z
 
 (* Lambda args can be annontated. *)
 local def annotated-lambda
@@ -93,7 +93,7 @@ def filter
     | Cons { tail } =>
       filter pred tail
 
-    | Nil {} => Nil {}
+    | Nil => Nil
 
 (* Can match over constants. *)
 def fib : Int -> Int = \n =>
@@ -114,6 +114,13 @@ def fold_1
 def append
   : List a -> List a -> List a
   = \xs, ys => [... xs, ... ys]
+
+def concat
+  : List (List a) -> List a
+  = \xs =>
+    case xs of
+    | []         => []
+    | [x, ...xs] => [...x, ...concat xs]
 
 (* Branches can have when-blocks. *)
 def filter?
