@@ -55,6 +55,14 @@ data Prog
   | Let [Decl] Prog
   | List [ListElem]
   | Con Constant
+
+  | Do [Stmt] Prog
+  deriving stock (Show, Eq, Ord)
+
+data Stmt
+  = SLet    Name (Maybe Type) Prog
+  | SBind   Name (Maybe Type) Prog
+  | SInvoke Prog
   deriving stock (Show, Eq, Ord)
 
 data ListElem

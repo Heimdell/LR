@@ -86,15 +86,25 @@ arith = mdo
     , Pos !* qName                                  :=> \_ n         -> Var n
     , Pos !. "\\" !* args !. "=>" !* prog           :=> \_ _ as _ b  -> Lam as b
     , Pos !* aCtor                                  :=> \_ c         -> Inj c []
-    -- , Pos !* aCtor !. "{"           !. "}"          :=> \_ c _ _     -> Inj c []
+    , Pos !* aCtor !. "{"           !. "}"          :=> \_ c _ _     -> Inj c []
     , Pos !* aCtor !. "{" !* rdecls !. "}"          :=> \_ c _ rd _  -> Inj c rd
     , Pos !* term !. "." !* field                   :=> \_ t _ f     -> Get t f
     , Pos !* term !. "with" !. "{" !* rdecls !. "}" :=> \_ t _ _ f _ -> Upd t f
     , Pos !* constant                               :=> \_ c         -> Con c
-    , Pos !. "case" !* prog !. "of" !. "{" !. "}"   :=> \_ _ p _ _ _ -> Mtc p []
-    , Pos !. "case" !* prog !. "of" !* alts         :=> \_ _ p _ as  -> Mtc p as
+    , Pos !. "case" !* prog !. "of" !. "end"        :=> \_ _ p _ _   -> Mtc p []
+    , Pos !. "case" !* prog !. "of" !* alts !. "end":=> \_ _ p _ as _-> Mtc p as
     , Pos !. "[" !. "]"                             :=> \_ _ _       -> List []
     , Pos !. "[" !* elems !. "]"                    :=> \_ _ es _    -> List es
+    ]
+
+  stmts <- stmt `sepBy` semi
+
+  stmt <- rule "Stmt"
+    [ Pos !* name !.                 "="  !* prog :=> \_ n     _ p -> SLet  n  Nothing p
+    , Pos !* name !. ":" !* type_ !. "="  !* prog :=> \_ n _ t _ p -> SLet  n (Just t) p
+    , Pos !* name !.                 "<-" !* prog :=> \_ n     _ p -> SBind n  Nothing p
+    , Pos !* name !. ":" !* type_ !. "<-" !* prog :=> \_ n _ t _ p -> SBind n (Just t) p
+    , Pos !* prog                                 :=> \_ p         -> SInvoke          p
     ]
 
   elems <- lelem `sepBy` sep
@@ -129,7 +139,7 @@ arith = mdo
 
   pat <- rule "Pat"
     [ Pos !* aCtor                         :=> \_ c        -> PPrj c []
-    -- , Pos !* aCtor !. "{"           !. "}" :=> \_ c _    _ -> PPrj c []
+    , Pos !* aCtor !. "{"           !. "}" :=> \_ c _    _ -> PPrj c []
     , Pos !* aCtor !. "{" !* pdecls !. "}" :=> \_ c _ ds _ -> PPrj c ds
     , Pos !* constant                      :=> \_ c        -> PCon c
     , Pos !* name                          :=> \_ n        -> PVar n
@@ -235,9 +245,8 @@ arith = mdo
   ctor <- rule @_ @SourcePos "Ctor" [ Pos !. "ctor" :=> \_ (LCtor c) -> fromText c ]
   name <- rule               "Name" [ Pos !. "name" :=> \_ (LVar  c) -> fromText c ]
 
-  dot <- rule "Dot"
-    [ Pos !. "." :=> \_ _ -> ()
-    ]
+  dot  <- rule "Dot"  [ Pos !. "." :=> \_ _ -> () ]
+  semi <- rule "Semi" [ Pos !. ";" :=> \_ _ -> () ]
 
   sep <- rule "Separator"
     [ Pos !. "," :=> \_ _ -> ()
@@ -301,7 +310,7 @@ lexer = runLexer "$" (LIgnored "$")
   , terms LIgnored reserved
   ]
   where
-    reserved = "-> ( ) : , ; { } | type * let in \\ => = with case of module use as where def local T when [ ] ... . @"
+    reserved = "-> ( ) : , ; { } | type * let in \\ => = with case of module use as where def local T when [ ] ... . @ end"
     startName c = isAlpha c && isLower c
     startCtor c = isAlpha c && isUpper c
     restName  c = isAlpha c && isLower c || isDigit c || c `elem` ("-_?!'" :: String)

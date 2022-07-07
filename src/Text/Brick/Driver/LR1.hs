@@ -19,6 +19,7 @@ import Data.String
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Generics
+import GHC.Stack
 import Numeric
 
 import Debug.Trace
@@ -82,11 +83,24 @@ data Rule = MkRule
   }
   deriving stock (Generic)
 
--- | Only the @(.hash)@ is compared to speed all up.
-instance Eq  Rule where (==)    = (==)    `on` (.hash)
+instance Eq Rule where
+  a == b = a.hash == b.hash
+    && checkCollision "eq" (==) True a.entity b.entity
+    && checkCollision "eq" (==) True a.points b.points
+    && checkCollision "eq" (==) True a.mark   b.mark
 
 -- | Only the @(.hash)@ is compared to speed all up.
-instance Ord Rule where compare = compare `on` (.hash)
+instance Ord Rule where
+  compare a b = compare a.hash b.hash
+    <> checkCollision "compare" compare EQ a.entity b.entity
+    <> checkCollision "compare" compare EQ a.points b.points
+    <> checkCollision "compare" compare EQ a.mark   b.mark
+
+-- -- | Only the @(.hash)@ is compared to speed all up.
+-- instance Eq  Rule where (==)    = (==)    `on` (.hash)
+
+-- -- | Only the @(.hash)@ is compared to speed all up.
+-- instance Ord Rule where compare = compare `on` (.hash)
 
 -- | Precomputed @(.hash)@ is used instead of recalculating.
 instance Hashable Rule where
@@ -216,10 +230,24 @@ data Position = MkPosition
   deriving stock (Generic)
 
 -- | Only the @(.hash)@ is compared to speed all up.
-instance Eq  Position where (==)    = (==)    `on` (.hash)
+instance Eq Position where
+  a == b = a.hash == b.hash
+    && checkCollision "eq" (==) True a.rule      b.rule
+    && checkCollision "eq" (==) True a.pos       b.pos
+    && checkCollision "eq" (==) True a.lookahead b.lookahead
 
 -- | Only the @(.hash)@ is compared to speed all up.
-instance Ord Position where compare = compare `on` (.hash)
+instance Ord Position where
+  compare a b = compare a.hash b.hash
+    <> checkCollision "compare" compare EQ a.rule      b.rule
+    <> checkCollision "compare" compare EQ a.pos       b.pos
+    <> checkCollision "compare" compare EQ a.lookahead b.lookahead
+-- instance Eq St where
+--   a == b = a.hash == b.hash && checkCollision "==" (==) True a.positions b.positions
+
+-- -- | Only the @(.hash)@ is compared to speed all up.
+-- instance Ord St where
+--   compare a b = compare a.hash b.hash <> checkCollision "compare" compare EQ a.positions b.positions
 
 -- | Precomputed @(.hash)@ is used instead of recalculating.
 instance Hashable Position where
@@ -301,8 +329,7 @@ instance Eq St where
 
 -- | Only the @(.hash)@ is compared to speed all up.
 instance Ord St where
-  compare a b = compare a.hash b.hash
-    <> checkCollision "compare" compare EQ a.positions b.positions
+  compare a b = compare a.hash b.hash <> checkCollision "compare" compare EQ a.positions b.positions
 
 -- | Precomputed @(.hash)@ is used instead of recalculating.
 instance Hashable St where
@@ -318,7 +345,7 @@ instance Show St where
 
 {- Uncomment this for 10% slowdown.
 -}
--- checkCollision :: (Show a, Show b, Eq b) => Text -> (a -> a -> b) -> b -> a -> a -> b
+-- checkCollision :: (Show a, Show b, Eq b, HasCallStack) => Text -> (a -> a -> b) -> b -> a -> a -> b
 -- checkCollision name cmp mustBe a b = do
 --   let res = cmp a b
 --   if res /= mustBe
@@ -601,6 +628,7 @@ consume actions goto (top : states, stack) (term, pos, lexeme) = do
           & foldMap \case
               Entity e -> Set.singleton e
               _        -> Set.empty
+    traceShowM top
     Left (ParseError term pos (Map.keysSet positionsibleActions) positionsibleProductions)
 
   case positionsibleActions Map.! term of
@@ -642,7 +670,7 @@ runLR1 grammar = do
   let goto   = mkGotos grammar first
   let action = mkActions goto
   traceShow grammar $
-  -- traceShow ("GOTO", length goto.moves, "states", foldMap (Sum . length) goto.moves, "moves") $
+   traceShow (length goto.moves) $
     parse action goto start
 
 gotoStateCount :: Goto -> Int

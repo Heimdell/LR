@@ -65,8 +65,9 @@ local def fold
   : (a -> z -> z) -> z -> List a -> z
   = \f, z, list =>
     case list of
-    | Cons { head = x, tail } => f x (fold f z tail)
+    | Cons { head = x, tail } => f x (fold f z tail) a
     | Nil                     => z
+    end
 
 (* Lambda args can be annontated. *)
 local def annotated-lambda
@@ -77,7 +78,7 @@ local def annotated-lambda
 def absurd
   : Void -> a
   = \abs =>
-    case abs of { }
+    case abs of end
 
 (*
   Can pattern-match over unions.
@@ -94,6 +95,7 @@ def filter
       filter pred tail
 
     | Nil => Nil
+    end
 
 (* Can match over constants. *)
 def fib : Int -> Int = \n =>
@@ -101,6 +103,7 @@ def fib : Int -> Int = \n =>
   | 0 => 0
   | 1 => 1
   | n => add (fib (sub n 1)) (sub (n 2))
+  end
 
 (* Lists have nicer syntax. *)
 def fold_1
@@ -109,6 +112,7 @@ def fold_1
     case list of
     | [x, ... xs] => f x (fold f z tail)
     | []          => z
+    end
 
 (* In expression you can spread at any point. *)
 def append
@@ -121,6 +125,7 @@ def concat
     case xs of
     | []         => []
     | [x, ...xs] => [...x, ...concat xs]
+    end
 
 (* Branches can have when-blocks. *)
 def filter?
@@ -130,6 +135,7 @@ def filter?
     | [x, ...xs] when pred x => [x, ...filter pred xs]
     | [x, ...xs]             => filter pred xs
     | []                     => []
+    end
 
 def filter!
   : (a -> Bool) -> List a -> List a
@@ -140,6 +146,7 @@ def filter!
       | [x, ...xs] when pred x => [x, ...go xs]
       | [x, ...xs]             => go xs
       | []                     => []
+      end
     in
       go
 
@@ -151,3 +158,4 @@ def filter!?
       | [x, ...xs] when pred x => [x, ...go xs]
       | [x, ...xs]             => go xs
       | []                     => []
+      end
