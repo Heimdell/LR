@@ -164,10 +164,15 @@ find k m = maybe mempty id (Map.lookup k m)
 instance Show Grammar where
   show g =
     g.order
-      & map ruleShowTable
-      & untable
+      & groupEntities
+      & map (unlines . untable . map ruleShowTable)
       & unlines
     where
+      groupEntities =
+        map (map snd) .
+        groupBy ((==) `on` fst) .
+        map \r -> (r.entity, r)
+
       untable :: [[String]] -> [String]
       untable tbl = do
         let
