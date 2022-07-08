@@ -13,8 +13,6 @@ dependencies:
   - megaparsec
   - scientific
   - prettyprinter
-  - microlens
-  - microlens-mtl
 
 default-extensions:
   - AllowAmbiguousTypes
