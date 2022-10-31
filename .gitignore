@@ -1,3 +1,4 @@
 .stack-work
 *.prof
 *.cabal
+dist-newstyle
