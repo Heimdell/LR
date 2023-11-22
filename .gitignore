@@ -2,3 +2,6 @@
 *.prof
 *.cabal
 dist-newstyle
+lr.cabal
+stack.yaml.lock
+.stack-work

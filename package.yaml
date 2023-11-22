@@ -1,72 +1,34 @@
-name: LR
 
-dependencies:
-  - array
-  - base
-  - mtl
-  - containers
-  - unordered-containers
-  - exceptions
-  - text
-  - hashable
-  - shower
-  - megaparsec
-  - scientific
-  - prettyprinter
+name: lr
 
 default-extensions:
-  - AllowAmbiguousTypes
-  - ApplicativeDo
-  - BlockArguments
-  - ConstraintKinds
-  - DataKinds
-  - DeriveAnyClass
-  - DeriveFoldable
-  - DeriveFunctor
-  - DeriveGeneric
-  - DeriveTraversable
-  - DerivingStrategies
-  - DerivingVia
-  - DuplicateRecordFields
-  - EmptyCase
-  - FlexibleContexts
-  - FlexibleInstances
-  - FunctionalDependencies
-  - GADTs
-  - GeneralizedNewtypeDeriving
-  - ImportQualifiedPost
-  - KindSignatures
-  - LambdaCase
-  - MultiParamTypeClasses
-  - MultiWayIf
-  - NamedFieldPuns
-  - NoFieldSelectors
-  - OverloadedRecordDot
-  - OverloadedStrings
-  - PatternSynonyms
-  - QuasiQuotes
-  - RankNTypes
-  - RecursiveDo
-  - ScopedTypeVariables
-  - StandaloneDeriving
-  - TemplateHaskell
-  - TypeApplications
-  - TypeFamilies
-  - TypeOperators
-  - TypeSynonymInstances
-  - UndecidableInstances
-  - ViewPatterns
+- LambdaCase
+- BlockArguments
+- OverloadedRecordDot
+- DefaultSignatures
+- DerivingStrategies
+- DeriveFunctor
+- DeriveFoldable
+- DeriveTraversable
+- NoFieldSelectors
+- DuplicateRecordFields
+- UndecidableInstances
+- ViewPatterns
+- DeriveAnyClass
+- OverloadedStrings
 
-ghc-options: -Wall -freverse-errors -O2
+language: GHC2021
+
+dependencies:
+- base
+- containers
+- monoidal-map
+- mtl
+- text
+- hashable
+
+ghc-options: -freverse-errors
+
 library:
   source-dirs:
-    - src
-
-executables:
-  bricc:
-    main: Main
-    source-dirs:
-    - app
-
-    dependencies:
-    - LR
+  - src
