@@ -10,6 +10,7 @@ import Data.Set                       (Set)
 import Data.Set qualified as Set
 import Data.Text                      (Text)
 import qualified Data.Array as Array
+import Data.Function (on)
 
 {- |
   Rule in the form of `Entity` ::= {`Point`} @Reducer@.
@@ -20,7 +21,9 @@ data Rule = Rule
   , points  :: Array Int Point  -- ^ sequence of [non]terminals
   , reducer :: Text            -- ^ action to perform
   }
-  deriving stock (Eq, Ord)
+
+instance Eq  Rule where (==)    = (==)    `on` (.mark)
+instance Ord Rule where compare = compare `on` (.mark)
 
 {- |
   Terminals, mentioned in the rule.
