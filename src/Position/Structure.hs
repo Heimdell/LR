@@ -3,28 +3,25 @@
 -}
 module Position.Structure where
 
-import Data.Foldable                         (Foldable(toList))
-import Data.Maybe                            (listToMaybe, fromJust)
+import Data.Maybe                            (fromJust)
 import Data.Map.Monoidal                     (type (==>), (!), (==>))
 import Data.Set                              (Set)
 import Data.Set          qualified as Set
 import GHC.Records                           (HasField(..))
 
 import Fixpoint                              ((>>-))
-import Rule                                  (Rule(Rule, entity, points, mark), mkRule)
+import Rule                                  (Rule(points), mkRule)
 import Term                                  (Point(..), Entity, Term(Term))
 import Grammar                               (Grammar(first, Grammar))
 import GHC.Generics (Generically(..), Generic)
+import qualified Data.Array as Array
 
 {- |
   Position in a rule during parsing process.
 -}
 data Position = Position
-  { entity    :: Entity   -- ^ entity to be parsed
-  , lookahead :: Term     -- ^ term expected right after rule is parsed
-  , front     :: [Point]  -- ^ already parsed points
-  , rest      :: [Point]  -- ^ yet-to be parsed points
-  , mark      :: Int      -- ^ mark of the rule
+  { lookahead :: Term     -- ^ term expected right after rule is parsed
+  , offset    :: Int      -- ^ mark of the rule
   , rule      :: Rule     -- ^ reference to the rule
   }
   deriving stock (Eq, Ord)
@@ -35,7 +32,10 @@ data Position = Position
   Current point of the position.
 -}
 instance HasField "locus" Position (Maybe Point) where
-  getField Position {rest} = listToMaybe rest
+  getField Position {rule, offset} =
+    if offset >= length rule.points
+    then Nothing
+    else Just (rule.points Array.! offset)
 
 {- |
   > E = E + T
@@ -47,22 +47,19 @@ instance HasField "locus" Position (Maybe Point) where
   Next position.
 -}
 instance HasField "next" Position (Maybe Position) where
-  getField pos@Position{front, rest} = case rest of
-    []            -> Nothing
-    point : rest' -> Just (pos :: Position)
-      { front = point : front
-      , rest  = rest'
+  getField pos@Position{rule, offset} =
+    if offset >= length rule.points
+    then Nothing
+    else Just (pos :: Position)
+      { offset = offset + 1
       }
 
 {- |
   Start parsing a rule, expecting given `lookahead` term.
 -}
 start :: Rule -> Term -> Position
-start rule@Rule {entity, points, mark} lookahead = Position
-  { entity
-  , front = []
-  , rest  = toList points
-  , mark
+start rule lookahead = Position
+  { offset = 0
   , lookahead
   , rule
   }

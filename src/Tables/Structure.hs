@@ -139,8 +139,8 @@ doAccept = Set.singleton Accept
 
 reducingDecision :: Position -> Term ==> Set Decision
 reducingDecision pos
-  | pos.entity == "S" = "$"           ==> doAccept
-  | otherwise         = pos.lookahead ==> doReduce pos.rule
+  | pos.rule.entity == "S" = "$"           ==> doAccept
+  | otherwise              = pos.lookahead ==> doReduce pos.rule
 
 onlyShift :: Decision -> [State]
 onlyShift = \case
