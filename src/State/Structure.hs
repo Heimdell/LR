@@ -7,6 +7,7 @@ import GHC.Generics
 import Fixpoint
 import Data.Map.Monoidal ( (!) )
 import qualified Data.Set as Set
+import Data.Function (on)
 
 {- |
   Parser state.
@@ -35,8 +36,11 @@ data State = State
   { positions :: Set Position
   , kernel    :: Set Position
   }
-  deriving stock (Eq, Ord, Generic)
+  deriving stock (Generic)
   deriving       (Semigroup, Monoid) via Generically State
+
+instance Eq  State where (==)    = (==)    `on` (.kernel)
+instance Ord State where compare = compare `on` (.kernel)
 
 {- |
   Calculate a closure of a kernel, using grammar and included FIRST table.
