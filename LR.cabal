@@ -57,7 +57,7 @@ library
       Data.Map.Monoidal
     -- other-modules:
     -- other-extensions:
-    build-depends:    base, text, containers, pretty, mtl
+    build-depends:    array, base, text, containers, pretty, mtl
     hs-source-dirs:   src
     default-language: GHC2024
 

@@ -1,19 +1,18 @@
 module Grammar.Example where
 
 import Grammar.Structure  (Grammar, makeGrammar)
-import Rule               (Rule(Rule))
+import Rule               (mkRule)
 import Term               (Point(..))
-import Data.List.NonEmpty (NonEmpty((:|)))
 
 grammarTest :: Grammar
 grammarTest = makeGrammar
-  [ Rule "S" 0 (E "E" :| []) "Stop"
-  , Rule "E" 0 (E "E" :| T "+" : E "F" : []) "Add"
-  , Rule "E" 0 (E "E" :| T "-" : E "F" : []) "Subtract"
-  , Rule "E" 0 (E "F" :| []) "F->E"
-  , Rule "F" 0 (E "F" :| T "*" : E "T" : []) "Mult"
-  , Rule "F" 0 (E "F" :| T "/" : E "T" : []) "Divide"
-  , Rule "F" 0 (E "T" :| []) "T->F"
-  , Rule "T" 0 (T "number" :| []) "Number"
-  , Rule "T" 0 (T "(" :| E "E" : T ")" : []) "Group"
+  [ mkRule "S" [E "E"] "Stop"
+  , mkRule "E" [E "E", T "+", E "F"] "Add"
+  , mkRule "E" [E "E", T "-", E "F"] "Subtract"
+  , mkRule "E" [E "F"] "F->E"
+  , mkRule "F" [E "F", T "*", E "T"] "Mult"
+  , mkRule "F" [E "F", T "/", E "T"] "Divide"
+  , mkRule "F" [E "T"] "T->F"
+  , mkRule "T" [T "number"] "Number"
+  , mkRule "T" [T "(", E "E", T ")"] "Group"
   ]

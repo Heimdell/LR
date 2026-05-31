@@ -4,7 +4,6 @@
 module Position.Structure where
 
 import Data.Foldable                         (Foldable(toList))
-import Data.List.NonEmpty                    (NonEmpty((:|)))
 import Data.Maybe                            (listToMaybe, fromJust)
 import Data.Map.Monoidal                     (type (==>), (!), (==>))
 import Data.Set                              (Set)
@@ -12,7 +11,7 @@ import Data.Set          qualified as Set
 import GHC.Records                           (HasField(..))
 
 import Fixpoint                              ((>>-))
-import Rule                                  (Rule(Rule, entity, points, mark))
+import Rule                                  (Rule(Rule, entity, points, mark), mkRule)
 import Term                                  (Point(..), Entity, Term(Term))
 import Grammar                               (Grammar(first, Grammar))
 import GHC.Generics (Generically(..), Generic)
@@ -115,10 +114,10 @@ splitPositionsByCategory = foldMap \pos -> do
   Starting position for test grammar.
 -}
 startingPosition :: Position
-startingPosition = start (Rule "S" 0 (E "E" :| []) "") (Term "$")
+startingPosition = start (mkRule "S" [E "E"] "") (Term "$")
 
 examplePosSet :: Set Position
 examplePosSet = Set.fromList
-  [ fromJust $ (Rule "T" 1 (T "(" :| E "E" : T ")" : []) "" `start` "$").next
-  ,             Rule "E" 1 (E "E" :| T "+" : E "F" : []) "" `start` "+"
+  [ fromJust $ (mkRule "T" [T "(", E "E", T ")"] "" `start` "$").next
+  ,             mkRule "E" [E "E", T "+", E "F"] "" `start` "+"
   ]

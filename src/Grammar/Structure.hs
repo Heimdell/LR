@@ -8,7 +8,7 @@ import Data.Map.Monoidal (type (==>), (!), (==>))
 import qualified Data.Set as Set
 import Data.Foldable (fold)
 import Fixpoint (fixpoint)
-import qualified Data.List.NonEmpty as NonEmpty
+import Data.Array qualified as Array ((!))
 
 data Grammar = Grammar
   { ruleOrder :: [Rule]
@@ -27,7 +27,7 @@ makeGrammar ruleOrder = Grammar
   , first
   }
   where
-    rules = Map.fromList (map singleRule ruleOrder)
+    rules = Map.fromList (map singleRule (zipWith setNumber [0..] ruleOrder))
 
     singleRule :: Rule -> (Entity, Set Rule)
     singleRule rule = (rule.entity, Set.singleton rule)
@@ -38,6 +38,6 @@ makeGrammar ruleOrder = Grammar
         fromRule :: Rule -> Entity ==> Set Term -> Entity ==> Set Term
         fromRule rule cache = do
           rule.entity ==> do
-            case NonEmpty.head rule.points of
+            case rule.points Array.! 0 of
               T term   -> Set.singleton term
               E entity -> cache ! entity
