@@ -16,7 +16,8 @@ import Position (startingPosition)
 -- import Debug.Trace (traceM)
 import Driver.ParseTree
 import Data.Foldable (toList)
-import State
+import State ( State, closure )
+import Decision ( Decision(..) )
 
 data ParseError a
   = Expected (Set Term) Term a

@@ -13,9 +13,9 @@ import Grammar           (Grammar())
 import Position          (Position(..))
 import Term              (Term, Entity)
 import Data.Foldable     (toList)
-import Rule              (Rule(entity))
 import Position          (splitPositionsByCategory, SortedPositions (..))
 import State             (State(positions, State), closure)
+import Decision          (Decision, doShift, reducingDecision, onlyShift)
 
 {- |
   In classic formulation, GOTO and ACTION are somewhat separate tables.
@@ -42,32 +42,6 @@ data Table = Table
   }
   deriving stock (Eq, Ord, Generic)
   deriving       (Semigroup, Monoid) via Generically Table
-
-data Decision
-  = Shift State
-  | Reduce Rule
-  -- | Conflict (Set Decision)
-  | Accept
-  deriving stock (Eq, Ord)
-
-doShift :: State -> Set Decision
-doShift = Set.singleton . Shift
-
-doReduce :: Rule -> Set Decision
-doReduce = Set.singleton . Reduce
-
-doAccept :: Set Decision
-doAccept = Set.singleton Accept
-
-reducingDecision :: Position -> Term ==> Set Decision
-reducingDecision pos
-  | pos.rule.entity == "S" = "$"           ==> doAccept
-  | otherwise              = pos.lookahead ==> doReduce pos.rule
-
-onlyShift :: Decision -> [State]
-onlyShift = \case
-  Shift state -> [state]
-  _           -> []
 
 {- |
   Collect targed nodes of subgraph.
