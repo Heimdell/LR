@@ -3,18 +3,19 @@
 -}
 module Position.Structure where
 
-import Data.Maybe                            (fromJust)
-import Data.Map.Monoidal                     (type (==>), (!), (==>))
-import Data.Set                              (Set)
-import Data.Set          qualified as Set
-import GHC.Records                           (HasField(..))
+import Data.Maybe        (fromJust)
+import Data.Set          (Set)
+import GHC.Generics      (Generically(..), Generic)
+import GHC.Records       (HasField(..))
 
-import Fixpoint                              ((>>-))
-import Rule                                  (Rule(points), mkRule)
-import Term                                  (Point(..), Entity, Term(Term))
-import Grammar                               (Grammar(first, Grammar))
-import GHC.Generics (Generically(..), Generic)
-import qualified Data.Array as Array
+import Data.Array qualified as Array
+import Data.Set   qualified as Set
+
+import Data.Map.Monoidal (type (==>), (!), (==>))
+import Fixpoint          ((>>-))
+import Grammar           (Grammar(first, Grammar))
+import Rule              (Rule(points), mkRule)
+import Term              (Point(..), Entity, Term(Term))
 
 {- |
   Position in a rule during parsing process.

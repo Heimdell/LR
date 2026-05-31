@@ -1,23 +1,25 @@
 module Driver.LR1 where
 
-import Tables
-import Term (Term)
+import Control.Monad                  (unless, foldM)
+import Control.Monad.Except           (MonadError(throwError))
+import Data.Foldable                  (toList)
+import Data.Function                  ((&))
+import Data.Set                       (Set)
+import Text.PrettyPrint.HughesPJClass (Pretty(pPrint), hang, vcat)
+
+import Data.Set qualified as Set
+
 import Data.Map.Monoidal ((!), type (==>))
+import Decision          (Decision(..))
+import Driver.ParseTree  (Tree(..))
+import Grammar.Example   (grammarTest)
+import Position          (startingPosition)
+import Rule              (Rule(points, entity, reducer))
+import State             (State, closure)
+import Tables            (Action(goto, Action, action), Table(..), makeTables)
+import Term              (Term)
+
 import qualified Data.Map.Monoidal as Map
-import Data.Function ((&))
-import qualified Data.Set as Set
-import Data.Set (Set)
-import Control.Monad (unless, foldM)
-import Control.Monad.Except ( MonadError(throwError) )
-import Text.PrettyPrint.HughesPJClass ( Pretty(pPrint), hang, vcat )
-import Rule (Rule(points, entity, reducer))
-import Grammar.Example (grammarTest)
-import Position (startingPosition)
--- import Debug.Trace (traceM)
-import Driver.ParseTree
-import Data.Foldable (toList)
-import State ( State, closure )
-import Decision ( Decision(..) )
 
 data ParseError a
   = Expected (Set Term) Term a
@@ -28,18 +30,12 @@ instance MonadFail (Either a) where
 
 consume :: Table -> ([State], [Tree a]) -> (Term, a) -> Either (ParseError a) ([State], [Tree a])
 consume Table {actions} (top : stack, trees) (klass, term) = do
-  -- traceM ("=======")
-  -- traceM ("PARSING " <> show klass)
-  -- traceM ("STATES\n" <> show (vcat (punctuate "\n" (map pPrint (top : stack)))))
-  -- traceM ("MOVES\n" <> show (action ! top))
   let
     action :: Term ==> Set Decision
     Action {action} = actions ! top
 
     possible :: Set Term
     possible = action & Map.foldMapWithKey (const . Set.singleton)
-
-  -- traceM (show klass <> " " <> show (possible))
 
   unless (Set.member klass possible) do
     throwError $ Expected possible klass term
@@ -73,7 +69,6 @@ test :: Tree String
 test = either (error . show) id do
   let starter = closure grammarTest (Set.singleton startingPosition)
   let tables = makeTables grammarTest starter
-  -- traceM (show (pPrint tables))
   parse tables starter input
   where
     input =

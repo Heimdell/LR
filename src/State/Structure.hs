@@ -1,13 +1,16 @@
 module State.Structure where
-import Grammar
-import Data.Set (Set)
-import Position
-import Term
-import GHC.Generics
-import Fixpoint
-import Data.Map.Monoidal ( (!) )
-import qualified Data.Set as Set
+
+import Data.Set      (Set)
 import Data.Function (on)
+import GHC.Generics  (Generic, Generically(..))
+
+import Data.Set qualified as Set
+
+import Data.Map.Monoidal ((!))
+import Fixpoint          ((>>-), graphClosure)
+import Grammar           (Grammar(rules))
+import Position          (Position, start, lookaheadAfterCurrentPoint)
+import Term              (Point(E))
 
 {- |
   Parser state.

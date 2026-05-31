@@ -1,21 +1,28 @@
 module Fixpoint where
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Data.Function ((&))
 
+import Data.Function ((&))
+import Data.Set      (Set)
+
+import Data.Set qualified as Set
+
+{- |
+  Calculate a simple fixpoint over a monoidal object.
+-}
 fixpoint :: (Monoid vertex, Eq vertex) => (vertex -> vertex) -> vertex -> vertex
 fixpoint f = go
   where
     go vertex = do
-      let vertex' = f vertex
+      let vertex'  = f vertex
       let vertex'' = vertex <> vertex'
-      if vertex == vertex'' then vertex else go vertex''
+      if vertex == vertex''
+        then    vertex
+        else go vertex''
 
 infix 3 >>-
 
+{-# INLINE (>>-) #-}
 (>>-) :: (Foldable f, Monoid m) => f vertex -> (vertex -> m) -> m
 (>>-) = flip foldMap
-
 
 {- |
   Construct a graph from adjacency relation.

@@ -1,8 +1,10 @@
 module Driver.ParseTree.Pretty where
 
-import Driver.ParseTree.Structure
-import Text.PrettyPrint.HughesPJClass
-import qualified Data.Text as Text
+import Text.PrettyPrint.HughesPJClass (hang, parens, text, vcat, Pretty(pPrint))
+
+import Data.Text qualified as Text
+
+import Driver.ParseTree.Structure (Tree(..))
 
 instance Pretty a => Pretty (Tree a) where
   pPrint = \case

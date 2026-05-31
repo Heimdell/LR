@@ -1,7 +1,8 @@
 module Data.Map.Monoidal.Structure where
 
-import Data.Map qualified as Map
 import Data.Coerce (coerce)
+
+import Data.Map qualified as Map
 
 infixr 1 ==>
 

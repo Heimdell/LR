@@ -1,8 +1,10 @@
 module Term.Pretty where
 
-import Term.Structure                 (Point(..), Entity(entity), Term(term))
 import Text.PrettyPrint.HughesPJClass (text, Pretty(pPrint))
-import qualified Data.Text as Text
+
+import Data.Text qualified as Text
+
+import Term.Structure (Point(..), Entity(entity), Term(term))
 
 instance Pretty Term   where pPrint = text . Text.unpack . (.term)
 instance Pretty Entity where pPrint = text . Text.unpack . (.entity)

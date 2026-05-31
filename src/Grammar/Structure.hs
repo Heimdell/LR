@@ -1,14 +1,17 @@
 module Grammar.Structure where
 
-import Rule
-import Term
-import Data.Set (Set)
-import qualified Data.Map.Monoidal as Map
-import Data.Map.Monoidal (type (==>), (!), (==>))
-import qualified Data.Set as Set
 import Data.Foldable (fold)
-import Fixpoint (fixpoint)
+import Data.Set      (Set)
+
 import Data.Array qualified as Array ((!))
+import Data.Set   qualified as Set
+
+import Data.Map.Monoidal (type (==>), (!), (==>))
+import Fixpoint          (fixpoint)
+import Rule              (Rule(points, entity), ruleTerminals, ruleEntities, setNumber)
+import Term              (Point(E, T), Entity, Term)
+
+import Data.Map.Monoidal qualified as Map
 
 data Grammar = Grammar
   { ruleOrder :: [Rule]

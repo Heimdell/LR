@@ -1,13 +1,14 @@
 module Grammar.Pretty where
 
-import Text.PrettyPrint.HughesPJClass ( vcat, Doc, Pretty(pPrint) )
-import Data.Function ((&))
-import Data.Foldable (toList)
+import Data.Foldable                  (toList)
+import Data.Function                  ((&))
+import Data.Set                       (Set)
+import Text.PrettyPrint.HughesPJClass (vcat, Doc, Pretty(pPrint))
 
-import Grammar.Structure
-import Term (Entity)
-import Data.Set (Set)
-import Rule (Rule)
+import Grammar.Structure (Grammar(rules, Grammar))
+import Rule              (Rule)
+import Term              (Entity)
+
 import qualified Data.Map.Monoidal as Map
 
 instance Pretty Grammar where

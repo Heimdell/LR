@@ -3,19 +3,20 @@
 -}
 module Tables.Structure where
 
+import Data.Foldable     (toList)
 import Data.Map.Monoidal (type (==>), (==>))
 import Data.Set          (Set)
-import Data.Set          qualified as Set
 import GHC.Generics      (Generic, Generically (..))
 
-import Fixpoint          (graphClosure)
-import Grammar           (Grammar())
-import Position          (Position(..))
-import Term              (Term, Entity)
-import Data.Foldable     (toList)
-import Position          (splitPositionsByCategory, SortedPositions (..))
-import State             (State(positions, State), closure)
-import Decision          (Decision, doShift, reducingDecision, onlyShift)
+import Data.Set qualified as Set
+
+import Decision (Decision, doShift, reducingDecision, onlyShift)
+import Fixpoint (graphClosure)
+import Grammar  (Grammar())
+import Position (Position(..))
+import Position (splitPositionsByCategory, SortedPositions (..))
+import State    (State(positions, State), closure)
+import Term     (Term, Entity)
 
 {- |
   In classic formulation, GOTO and ACTION are somewhat separate tables.

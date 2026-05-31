@@ -1,8 +1,8 @@
 module Grammar.Example where
 
-import Grammar.Structure  (Grammar, makeGrammar)
-import Rule               (mkRule)
-import Term               (Point(..))
+import Grammar.Structure (Grammar, makeGrammar)
+import Rule              (mkRule)
+import Term              (Point(..))
 
 grammarTest :: Grammar
 grammarTest = makeGrammar

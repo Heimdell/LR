@@ -1,11 +1,14 @@
 module Decision.Structure where
-import State ( State )
-import Rule ( Rule(entity) )
+
 import Data.Set (Set)
-import Position ( Position(rule, lookahead) )
-import Term ( Term )
+
+import Data.Set qualified as Set
+
+import State             (State)
+import Rule              (Rule(entity))
+import Position          (Position(rule, lookahead))
+import Term              (Term)
 import Data.Map.Monoidal (type (==>), (==>))
-import qualified Data.Set as Set
 
 data Decision
   = Shift State

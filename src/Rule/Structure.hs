@@ -3,14 +3,16 @@
 -}
 module Rule.Structure where
 
+import Data.Array    (Array)
+import Data.Function (on)
+import Data.Set      (Set)
+import Data.Text     (Text)
+
+import Data.Array qualified as Array
+import Data.Set   qualified as Set
+
 import Term (Point, Entity, Term, pointTerminals, pointEntities)
 
-import Data.Array
-import Data.Set                       (Set)
-import Data.Set qualified as Set
-import Data.Text                      (Text)
-import qualified Data.Array as Array
-import Data.Function (on)
 
 {- |
   Rule in the form of `Entity` ::= {`Point`} @Reducer@.

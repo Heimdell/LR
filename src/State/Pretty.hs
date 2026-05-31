@@ -1,11 +1,11 @@
 module State.Pretty where
 
-import State.Structure
-import Text.PrettyPrint.HughesPJClass
-import Position (groupPositionsByPrefices)
-import Data.Foldable (toList)
-import Data.Function ((&))
+import Data.Foldable                  (toList)
+import Data.Function                  ((&))
+import Text.PrettyPrint.HughesPJClass (vcat, Pretty(pPrint))
 
+import Position        (groupPositionsByPrefices)
+import State.Structure (State(positions, State))
 
 instance Pretty State where
   -- pPrint State {kernel} =

@@ -2,16 +2,18 @@ module Position.Pretty where
 
 import Data.Foldable                  (toList)
 import Data.Function                  ((&))
-import Data.Map.Monoidal              ((==>))
-import Data.Map.Monoidal qualified as Map
 import Data.Set                       (Set)
-import Data.Set qualified as Set
+import GHC.Records                    (HasField(..))
 import Text.PrettyPrint.HughesPJClass (Pretty, pPrint, (<+>), fsep, braces)
 
-import Position.Structure ( Position(offset, lookahead, rule) )
+import Data.Set qualified as Set
+
+import Data.Map.Monoidal  ((==>))
+import Position.Structure (Position(offset, lookahead, rule))
+import Rule               (Rule(entity, points))
 import Term               (Term)
-import GHC.Records ( HasField(..) )
-import Rule
+
+import Data.Map.Monoidal qualified as Map
 
 instance HasField "prefix" Position (Rule, Int) where
   getField pos = (pos.rule, pos.offset)

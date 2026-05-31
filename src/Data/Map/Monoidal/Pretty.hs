@@ -1,8 +1,9 @@
 module Data.Map.Monoidal.Pretty where
 
-import Data.Map.Monoidal.Structure
-import Text.PrettyPrint.HughesPJClass
-import Data.Function ((&))
+import Data.Function                  ((&))
+import Text.PrettyPrint.HughesPJClass ((<+>), hang, vcat, Pretty(pPrint))
+
+import Data.Map.Monoidal.Structure (type (==>), assocs)
 
 instance (Pretty k, Pretty v) => Pretty (k ==> v) where
   pPrint monoidal =

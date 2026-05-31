@@ -1,11 +1,12 @@
 module Tables.Pretty where
 
-import Text.PrettyPrint.HughesPJClass (hang, punctuate, vcat, Pretty(pPrint))
-import Data.Function                  ((&))
 import Data.Foldable                  (toList)
-import Data.Map.Monoidal qualified as Map
+import Data.Function                  ((&))
+import Text.PrettyPrint.HughesPJClass (hang, punctuate, vcat, Pretty(pPrint))
 
-import Tables.Structure ( Action(..), Table(..) )
+import Tables.Structure (Action(..), Table(..))
+
+import Data.Map.Monoidal qualified as Map
 
 instance Pretty Action where
   pPrint Action {goto, action} = vcat
