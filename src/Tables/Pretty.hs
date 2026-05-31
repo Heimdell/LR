@@ -2,21 +2,10 @@ module Tables.Pretty where
 
 import Text.PrettyPrint.HughesPJClass (hang, punctuate, vcat, Pretty(pPrint))
 import Data.Function                  ((&))
-import Position.Pretty                (groupPositionsByPrefices)
 import Data.Foldable                  (toList)
 import Data.Map.Monoidal qualified as Map
 
 import Tables.Structure
-
-instance Pretty State where
-  -- pPrint State {kernel} =
-  --   kernel
-  pPrint State {positions} =
-    positions
-      & groupPositionsByPrefices
-      & toList
-      & map pPrint
-      & vcat
 
 instance Pretty Action where
   pPrint Action {goto, action} = vcat

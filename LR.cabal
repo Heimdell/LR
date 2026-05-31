@@ -31,30 +31,33 @@ common warnings
 library
     import:           warnings
     exposed-modules:
-      Grammar
-      Grammar.Structure
-      Grammar.Pretty
-      Grammar.Example
-      Rule
-      Rule.Structure
-      Rule.Pretty
-      Term
-      Term.Structure
-      Term.Pretty
-      Fixpoint
-      Position
-      Position.Structure
-      Position.Pretty
-      Tables
-      Tables.Structure
-      Tables.Pretty
+      Data.Map.Monoidal
+      Data.Map.Monoidal.Pretty
+      Data.Map.Monoidal.Structure
       Driver.LR1
       Driver.ParseTree
       Driver.ParseTree.Pretty
       Driver.ParseTree.Structure
-      Data.Map.Monoidal.Structure
-      Data.Map.Monoidal.Pretty
-      Data.Map.Monoidal
+      Fixpoint
+      Grammar
+      Grammar.Example
+      Grammar.Pretty
+      Grammar.Structure
+      Position
+      Position.Pretty
+      Position.Structure
+      Rule
+      Rule.Pretty
+      Rule.Structure
+      State
+      State.Pretty
+      State.Structure
+      Tables
+      Tables.Pretty
+      Tables.Structure
+      Term
+      Term.Pretty
+      Term.Structure
     -- other-modules:
     -- other-extensions:
     build-depends:    array, base, text, containers, pretty, mtl
