@@ -1,0 +1,47 @@
+{- |
+  Elements of rule.
+-}
+module Term.Structure where
+
+import Data.String (IsString)
+import Data.Text   (Text)
+
+{- |
+  Terminal, used in grammar.
+-}
+newtype Term = Term
+  { term :: Text
+  }
+  deriving newtype (Eq, Ord, IsString)
+
+{- |
+  Non-terminal, used in grammar.
+-}
+newtype Entity = Entity
+  { entity :: Text
+  }
+  deriving newtype (Eq, Ord, IsString)
+
+{- |
+  Terminal or non-terminal, used in grammar.
+-}
+data Point
+  = T Term
+  | E Entity
+  deriving stock (Eq, Ord)
+
+{- |
+  Check it point is a terminal.
+-}
+pointTerminals :: Point -> Maybe Term
+pointTerminals = \case
+  T term -> Just term
+  _      -> Nothing
+
+{- |
+  Check it point is a non-terminal.
+-}
+pointEntities :: Point -> Maybe Entity
+pointEntities = \case
+  E entity -> Just entity
+  _        -> Nothing

@@ -1,0 +1,74 @@
+cabal-version:      3.0
+name:               LR
+version:            0.1.0.0
+-- synopsis:
+-- description:
+license:            MIT
+license-file:       LICENSE
+author:             Kirill Andreev
+-- maintainer:
+-- copyright:
+category:           Text
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common warnings
+    ghc-options: -Wall -Wno-orphans -Wno-ambiguous-fields
+    default-extensions:
+      NoFieldSelectors
+      DuplicateRecordFields
+      OverloadedRecordDot
+      LambdaCase
+      DerivingStrategies
+      BlockArguments
+      OverloadedStrings
+      DerivingVia
+      DeriveAnyClass
+      ViewPatterns
+      MultiWayIf
+
+library
+    import:           warnings
+    exposed-modules:
+      Grammar
+      Grammar.Structure
+      Grammar.Pretty
+      Grammar.Example
+      Rule
+      Rule.Structure
+      Rule.Pretty
+      Term
+      Term.Structure
+      Term.Pretty
+      Fixpoint
+      Position
+      Position.Structure
+      Position.Pretty
+      Tables
+      Tables.Structure
+      Tables.Pretty
+      Driver.LR1
+      Driver.ParseTree
+      Driver.ParseTree.Pretty
+      Driver.ParseTree.Structure
+      Data.Map.Monoidal.Structure
+      Data.Map.Monoidal.Pretty
+      Data.Map.Monoidal
+    -- other-modules:
+    -- other-extensions:
+    build-depends:    base, text, containers, pretty, mtl
+    hs-source-dirs:   src
+    default-language: GHC2024
+
+executable LR
+    import:           warnings
+    main-is:          Main.hs
+    -- other-modules:
+    -- other-extensions:
+    build-depends:
+        base,
+        LR
+
+    hs-source-dirs:   app
+    default-language: GHC2024
