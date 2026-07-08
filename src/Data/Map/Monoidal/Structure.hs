@@ -43,3 +43,9 @@ mapWithKey = coerce (Map.mapWithKey @k @v @v')
 
 selectKeys :: (Ord k', Semigroup v) => (k -> Maybe k') -> k ==> v -> k' ==> v
 selectKeys choose = foldMapWithKey \k v -> foldMap (==> v) (choose k)
+
+member :: forall k v. (Ord k) => k -> k ==> v -> Bool
+member = coerce (Map.member @k @v)
+
+keys :: forall k v. (Ord k) => k ==> v -> [k]
+keys = coerce (Map.keys @k @v)

@@ -21,3 +21,5 @@ instance Pretty Grammar where
       ruleBlock :: (Entity, Set Rule) -> Doc
       ruleBlock (_, ruleset) =
         vcat (map pPrint (toList ruleset))
+
+instance Show Grammar where show = show . pPrint

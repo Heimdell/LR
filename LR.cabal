@@ -31,21 +31,26 @@ common warnings
 library
     import:           warnings
     exposed-modules:
+      Backend.StateMachine
+      Backend.Example
+      Backend.Example1
+      Backend.Example2
+      Backend.DefaultLexer
+      Backend.Generated
+      Backend.AST
+      Frontend.Parser0
       Data.Map.Monoidal
       Data.Map.Monoidal.Pretty
       Data.Map.Monoidal.Structure
       Decision
       Decision.Pretty
       Decision.Structure
-      Driver.LR1
-      Driver.ParseTree
-      Driver.ParseTree.Pretty
-      Driver.ParseTree.Structure
       Fixpoint
       Grammar
       Grammar.Example
       Grammar.Pretty
       Grammar.Structure
+      Interface.Structure
       Position
       Position.Pretty
       Position.Structure
@@ -63,7 +68,17 @@ library
       Term.Structure
     -- other-modules:
     -- other-extensions:
-    build-depends:    array, base, text, containers, pretty, mtl
+    build-depends:
+        array,
+        base,
+        text,
+        containers,
+        pretty,
+        mtl,
+        logict,
+        transformers,
+        filepath,
+        parsec
     hs-source-dirs:   src
     default-language: GHC2024
 
@@ -74,7 +89,9 @@ executable LR
     -- other-extensions:
     build-depends:
         base,
-        LR
+        LR,
+        optparse-applicative,
+        split
 
     hs-source-dirs:   app
     default-language: GHC2024

@@ -3,7 +3,6 @@
 -}
 module Position.Structure where
 
-import Data.Maybe        (fromJust)
 import Data.Set          (Set)
 import GHC.Generics      (Generically(..), Generic)
 import GHC.Records       (HasField(..))
@@ -14,8 +13,10 @@ import Data.Set   qualified as Set
 import Data.Map.Monoidal (type (==>), (!), (==>))
 import Fixpoint          ((>>-))
 import Grammar           (Grammar(first, Grammar))
-import Rule              (Rule(points), mkRule)
+import Rule              (Rule(..), mkRule)
 import Term              (Point(..), Entity, Term(Term))
+import Data.Foldable
+import Data.Text (Text)
 
 {- |
   Position in a rule during parsing process.
@@ -38,6 +39,12 @@ instance HasField "locus" Position (Maybe Point) where
     then Nothing
     else Just (rule.points Array.! offset)
 
+instance HasField "entity" Position Entity where
+  getField Position {rule} = rule.entity
+
+instance HasField "reducer" Position Text where
+  getField Position {rule} = rule.reducer
+
 {- |
   > E = E + T
   >       ^
@@ -54,6 +61,9 @@ instance HasField "next" Position (Maybe Position) where
     else Just (pos :: Position)
       { offset = offset + 1
       }
+
+instance HasField "parsed" Position [Point] where
+  getField Position {offset, rule} = take offset $ toList rule.points
 
 {- |
   Start parsing a rule, expecting given `lookahead` term.
@@ -80,9 +90,9 @@ start rule lookahead = Position
 -}
 lookaheadAfterCurrentPoint :: Grammar -> Position -> Set Term
 lookaheadAfterCurrentPoint Grammar {first} pos = case pos.next >>= (.locus) of
-  Nothing         -> Set.singleton pos.lookahead
-  Just (T term)   -> Set.singleton term
-  Just (E entity) -> first ! entity
+  Nothing           -> Set.singleton pos.lookahead
+  Just (T _ term)   -> Set.singleton term
+  Just (E _ entity) -> first ! entity
 
 {- |
   Group a set of position by current point to be parsed.
@@ -104,18 +114,12 @@ data SortedPositions = SortedPositions
 splitPositionsByCategory :: Set Position -> SortedPositions
 splitPositionsByCategory = foldMap \pos -> do
   case pos.locus of
-    Nothing         -> mempty { needsReduction  =            Set.singleton pos }
-    Just (T term)   -> mempty { expectsTerminal = term   ==> Set.singleton pos }
-    Just (E entity) -> mempty { expectsEntity   = entity ==> Set.singleton pos } :: SortedPositions
+    Nothing           -> mempty { needsReduction  =            Set.singleton pos }
+    Just (T _ term)   -> mempty { expectsTerminal = term   ==> Set.singleton pos }
+    Just (E _ entity) -> mempty { expectsEntity   = entity ==> Set.singleton pos } :: SortedPositions
 
-{- |
-  Starting position for test grammar.
--}
-startingPosition :: Position
-startingPosition = start (mkRule "S" [E "E"] "") (Term "$")
-
-examplePosSet :: Set Position
-examplePosSet = Set.fromList
-  [ fromJust $ (mkRule "T" [T "(", E "E", T ")"] "" `start` "$").next
-  ,             mkRule "E" [E "E", T "+", E "F"] "" `start` "+"
-  ]
+-- examplePosSet :: Set Position
+-- examplePosSet = Set.fromList
+--   [ fromJust $ (mkRule "T" [T "(", E "E", T ")"] "" `start` "$").next
+--   ,             mkRule "E" [E "E", T "+", E "F"] "" `start` "+"
+--   ]

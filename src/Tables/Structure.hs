@@ -4,50 +4,63 @@
 module Tables.Structure where
 
 import Data.Foldable     (toList)
-import Data.Map.Monoidal (type (==>), (==>))
+import Data.Map.Monoidal (type (==>) (Monoidal), (==>))
 import Data.Set          (Set)
 import GHC.Generics      (Generic, Generically (..))
 
 import Data.Set qualified as Set
 
-import Decision (Decision, doShift, reducingDecision, onlyShift)
+import Decision (Decision, doShift, reducingDecision, onlyShift, mapDecisionState)
 import Fixpoint (graphClosure)
 import Grammar  (Grammar())
 import Position (Position(..))
 import Position (splitPositionsByCategory, SortedPositions (..))
 import State    (State(positions, State), closure)
 import Term     (Term, Entity)
+import qualified Data.Map.Monoidal as Monoidal
 
 {- |
   In classic formulation, GOTO and ACTION are somewhat separate tables.
 
   I decided to join both tables by common dimension of parsing state.
 -}
-data Action = Action
-  { goto   :: Entity ==> State         -- ^ move after non-terminal is parsed
-  , action :: Term   ==> Set Decision  -- ^ action after terminal is parsed
+data Action state = Action
+  { goto   :: Entity ==> state         -- ^ move after non-terminal is parsed
+  , action :: Term   ==> Set (Decision state)  -- ^ action after terminal is parsed
   }
   deriving stock (Eq, Ord, Generic)
-  deriving       (Semigroup, Monoid) via Generically Action
+  deriving       (Semigroup, Monoid) via Generically (Action state)
+
+mapActionState :: (Ord b, Semigroup b) => (a -> b) -> Action a -> Action b
+mapActionState f Action {goto, action} = Action
+  { goto   = fmap f goto
+  , action = fmap (Set.map (mapDecisionState f)) action
+  }
 
 {- |
   Find nodes the `Action` subtable can lead into.
 -}
-endpointNodes :: Action -> [State]
+endpointNodes :: Action State -> [State]
 endpointNodes Action {goto, action}
   =  toList goto
   <> (toList action >>= foldMap onlyShift)
 
-data Table = Table
-  { actions :: State ==> Action
+newtype Table state = Table
+  { actions :: state ==> Action state
   }
   deriving stock (Eq, Ord, Generic)
-  deriving       (Semigroup, Monoid) via Generically Table
+  deriving       (Semigroup, Monoid) via Generically (Table state)
+
+mapTableState :: forall a b. (Ord b, Semigroup b) => (a -> b) -> Table a -> Table b
+mapTableState f = Table . Monoidal.foldMapWithKey aux . (.actions)
+  where
+    aux :: a -> Action a -> b ==> Action b
+    aux a b = f a ==> mapActionState f b
 
 {- |
   Collect targed nodes of subgraph.
 -}
-collectTargetStates :: Table -> [State]
+collectTargetStates :: Table State -> [State]
 collectTargetStates Table {actions} = foldMap endpointNodes actions
 
 {- |
@@ -75,18 +88,18 @@ advanceOnePoint grammar
   The (2) generates SHIFTs.
   The (3) generates REDUCEs.
 -}
-adjacentSubgraph :: Grammar -> State -> Table
+adjacentSubgraph :: Grammar -> State -> Table State
 adjacentSubgraph grammar state@State {positions} =
   Table do
     state ==> gotos <> shifts <> reduce
   where
     sorted = splitPositionsByCategory positions
 
-    gotos, shifts, reduce :: Action
+    gotos, shifts, reduce :: Action State
     gotos  = mempty { goto   =           advanceOnePoint grammar <$> sorted.expectsEntity   }
     shifts = mempty { action = doShift . advanceOnePoint grammar <$> sorted.expectsTerminal }
     reduce = mempty { action =           foldMap reducingDecision    sorted.needsReduction  }
 
-makeTables :: Grammar -> State -> Table
+makeTables :: Grammar -> State -> Table State
 makeTables grammar firstState =
   graphClosure (adjacentSubgraph grammar) collectTargetStates firstState

@@ -8,7 +8,7 @@ import Tables.Structure (Action(..), Table(..))
 
 import Data.Map.Monoidal qualified as Map
 
-instance Pretty Action where
+instance (Pretty state) => Pretty (Action state) where
   pPrint Action {goto, action} = vcat
     [ goto
         & Map.assocs
@@ -21,5 +21,5 @@ instance Pretty Action where
         & punctuate "\n" & vcat
     ]
 
-instance Pretty Table where
+instance (Pretty state) => Pretty (Table state) where
   pPrint Table {actions} = pPrint actions

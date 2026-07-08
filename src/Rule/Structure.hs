@@ -12,6 +12,7 @@ import Data.Array qualified as Array
 import Data.Set   qualified as Set
 
 import Term (Point, Entity, Term, pointTerminals, pointEntities)
+import Backend.DefaultLexer (Pos)
 
 
 {- |
@@ -21,6 +22,7 @@ data Rule = Rule
   { entity  :: Entity          -- ^ entity constructed by rule
   , mark    :: Int             -- ^ number unique to rule
   , points  :: Array Int Point  -- ^ sequence of [non]terminals
+  , pos     :: Pos
   , reducer :: Text            -- ^ action to perform
   }
 
@@ -42,12 +44,13 @@ ruleEntities rule
   =  Set.singleton rule.entity
   <> foldMap (foldMap Set.singleton . pointEntities) rule.points
 
-mkRule :: Entity -> [Point] -> Text -> Rule
-mkRule entity pointList reducer = Rule
+mkRule :: Entity -> [Point] -> Pos -> Text -> Rule
+mkRule entity pointList pos reducer = Rule
   { entity
   , points = Array.listArray (0, length pointList - 1) pointList
   , mark   = -1
   , reducer
+  , pos
   }
 
 setNumber :: Int -> Rule -> Rule

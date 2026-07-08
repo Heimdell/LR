@@ -87,9 +87,15 @@ closure grammar kernel = State {kernel, positions}
          and each term that can happen right after it,
          start that tule with that term as a lookahead.
       -}
-      Just (E entity) ->
+      Just (E _ entity) ->
         grammar.rules ! entity                 >>- \rule ->
         lookaheadAfterCurrentPoint grammar pos >>- \term ->
           Set.singleton (start rule term)
 
       _ -> mempty
+
+{- |
+  Starting position for test grammar.
+-}
+startingState :: Grammar -> State
+startingState grammar = closure grammar (Set.map (`start` "$") (grammar.rules ! "Start"))

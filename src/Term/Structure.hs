@@ -5,6 +5,7 @@ module Term.Structure where
 
 import Data.String (IsString)
 import Data.Text   (Text)
+import GHC.Records
 
 {- |
   Terminal, used in grammar.
@@ -26,22 +27,27 @@ newtype Entity = Entity
   Terminal or non-terminal, used in grammar.
 -}
 data Point
-  = T Term
-  | E Entity
+  = T (Maybe Text) Term
+  | E (Maybe Text) Entity
   deriving stock (Eq, Ord)
+
+instance HasField "name" Point (Maybe Text) where
+  getField = \case
+    T name _ -> name
+    E name _ -> name
 
 {- |
   Check it point is a terminal.
 -}
 pointTerminals :: Point -> Maybe Term
 pointTerminals = \case
-  T term -> Just term
-  _      -> Nothing
+  T _ term -> Just term
+  _        -> Nothing
 
 {- |
   Check it point is a non-terminal.
 -}
 pointEntities :: Point -> Maybe Entity
 pointEntities = \case
-  E entity -> Just entity
-  _        -> Nothing
+  E _ entity -> Just entity
+  _          -> Nothing
