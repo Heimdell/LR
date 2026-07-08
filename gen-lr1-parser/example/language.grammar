@@ -16,6 +16,11 @@ Stmt     = e:Effect                  { StmtEffect pos e }
 Effect   = c:Call               "=>" ds:Changes "."  { Effect pos c [] ds }
 Effect   = c:Call "->" cs:Conds "=>" ds:Changes "."  { Effect pos c cs ds }
 
+Effect   = c:Call               "=>" ds:Changes "."  { Effect pos c [] ds }
+Effect   = c:Call "->" cs:Conds "=>" ds:Changes "."  { Effect pos c cs ds }
+Effect   = c:Call "->" cs:Conds                 "."  { Effect pos c cs [] }
+Effect   = c:Call                               "."  { Effect pos c [] [] }
+
 Changes  = c:Change "," cs:Changes   { c : cs }
 Changes  = c:Change                  { [c] }
 
