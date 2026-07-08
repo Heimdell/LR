@@ -12,6 +12,7 @@ import Data.Char (isAlpha, isLowerCase, isUpperCase, isDigit, isSpace)
 import Data.Set (Set)
 import Control.Monad (void)
 import Data.Maybe (listToMaybe, fromMaybe)
+import System.Exit (exitFailure)
 
 data Pos = Pos
   { column, line :: Int
@@ -263,7 +264,7 @@ dieOnLexerError = \case
   Left le@(Expected _ pos) -> do
     text <- Text.readFile pos.filename
     putStrLn $ showLexerError le text
-    error "Halting on lexer error"
+    exitFailure
   Left None -> error "impossible: LexerError is None"
   Right a -> pure a
 
@@ -273,5 +274,5 @@ dieOnParserError = \case
     text <- Text.readFile pos.filename
     putStrLn $ showPos pos text
     putStrLn $ "expected one of " <> show expected
-    error "Halting on parser error"
+    exitFailure
   Right a -> pure a
