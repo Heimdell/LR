@@ -82,7 +82,7 @@ library
     hs-source-dirs:   src
     default-language: GHC2024
 
-executable LR
+executable gen-lr1-parser
     import:           warnings
     main-is:          Main.hs
     -- other-modules:
