@@ -106,7 +106,7 @@ generateParserModule addendum grammar pathToSrc moduleName = do
       , "  ([],           end) -> end"
       , "  ((pos, _) : _, _)   -> pos"
       , "  "
-      , "parse :: FilePath -> IO (Either LexerError (Either (Pos, [String]) Expr))"
+      , "parse :: FilePath -> IO (Either LexerError (Either (Pos, [String]) " <> pPrint grammar.starter <> "))"
       , "parse filepath = do"
       , "  text <- Text.readFile filepath"
       , "  case lexText filepath text" <+> terms <+> "of"
@@ -122,10 +122,10 @@ makeParser grammar raw = vcat
   , "  "
   , vcat do
       punctuate "\n" do
-        foldMap (pure . (`gotoEntity` table)) do
+        foldMap (pure . (\e -> gotoEntity grammar.starter e table)) do
           Set.delete "Start" grammar.entities
   , "  "
-  , "run :: St a -> ([Lexeme], Pos) -> Stack' a -> Either (Pos, [String]) Expr"
+  , "run :: St a -> ([Lexeme], Pos) -> Stack' a -> Either (Pos, [String]) " <> pPrint grammar.starter
   , "run = \\cases {"
   , vcat $ foldMap (pure . uncurry stateShifts) (Monoidal.assocs table.actions)
   , vcat $ foldMap (pure . uncurry stateReducers) (Map.assocs states)
@@ -156,9 +156,9 @@ makeParser grammar raw = vcat
       , text (replicate (column - 1) ' ') <> pPrint body
       ]
 
-gotoEntity :: Entity -> Table Int -> Doc
-gotoEntity entity Table {actions} = vcat
-  [ gotoName <+> do ":: ([Lexeme], Pos) -> " <> pPrint entity <> " -> Stack a -> Either (Pos, [String]) Expr"
+gotoEntity :: Entity -> Entity -> Table Int -> Doc
+gotoEntity starter entity Table {actions} = vcat
+  [ gotoName <+> do ":: ([Lexeme], Pos) -> " <> pPrint entity <> " -> Stack a -> Either (Pos, [String]) " <> pPrint starter
   , gotoName <+> "toks term stk@(state, _, _) = case state of"
   , vcat do
       map stateTransition do

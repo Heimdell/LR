@@ -41,7 +41,7 @@ makeGrammar starter ruleOrder = Grammar
             { reducer = "res"
             , points  = listArray (0, 0) [E (Just "res") starter]
             , mark    = -1
-            , entity  = starter
+            , entity  = "Start"
             , pos     = Pos 0 0 "<nowhere>"
             }
 
