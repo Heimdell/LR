@@ -1,0 +1,18 @@
+edge(1, 2).
+edge(2, 3).
+edge(3, 4).
+edge(4, 5).
+
+has-link(A, B, A, B)
+  <- edge(A, B)
+  .
+
+has-link(A, B, C, D)
+  <- has-link(A, C)
+  ,  edge(C, D)
+  ,  has-link(D, B)
+  .
+
+unlink(A, B)
+  -> has-link(A, B, C, D)
+  => -edge(C, D).

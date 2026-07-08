@@ -1,0 +1,57 @@
+
+| import Backend.DefaultLexer
+| import AST
+| import Data.Text (Text)
+
+start Program
+
+Program  = stmts:Stmts               { Program {stmts} }
+
+Stmts    = c:Stmt cs:Stmts           { c : cs }
+Stmts    = c:Stmt                    { [c] }
+
+Stmt     = c:Clause                  { StmtClause pos c }
+Stmt     = e:Effect                  { StmtEffect pos e }
+
+Effect   = c:Call               "=>" ds:Changes "."  { Effect pos c [] ds }
+Effect   = c:Call "->" cs:Conds "=>" ds:Changes "."  { Effect pos c cs ds }
+
+Changes  = c:Change "," cs:Changes   { c : cs }
+Changes  = c:Change                  { [c] }
+
+Change   = "+" c:Call                { Assert pos c }
+Change   = "-" c:Call                { Refute pos c }
+
+Clause   = c:Call               "."  { Clause pos c [] }
+Clause   = c:Call "<-" cs:Conds "."  { Clause pos c cs }
+
+Conds    = c:Cond "," cs:Conds       { c : cs }
+Conds    = c:Cond                    { [c] }
+
+Cond     =     c:Call                { CondAssert pos c }
+Cond     = "~" c:Call                { CondRefute pos c }
+Cond     =     e:Expr                { CondGuard  pos e }
+
+Call     = pred:"<name>" t:Tuple     { Call pos pred t }
+
+Tuple    = "("           ")"         { [] }
+Tuple    = "(" es:Exprs1 ")"         { es }
+
+Exprs1   = e:Expr     "," es:Exprs1  { e : es }
+Exprs1   = e:Expr                    { [e] }
+
+Expr     = a:ExprAdd  "=" b:ExprAdd  { ExprBinary pos a Equals b }
+Expr     = a:ExprAdd                 { a }
+
+ExprAdd  = a:ExprAdd  "+" b:ExprMult { ExprBinary pos a Add b }
+ExprAdd  = a:ExprMult                { a }
+
+ExprMult = a:ExprMult "*" b:ExprTerm { ExprBinary pos a Mult b }
+ExprMult = a:ExprTerm                { a }
+
+ExprTerm = "(" e:Expr ")"            { e }
+ExprTerm = n:"<Name>"                { ExprVar   pos n }
+ExprTerm = n:Const                   { ExprConst pos n }
+
+Const    = n:"<name>"                { ConstNamed pos n }
+Const    = n:"<num>"                 { ConstInt   pos n }

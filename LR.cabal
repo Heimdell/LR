@@ -95,3 +95,17 @@ executable gen-lr1-parser
 
     hs-source-dirs:   app
     default-language: GHC2024
+
+executable gen-lr1-parser-example
+    import:           warnings
+    main-is:          Main.hs
+    other-modules:    AST, Parser
+    -- other-extensions:
+    build-depends:
+        base,
+        LR,
+        shower,
+        text
+
+    hs-source-dirs:   example
+    default-language: GHC2024
