@@ -32,12 +32,7 @@ library
     import:           warnings
     exposed-modules:
       Backend.StateMachine
-      Backend.Example
-      Backend.Example1
-      Backend.Example2
       Backend.DefaultLexer
-      Backend.Generated
-      Backend.AST
       Frontend.Parser0
       Data.Map.Monoidal
       Data.Map.Monoidal.Pretty
