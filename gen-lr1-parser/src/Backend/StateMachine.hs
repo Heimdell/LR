@@ -9,13 +9,12 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Map.Monoidal ((!))
 import Data.Map.Monoidal qualified as Monoidal
-import Data.Maybe (fromMaybe, maybeToList)
+import Data.Maybe (maybeToList)
 import Data.Ord (comparing)
 import Data.Set ((\\))
-import Data.Set (Set)
 import Data.Text (Text)
 import Decision
-import Frontend.Parser0 (parseGrammar, rule)
+import Frontend.Parser0 (parseGrammar)
 import Grammar
 import Position
 import qualified Data.Set as Set
@@ -25,9 +24,8 @@ import System.FilePath
 import Tables
 import Term
 import Text.PrettyPrint.HughesPJClass hiding ((<>))
-import Backend.DefaultLexer
 import Rule
-import Backend.DefaultLexer
+import Data.Text.Position
 
 enumerateStates :: Table State -> Map State Int
 enumerateStates Table {actions} =

@@ -15,6 +15,7 @@ import Control.Monad
 import Data.Text (Text)
 import Data.Array (Array, listArray)
 import Data.Foldable
+import Data.Text.Position ( Pos(Pos) )
 
 parseGrammar :: FilePath -> IO ([Text], Grammar)
 parseGrammar path = either (error . show) id <$> parseFromFile program path

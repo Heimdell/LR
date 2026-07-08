@@ -13,7 +13,7 @@ import Term              (Point(E, T), Entity, Term)
 
 import Data.Map.Monoidal qualified as Map
 import Data.Array (listArray)
-import Backend.DefaultLexer
+import Data.Text.Position
 
 data Grammar = Grammar
   { ruleOrder :: [Rule]

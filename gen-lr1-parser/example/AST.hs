@@ -3,7 +3,7 @@ module AST where
 
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Backend.DefaultLexer (Pos)
+import Data.Text.Position (Pos)
 import Data.List (intercalate)
 
 data Const

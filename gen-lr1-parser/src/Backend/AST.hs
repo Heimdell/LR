@@ -1,6 +1,6 @@
 module Backend.AST where
 
-import Backend.DefaultLexer (Pos)
+import Data.Text.Position (Pos)
 
 data Term
   = Number Pos Integer

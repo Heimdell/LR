@@ -78,7 +78,8 @@ library
         logict,
         transformers,
         filepath,
-        parsec
+        parsec,
+        lr1-parser-pos,
     hs-source-dirs:   src
     default-language: GHC2024
 
@@ -105,7 +106,8 @@ executable gen-lr1-parser-example
         base,
         LR,
         shower,
-        text
+        text,
+        lr1-parser-pos,
 
     hs-source-dirs:   example
     default-language: GHC2024

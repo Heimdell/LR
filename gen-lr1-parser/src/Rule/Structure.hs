@@ -12,7 +12,7 @@ import Data.Array qualified as Array
 import Data.Set   qualified as Set
 
 import Term (Point, Entity, Term, pointTerminals, pointEntities)
-import Backend.DefaultLexer (Pos)
+import Data.Text.Position (Pos)
 
 
 {- |

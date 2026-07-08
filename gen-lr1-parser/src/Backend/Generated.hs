@@ -2,23 +2,24 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 module Backend.Generated (parse) where
-  
+
 import Data.Text.IO.Utf8 qualified as Text
 import Data.Kind qualified as Kind
 import Backend.AST
+import Data.Text.Position (Pos)
 import Backend.DefaultLexer
-  
+
 data Stack' xs where
   Nil  ::      Stack' '[]
   (:>) :: x -> Stack xs -> Stack' (x : xs)
-  
+
 type Stack a = (St a, Pos, Stack' a)
-  
+
 pattern (:?) :: a -> Stack xs -> Stack (a : xs)
 pattern a :? xs <- (_, _, a :> xs)
-  
+
 infixr 2 :>, :?
-  
+
 data St :: [Kind.Type] -> Kind.Type where
   S0 :: forall a. St (a)
   S1 :: forall a. St (Expr : a)
@@ -42,7 +43,7 @@ data St :: [Kind.Type] -> Kind.Type where
   S19 :: forall a. St (() : Factor : a)
   S20 :: forall a. St (Term : () : Factor : a)
   S21 :: forall a. St (() : Expr : () : a)
-  
+
 gotoExpr :: ([Lexeme], Pos) -> Expr -> Stack a -> Either (Pos, [String]) Expr
 gotoExpr toks term stk@(state, _, _) = case state of
   S0 -> run S1 toks (term :> stk)
@@ -69,7 +70,7 @@ gotoTerm toks term stk@(state, _, _) = case state of
   S18 -> run S15 toks (term :> stk)
   S19 -> run S20 toks (term :> stk)
   _ -> error ""
-  
+
 run :: St a -> ([Lexeme], Pos) -> Stack' a -> Either (Pos, [String]) Expr
 run = \cases {
 ; S0 ((p, Reserved "(") : input, end) stk ->
@@ -212,29 +213,29 @@ run = \cases {
 res
 ; action7 pos e f =
 {-# LINE  7 "arith.grammar" #-}
-                             Add pos e f 
+                             Add pos e f
 ; action8 pos f =
 {-# LINE  8 "arith.grammar" #-}
-                             Factor pos f 
+                             Factor pos f
 ; action10 pos f t =
 {-# LINE  10 "arith.grammar" #-}
-                               Mult pos f t 
+                               Mult pos f t
 ; action11 pos t =
 {-# LINE  11 "arith.grammar" #-}
-                               Term pos t 
+                               Term pos t
 ; action13 pos n =
 {-# LINE  13 "arith.grammar" #-}
-                        Number pos n 
+                        Number pos n
 ; action14 pos e =
 {-# LINE  14 "arith.grammar" #-}
-                        Group  pos e 
+                        Group  pos e
 }
-  
+
 currentPos :: ([Lexeme], Pos) -> Pos
 currentPos = \case
   ([],           end) -> end
   ((pos, _) : _, _)   -> pos
-  
+
 parse :: FilePath -> IO (Either LexerError (Either (Pos, [String]) Expr))
 parse filepath = do
   text <- Text.readFile filepath
