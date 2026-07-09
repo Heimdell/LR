@@ -5,7 +5,7 @@ module Parser (parse) where
   
 import Data.Text.IO.Utf8 qualified as Text
 import Data.Kind qualified as Kind
-import Backend.DefaultLexer
+import Text.Lexer.Default
 import Data.Text.Position (Pos)
 import Data.Lexeme
 import AST

@@ -1,4 +1,4 @@
-module Backend.DefaultLexer where
+module Text.Lexer.Default where
 
 import Data.Text (Text)
 import qualified Data.Text as Text

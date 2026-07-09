@@ -32,7 +32,6 @@ library
     import:           warnings
     exposed-modules:
       Backend.StateMachine
-      Backend.DefaultLexer
       Frontend.Parser0
       Data.Map.Monoidal
       Data.Map.Monoidal.Pretty
@@ -76,6 +75,7 @@ library
         parsec,
         lr1-parser-pos,
         lr1-parser-lexeme,
+        lr1-parser-default-lexer,
     hs-source-dirs:   src
     default-language: GHC2024
 
@@ -88,7 +88,7 @@ executable gen-lr1-parser
         base,
         LR,
         optparse-applicative,
-        split
+        split,
 
     hs-source-dirs:   app
     default-language: GHC2024
@@ -105,6 +105,7 @@ executable gen-lr1-parser-example
         text,
         lr1-parser-pos,
         lr1-parser-lexeme,
+        lr1-parser-default-lexer,
 
     hs-source-dirs:   example
     default-language: GHC2024

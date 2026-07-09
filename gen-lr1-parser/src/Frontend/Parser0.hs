@@ -7,7 +7,7 @@ import Rule
 import Term
 import Control.Applicative (asum, some)
 import Text.Parsec.Token
-import Backend.DefaultLexer hiding (eof, stringLiteral, spaces, char, noneOf, (<?>))
+import Text.Lexer.Default hiding (eof, stringLiteral, spaces, char, noneOf, (<?>))
 import Text.Parsec
 import qualified Data.Text as Text
 import Data.Char (isLower, isUpper)
