@@ -2,7 +2,14 @@
 import AST
 import Parser
 import Text.Lexer.Default
+import System.Environment (getArgs)
+import System.Exit
 
 main = do
-  res <- parse "example/test.dlog" >>= dieOnLexerError >>= dieOnParserError
-  print res
+  getArgs >>= \case
+    [file] -> do
+      res <- parse file >>= dieOnLexerError >>= dieOnParserError
+      print res
+    _ -> do
+      putStrLn "Usage: gen-lr1-parser-example <file-to-parse>"
+      exitFailure
