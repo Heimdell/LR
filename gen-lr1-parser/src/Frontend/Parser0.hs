@@ -96,6 +96,7 @@ entityKind = flip (<?>) "entity" do
 rule :: Parser Rule
 rule = Rule
   <$> entityKind
+  <*> optionMaybe do parens haskell do Text.pack . snd <$> cover haskellType
   <*  reservedOp haskell "="
   <*> pure 0
   <*> do listToArray <$> some point
@@ -121,6 +122,17 @@ reducingActionLetter :: Parser ()
 reducingActionLetter = asum
   [ void do noneOf "{}"
   , braces haskell reducingActionText
+  ]
+
+haskellType :: Parser ()
+haskellType = do
+  void do
+    many haskellTypeLetter
+
+haskellTypeLetter :: Parser ()
+haskellTypeLetter = asum
+  [ void do noneOf "()"
+  , parens haskell haskellType
   ]
 
 cover :: (Monad m) => ParsecT [tok] u m a -> ParsecT [tok] u m (a, [tok])

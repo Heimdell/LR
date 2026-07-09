@@ -9,22 +9,19 @@ start Program
 
 Program  = stmts:Stmts               { Program {stmts} }
 
-Stmts    = c:Stmt cs:Stmts           { c : cs }
-Stmts    = c:Stmt                    { [c] }
+Stmts([Stmt])    = c:Stmt cs:Stmts           { c : cs }
+Stmts([Stmt])    = c:Stmt                    { [c] }
 
 Stmt     = c:Clause                  { StmtClause pos c }
 Stmt     = e:Effect                  { StmtEffect pos e }
 
 Effect   = c:Call               "=>" ds:Changes "."  { Effect pos c [] ds }
 Effect   = c:Call "->" cs:Conds "=>" ds:Changes "."  { Effect pos c cs ds }
-
-Effect   = c:Call               "=>" ds:Changes "."  { Effect pos c [] ds }
-Effect   = c:Call "->" cs:Conds "=>" ds:Changes "."  { Effect pos c cs ds }
 Effect   = c:Call "->" cs:Conds                 "."  { Effect pos c cs [] }
 Effect   = c:Call                               "."  { Effect pos c [] [] }
 
-Changes  = c:Change "," cs:Changes   { c : cs }
-Changes  = c:Change                  { [c] }
+Changes([Change])  = c:Change "," cs:Changes   { c : cs }
+Changes([Change])  = c:Change                  { [c] }
 
 Change   = "+" c:Call                { Assert pos c }
 Change   = "-" c:Call                { Refute pos c }
@@ -32,8 +29,8 @@ Change   = "-" c:Call                { Refute pos c }
 Clause   = c:Call               "."  { Clause pos c [] }
 Clause   = c:Call "<-" cs:Conds "."  { Clause pos c cs }
 
-Conds    = c:Cond "," cs:Conds       { c : cs }
-Conds    = c:Cond                    { [c] }
+Conds([Cond])    = c:Cond "," cs:Conds       { c : cs }
+Conds([Cond])    = c:Cond                    { [c] }
 
 Cond     =     c:Call                { CondAssert pos c }
 Cond     = "~" c:Call                { CondRefute pos c }
@@ -41,24 +38,24 @@ Cond     =     e:Expr                { CondGuard  pos e }
 
 Call     = pred:"<name>" t:Tuple     { Call pos pred t }
 
-Tuple    = "("           ")"         { [] }
-Tuple    = "(" es:Exprs1 ")"         { es }
+Tuple([Expr])    = "("           ")"         { [] }
+Tuple([Expr])    = "(" es:Exprs1 ")"         { es }
 
-Exprs1   = e:Expr     "," es:Exprs1  { e : es }
-Exprs1   = e:Expr                    { [e] }
+Exprs1([Expr])   = e:Expr     "," es:Exprs1  { e : es }
+Exprs1([Expr])   = e:Expr                    { [e] }
 
 Expr     = a:ExprAdd  "=" b:ExprAdd  { ExprBinary pos a Equals b }
 Expr     = a:ExprAdd                 { a }
 
-ExprAdd  = a:ExprAdd  "+" b:ExprMult { ExprBinary pos a Add b }
-ExprAdd  = a:ExprMult                { a }
+ExprAdd(Expr)  = a:ExprAdd  "+" b:ExprMult { ExprBinary pos a Add b }
+ExprAdd(Expr)  = a:ExprMult                { a }
 
-ExprMult = a:ExprMult "*" b:ExprTerm { ExprBinary pos a Mult b }
-ExprMult = a:ExprTerm                { a }
+ExprMult(Expr) = a:ExprMult "*" b:ExprTerm { ExprBinary pos a Mult b }
+ExprMult(Expr) = a:ExprTerm                { a }
 
-ExprTerm = "(" e:Expr ")"            { e }
-ExprTerm = n:"<Name>"                { ExprVar   pos n }
-ExprTerm = n:Const                   { ExprConst pos n }
+ExprTerm(Expr) = "(" e:Expr ")"            { e }
+ExprTerm(Expr) = n:"<Name>"                { ExprVar   pos n }
+ExprTerm(Expr) = n:Const                   { ExprConst pos n }
 
 Const    = n:"<name>"                { ConstNamed pos n }
 Const    = n:"<num>"                 { ConstInt   pos n }
