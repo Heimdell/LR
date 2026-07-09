@@ -75,6 +75,7 @@ library
         filepath,
         parsec,
         lr1-parser-pos,
+        lr1-parser-lexeme,
     hs-source-dirs:   src
     default-language: GHC2024
 
@@ -103,6 +104,7 @@ executable gen-lr1-parser-example
         shower,
         text,
         lr1-parser-pos,
+        lr1-parser-lexeme,
 
     hs-source-dirs:   example
     default-language: GHC2024

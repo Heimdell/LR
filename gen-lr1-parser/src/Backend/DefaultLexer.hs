@@ -13,6 +13,7 @@ import Data.Set (Set)
 import Control.Monad (void)
 import System.Exit (exitFailure)
 import Data.Text.Position
+import Data.Lexeme
 
 data Context__ = Context__
   { column, line ::  Int
@@ -192,29 +193,6 @@ space = "space or comment" <?> satisfy "space" isSpace <|> blockComment
 spaces :: M ()
 spaces = void do many space
 
-data Payload
-  = LowercaseName Text
-  | UppercaseName Text
-  | NumberLiteral Integer
-  | StringLiteral Text
-  | Operator      Text
-  | Punctuator    Text
-  | Reserved      Text
-
-instance Show Payload where
-  show = \case
-    LowercaseName _ -> "<name>"
-    UppercaseName _ -> "<Name>"
-    NumberLiteral _ -> "<num>"
-    StringLiteral _ -> "<str>"
-    Operator      _ -> "<op>"
-    Punctuator    _ -> "<pun>"
-    Reserved      n -> Text.unpack n
-
-type Lexeme = (Pos, Payload)
-
-instance {-# OVERLAPS #-} Show Lexeme where
-  show = show . snd
 
 lexeme :: Set Text -> M Lexeme
 lexeme keywords = do

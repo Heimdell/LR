@@ -1,0 +1,28 @@
+cabal-version:      3.0
+name:               lr1-parser-lexeme
+version:            0.1.0.0
+synopsis:           Lexeme for parser and lexer
+-- description:
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             Kirill Andreev
+maintainer:         hindmst.one@gmail.com
+-- copyright:
+category:           Language
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common warnings
+    ghc-options: -Wall
+    default-extensions:
+        LambdaCase
+
+library
+    import:           warnings
+    exposed-modules:  Data.Lexeme
+    -- other-modules:
+    -- other-extensions:
+    build-depends:    base ^>=4.20.2.0, text, lr1-parser-pos
+    hs-source-dirs:   src
+    default-language: GHC2021

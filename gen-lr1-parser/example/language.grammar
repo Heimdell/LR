@@ -1,6 +1,7 @@
 
 | import Backend.DefaultLexer
 | import Data.Text.Position (Pos)
+| import Data.Lexeme
 | import AST
 | import Data.Text (Text)
 
