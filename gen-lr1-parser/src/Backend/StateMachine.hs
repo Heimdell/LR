@@ -7,7 +7,7 @@ import Data.Function ((&))
 import Data.List (intercalate)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Map.Monoidal ((!))
+import Data.Map.Monoidal ((!), (==>))
 import Data.Map.Monoidal qualified as Monoidal
 import Data.Maybe (maybeToList)
 import Data.Ord (comparing)
@@ -114,13 +114,18 @@ generateParserModule addendum grammar pathToSrc moduleName = do
       ]
   writeFile fullPath (show moduleBody)
 
+typeOf :: Grammar -> Entity -> Text
+typeOf grammar entity = case toList (grammar.types ! entity) of
+  [ty_] -> ty_
+  other -> error $ "unexpected type set " <> show (entity ==> other) <> ", expected single type"
+
 makeParser :: Grammar -> Table State -> Doc
 makeParser grammar raw = vcat
-  [ genStateType states
+  [ genStateType grammar states
   , "  "
   , vcat do
       punctuate "\n" do
-        foldMap (pure . (\e -> gotoEntity grammar.starter e table)) do
+        foldMap (pure . (\e -> gotoEntity (typeOf grammar grammar.starter) (typeOf grammar e) e table)) do
           Set.delete "Start" grammar.entities
   , "  "
   , "run :: St a -> ([Lexeme], Pos) -> Stack' a -> Either (Pos, [String]) " <> pPrint grammar.starter
@@ -154,9 +159,9 @@ makeParser grammar raw = vcat
       , text (replicate (column - 1) ' ') <> pPrint body
       ]
 
-gotoEntity :: Entity -> Entity -> Table Int -> Doc
-gotoEntity starter entity Table {actions} = vcat
-  [ gotoName <+> do ":: ([Lexeme], Pos) -> " <> pPrint entity <> " -> Stack a -> Either (Pos, [String]) " <> pPrint starter
+gotoEntity :: Text -> Text -> Entity -> Table Int -> Doc
+gotoEntity starterType entityType entity Table {actions} = vcat
+  [ gotoName <+> do ":: ([Lexeme], Pos) -> " <> pPrint entityType <> " -> Stack a -> Either (Pos, [String]) " <> pPrint starterType
   , gotoName <+> "toks term stk@(state, _, _) = case state of"
   , vcat do
       map stateTransition do
@@ -173,21 +178,21 @@ gotoEntity starter entity Table {actions} = vcat
         "  " <> st start <> " -> run " <> st (goto ! entity) <> " toks (term :> stk)"
       | otherwise = mempty
 
-genStateType :: Map Int State -> Doc
-genStateType states = vcat
+genStateType :: Grammar -> Map Int State -> Doc
+genStateType grammar states = vcat
   [ "data St :: [Kind.Type] -> Kind.Type where"
   , nest 2 do
-      vcat $ map (uncurry genState) $ Map.assocs states
+      vcat $ map (uncurry (genState grammar)) $ Map.assocs states
   ]
 
-genState :: Int -> State -> Doc
-genState number state =
+genState :: Grammar -> Int -> State -> Doc
+genState grammar number state =
   ("S" <> pPrint number) <+> "::" <+> "forall a. St" <+> do
     parens
       $ fsep
       $ punctuate " :"
       $ (++ ["a"])
-      $ map pointToHaskellType -- and laugh
+      $ map (pointToHaskellType {- and laugh -} grammar)
       $ maximumBy (comparing length)
       $ map chooseReduce
       $ toList state.positions
@@ -195,9 +200,9 @@ genState number state =
     chooseReduce :: Position -> [Point]
     chooseReduce pos = reverse pos.parsed
 
-pointToHaskellType :: Point -> Doc
-pointToHaskellType = \case
-  E _   e      -> pPrint e
+pointToHaskellType :: Grammar -> Point -> Doc
+pointToHaskellType grammar = \case
+  E _   e      -> pPrint (typeOf grammar e)
   T _ "<num>"  -> "Integer"
   T _ "<str>"  -> "Text"
   T _ "<name>" -> "Text"

@@ -8,12 +8,13 @@ import Data.Set   qualified as Set
 
 import Data.Map.Monoidal (type (==>), (!), (==>))
 import Fixpoint          (fixpoint)
-import Rule              (Rule(..), ruleTerminals, ruleEntities, setNumber)
+import Rule              (Rule(..), ruleTerminals, ruleEntities, setNumber, ruleTypes)
 import Term              (Point(E, T), Entity, Term)
 
 import Data.Map.Monoidal qualified as Map
 import Data.Array (listArray)
 import Data.Text.Position
+import Data.Text (Text)
 
 data Grammar = Grammar
   { ruleOrder :: [Rule]
@@ -22,6 +23,7 @@ data Grammar = Grammar
   , entities  :: Set Entity
   , first     :: Entity ==> Set Term
   , starter   :: Entity
+  , types     :: Entity ==> Set Text
   }
 
 makeGrammar :: Entity -> [Rule] -> Grammar
@@ -32,6 +34,7 @@ makeGrammar starter ruleOrder = Grammar
   , entities  = foldMap ruleEntities  ruleOrder
   , first
   , starter
+  , types = foldMap ruleTypes ruleOrder
   }
   where
     rules =

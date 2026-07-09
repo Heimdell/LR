@@ -31,10 +31,6 @@ data Expr
   | ExprVar    Pos Text
   | ExprConst  Pos Const
 
-type ExprMult = Expr
-type ExprAdd  = Expr
-type ExprTerm = Expr
-
 instance Show Expr where
   show = \case
     ExprBinary _ left op right -> "(" <> show left <> " " <> show op <> " " <> show right <> ")"
@@ -44,11 +40,8 @@ instance Show Expr where
 data Call = Call
   { pos       :: Pos
   , predicate :: Text
-  , args      :: Tuple
+  , args      :: [Expr]
   }
-
-type Tuple  = [Expr]
-type Exprs1 = [Expr]
 
 instance Show Call where
   show Call {predicate, args} =
@@ -67,12 +60,10 @@ instance Show Cond where
     CondRefute _ c -> "~" <> show c
     CondGuard  _ c -> show c
 
-type Conds = [Cond]
-
 data Clause = Clause
   { pos  :: Pos
   , pat  :: Call
-  , body :: Conds
+  , body :: [Cond]
   }
 
 instance Show Clause where
@@ -89,13 +80,11 @@ instance Show Change where
     Assert _ c -> "+" <> show c
     Refute _ c -> "-" <> show c
 
-type Changes = [Change]
-
 data Effect = Effect
   { pos  :: Pos
   , pat  :: Call
-  , body :: Conds
-  , changes :: Changes
+  , body :: [Cond]
+  , changes :: [Change]
   }
 
 instance Show Effect where
@@ -106,8 +95,6 @@ instance Show Effect where
 data Stmt
   = StmtClause Pos Clause
   | StmtEffect Pos Effect
-
-type Stmts = [Stmt]
 
 instance Show Stmt where
   show = \case
