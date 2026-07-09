@@ -18,7 +18,7 @@ import Frontend.Parser0 (parseGrammar)
 import Grammar
 import Position
 import qualified Data.Set as Set
-import qualified Data.Text as Text
+-- import qualified Data.Text as Text
 import State
 import System.FilePath
 import Tables
@@ -84,7 +84,7 @@ generateParserModule addendum grammar pathToSrc moduleName = do
       , "import Data.Text.IO.Utf8 qualified as Text"
       , "import Data.Kind qualified as Kind"
       , vcat do
-          map (text . Text.unpack) addendum
+          map pPrint addendum
       , "  "
       , "data Stack' xs where"
       , "  Nil  ::      Stack' '[]"
@@ -227,13 +227,13 @@ pair f s = parens ((f <> ",") <+> s)
 
 pointToBinder :: Text -> Text -> Term -> Doc
 pointToBinder range name = \case
-  "<num>"      -> parens do (text (Text.unpack range) <> ", NumberLiteral") <+> text (Text.unpack name)
-  "<str>"      -> parens do (text (Text.unpack range) <> ", StringLiteral") <+> text (Text.unpack name)
-  "<name>"     -> parens do (text (Text.unpack range) <> ", LowercaseName") <+> text (Text.unpack name)
-  "<Name>"     -> parens do (text (Text.unpack range) <> ", UppercaseName") <+> text (Text.unpack name)
-  "<op>"       -> parens do (text (Text.unpack range) <> ", Operator")      <+> text (Text.unpack name)
-  "<pun>"      -> parens do (text (Text.unpack range) <> ", Punctuator")    <+> text (Text.unpack name)
-  Term keyword -> parens do (text (Text.unpack range) <> ", ")              <+> doubleQuotes (pPrint keyword)
+  "<num>"      -> parens do (pPrint range <> ", NumberLiteral") <+> pPrint name
+  "<str>"      -> parens do (pPrint range <> ", StringLiteral") <+> pPrint name
+  "<name>"     -> parens do (pPrint range <> ", LowercaseName") <+> pPrint name
+  "<Name>"     -> parens do (pPrint range <> ", UppercaseName") <+> pPrint name
+  "<op>"       -> parens do (pPrint range <> ", Operator")      <+> pPrint name
+  "<pun>"      -> parens do (pPrint range <> ", Punctuator")    <+> pPrint name
+  Term keyword -> parens do (pPrint range <> ", ")              <+> doubleQuotes (pPrint keyword)
 
 termIsBinding :: Term -> Bool
 termIsBinding = \case
