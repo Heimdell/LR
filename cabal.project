@@ -2,5 +2,6 @@
 packages:
   ./gen-lr1-parser
   ./lr1-parser-pos
+  ./lr1-parser-example
   ./lr1-parser-lexeme
   ./lr1-parser-default-lexer
