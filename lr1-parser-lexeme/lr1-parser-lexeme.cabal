@@ -17,6 +17,7 @@ common warnings
     ghc-options: -Wall
     default-extensions:
         LambdaCase
+        DerivingStrategies
 
 library
     import:           warnings

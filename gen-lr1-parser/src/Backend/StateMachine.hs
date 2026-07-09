@@ -233,7 +233,7 @@ pointToBinder range name = \case
   "<Name>"     -> parens do (text (Text.unpack range) <> ", UppercaseName") <+> text (Text.unpack name)
   "<op>"       -> parens do (text (Text.unpack range) <> ", Operator")      <+> text (Text.unpack name)
   "<pun>"      -> parens do (text (Text.unpack range) <> ", Punctuator")    <+> text (Text.unpack name)
-  Term keyword -> parens do (text (Text.unpack range) <> ", Reserved")      <+> doubleQuotes (pPrint keyword)
+  Term keyword -> parens do (text (Text.unpack range) <> ", ")              <+> doubleQuotes (pPrint keyword)
 
 termIsBinding :: Term -> Bool
 termIsBinding = \case

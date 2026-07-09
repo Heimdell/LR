@@ -1,5 +1,6 @@
 module Data.Lexeme where
 
+import Data.String (IsString(fromString))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Position (Pos)
@@ -12,6 +13,7 @@ data Payload
   | Operator      Text
   | Punctuator    Text
   | Reserved      Text
+  deriving stock (Eq)
 
 instance Show Payload where
   show = \case
@@ -27,3 +29,6 @@ type Lexeme = (Pos, Payload)
 
 instance {-# OVERLAPS #-} Show Lexeme where
   show = show . snd
+
+instance IsString Payload where
+  fromString = Reserved . fromString
