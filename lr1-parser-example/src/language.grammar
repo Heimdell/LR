@@ -21,7 +21,6 @@ Effect
   = c:Call               "=>" ds:Changes "."  { Effect pos c [] ds }
   | c:Call "->" cs:Conds "=>" ds:Changes "."  { Effect pos c cs ds }
   | c:Call "->" cs:Conds                 "."  { Effect pos c cs [] }
-  | c:Call                               "."  { Effect pos c [] [] }
 
 Changes : [Change]
   = c:Change "," cs:Changes   { c : cs }

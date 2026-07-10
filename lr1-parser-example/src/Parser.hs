@@ -909,13 +909,9 @@ run = \cases {
 ; S7 ([], end) (cs :> c :? stk@(_, pos, _)) ->
     gotoStmts ([], end) (action13 pos c cs) stk
 ; S10 ([], end) (_ :> c :? stk@(_, pos, _)) ->
-    gotoEffect ([], end) (action24 pos c) stk
-; S10 ([], end) (_ :> c :? stk@(_, pos, _)) ->
-    gotoClause ([], end) (action35 pos c) stk
+    gotoClause ([], end) (action34 pos c) stk
 ; S10 ((p, LowercaseName tok) : input, end) (_ :> c :? stk@(_, pos, _)) ->
-    gotoEffect ((p, LowercaseName tok) : input, end) (action24 pos c) stk
-; S10 ((p, LowercaseName tok) : input, end) (_ :> c :? stk@(_, pos, _)) ->
-    gotoClause ((p, LowercaseName tok) : input, end) (action35 pos c) stk
+    gotoClause ((p, LowercaseName tok) : input, end) (action34 pos c) stk
 ; S15 ([], end) (_ :> ds :? _ :? c :? stk@(_, pos, _)) ->
     gotoEffect ([], end) (action21 pos c ds) stk
 ; S15 ((p, LowercaseName tok) : input, end) (_ :> ds :? _ :? c :? stk@(_, pos, _)) ->
@@ -927,9 +923,9 @@ run = \cases {
     gotoEffect ((p, LowercaseName tok) : input, end) (action23 pos c
                                                                    cs) stk
 ; S18 ([], end) (_ :> cs :? _ :? c :? stk@(_, pos, _)) ->
-    gotoClause ([], end) (action36 pos c cs) stk
+    gotoClause ([], end) (action35 pos c cs) stk
 ; S18 ((p, LowercaseName tok) : input, end) (_ :> cs :? _ :? c :? stk@(_, pos, _)) ->
-    gotoClause ((p, LowercaseName tok) : input, end) (action36 pos c
+    gotoClause ((p, LowercaseName tok) : input, end) (action35 pos c
                                                                    cs) stk
 ; S20 ([], end) (_ :> ds :? _ :? cs :? _ :? c :? stk@(_, pos, _)) ->
     gotoEffect ([], end) (action22 pos c cs ds) stk
@@ -937,787 +933,787 @@ run = \cases {
     gotoEffect ((p, LowercaseName tok) : input, end) (action22 pos c cs
                                                                    ds) stk
 ; S21 ((p,  ")") : input, end) (e :> stk@(_, pos, _)) ->
-    gotoExprs1 ((p,  ")") : input, end) (action56 pos e) stk
+    gotoExprs1 ((p,  ")") : input, end) (action55 pos e) stk
 ; S22 ((p,  ")") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExpr ((p,  ")") : input, end) (action60 pos a) stk
+    gotoExpr ((p,  ")") : input, end) (action59 pos a) stk
 ; S22 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExpr ((p,  ",") : input, end) (action60 pos a) stk
+    gotoExpr ((p,  ",") : input, end) (action59 pos a) stk
 ; S23 ((p,  ")") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExpr ((p,  ")") : input, end) (action60 pos a) stk
+    gotoExpr ((p,  ")") : input, end) (action59 pos a) stk
 ; S24 ((p,  ")") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExpr ((p,  ")") : input, end) (action59 pos a b) stk
+    gotoExpr ((p,  ")") : input, end) (action58 pos a b) stk
 ; S25 ((p,  ")") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExpr ((p,  ")") : input, end) (action59 pos a b) stk
+    gotoExpr ((p,  ")") : input, end) (action58 pos a b) stk
 ; S25 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExpr ((p,  ",") : input, end) (action59 pos a b) stk
+    gotoExpr ((p,  ",") : input, end) (action58 pos a b) stk
 ; S26 ((p,  ")") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ")") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ")") : input, end) (action63 pos a) stk
 ; S26 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "+") : input, end) (action63 pos a) stk
 ; S27 ((p,  ")") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ")") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ")") : input, end) (action63 pos a) stk
 ; S27 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "+") : input, end) (action63 pos a) stk
 ; S27 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ",") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ",") : input, end) (action63 pos a) stk
 ; S28 ((p,  ")") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ")") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ")") : input, end) (action63 pos a) stk
 ; S28 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "+") : input, end) (action63 pos a) stk
 ; S28 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ",") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ",") : input, end) (action63 pos a) stk
 ; S28 ((p,  "=") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "=") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "=") : input, end) (action63 pos a) stk
 ; S29 ((p,  ")") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ")") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ")") : input, end) (action63 pos a) stk
 ; S29 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "+") : input, end) (action63 pos a) stk
 ; S29 ((p,  "=") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "=") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "=") : input, end) (action63 pos a) stk
 ; S30 ((p,  ")") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ")") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ")") : input, end) (action62 pos a b) stk
 ; S30 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "+") : input, end) (action62 pos a b) stk
 ; S31 ((p,  ")") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ")") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ")") : input, end) (action62 pos a b) stk
 ; S31 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "+") : input, end) (action62 pos a b) stk
 ; S31 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ",") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ",") : input, end) (action62 pos a b) stk
 ; S32 ((p,  ")") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ")") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ")") : input, end) (action62 pos a b) stk
 ; S32 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "+") : input, end) (action62 pos a b) stk
 ; S32 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ",") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ",") : input, end) (action62 pos a b) stk
 ; S32 ((p,  "=") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "=") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "=") : input, end) (action62 pos a b) stk
 ; S33 ((p,  ")") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ")") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ")") : input, end) (action62 pos a b) stk
 ; S33 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "+") : input, end) (action62 pos a b) stk
 ; S33 ((p,  "=") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "=") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "=") : input, end) (action62 pos a b) stk
 ; S34 ((p,  ")") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ")") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ")") : input, end) (action67 pos a) stk
 ; S34 ((p,  "*") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "*") : input, end) (action67 pos a) stk
 ; S34 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "+") : input, end) (action67 pos a) stk
 ; S35 ((p,  ")") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ")") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ")") : input, end) (action67 pos a) stk
 ; S35 ((p,  "*") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "*") : input, end) (action67 pos a) stk
 ; S35 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "+") : input, end) (action67 pos a) stk
 ; S35 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ",") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ",") : input, end) (action67 pos a) stk
 ; S36 ((p,  ")") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ")") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ")") : input, end) (action67 pos a) stk
 ; S36 ((p,  "*") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "*") : input, end) (action67 pos a) stk
 ; S36 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "+") : input, end) (action67 pos a) stk
 ; S36 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ",") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ",") : input, end) (action67 pos a) stk
 ; S36 ((p,  "=") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "=") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "=") : input, end) (action67 pos a) stk
 ; S37 ((p,  ")") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ")") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ")") : input, end) (action67 pos a) stk
 ; S37 ((p,  "*") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "*") : input, end) (action67 pos a) stk
 ; S37 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "+") : input, end) (action67 pos a) stk
 ; S37 ((p,  "=") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "=") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "=") : input, end) (action67 pos a) stk
 ; S42 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ")") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ")") : input, end) (action71 pos n) stk
 ; S42 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action71 pos n) stk
 ; S42 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action71 pos n) stk
 ; S43 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ")") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ")") : input, end) (action71 pos n) stk
 ; S43 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action71 pos n) stk
 ; S43 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action71 pos n) stk
 ; S43 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ",") : input, end) (action71 pos n) stk
 ; S44 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ")") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ")") : input, end) (action71 pos n) stk
 ; S44 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action71 pos n) stk
 ; S44 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action71 pos n) stk
 ; S44 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ",") : input, end) (action71 pos n) stk
 ; S44 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "=") : input, end) (action71 pos n) stk
 ; S45 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ")") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ")") : input, end) (action71 pos n) stk
 ; S45 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action71 pos n) stk
 ; S45 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action71 pos n) stk
 ; S45 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "=") : input, end) (action71 pos n) stk
 ; S46 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ")") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ")") : input, end) (action72 pos n) stk
 ; S46 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
 ; S46 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
 ; S47 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ")") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ")") : input, end) (action72 pos n) stk
 ; S47 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
 ; S47 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
 ; S47 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ",") : input, end) (action72 pos n) stk
 ; S48 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ")") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ")") : input, end) (action72 pos n) stk
 ; S48 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
 ; S48 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
 ; S48 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ",") : input, end) (action72 pos n) stk
 ; S48 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "=") : input, end) (action72 pos n) stk
 ; S49 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ")") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ")") : input, end) (action72 pos n) stk
 ; S49 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
 ; S49 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
 ; S49 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "=") : input, end) (action72 pos n) stk
 ; S50 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ")") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ")") : input, end) (action75 pos n) stk
 ; S50 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action75 pos n) stk
 ; S50 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action75 pos n) stk
 ; S51 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ")") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ")") : input, end) (action75 pos n) stk
 ; S51 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action75 pos n) stk
 ; S51 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action75 pos n) stk
 ; S51 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action75 pos n) stk
 ; S52 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ")") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ")") : input, end) (action75 pos n) stk
 ; S52 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action75 pos n) stk
 ; S52 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action75 pos n) stk
 ; S52 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action75 pos n) stk
 ; S52 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "=") : input, end) (action75 pos n) stk
 ; S53 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ")") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ")") : input, end) (action75 pos n) stk
 ; S53 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action75 pos n) stk
 ; S53 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action75 pos n) stk
 ; S53 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "=") : input, end) (action75 pos n) stk
 ; S54 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ")") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ")") : input, end) (action76 pos n) stk
 ; S54 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
 ; S54 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
 ; S55 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ")") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ")") : input, end) (action76 pos n) stk
 ; S55 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
 ; S55 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
 ; S55 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
 ; S56 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ")") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ")") : input, end) (action76 pos n) stk
 ; S56 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
 ; S56 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
 ; S56 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
 ; S56 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "=") : input, end) (action76 pos n) stk
 ; S57 ((p,  ")") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ")") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ")") : input, end) (action76 pos n) stk
 ; S57 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
 ; S57 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
 ; S57 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "=") : input, end) (action76 pos n) stk
 ; S73 ((p,  ")") : input, end) (es :> _ :? e :? stk@(_, pos, _)) ->
-    gotoExprs1 ((p,  ")") : input, end) (action55 pos e es) stk
+    gotoExprs1 ((p,  ")") : input, end) (action54 pos e es) stk
 ; S74 ((p,  ")") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ")") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ")") : input, end) (action66 pos a b) stk
 ; S74 ((p,  "*") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "*") : input, end) (action66 pos a b) stk
 ; S74 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "+") : input, end) (action66 pos a b) stk
 ; S75 ((p,  ")") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ")") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ")") : input, end) (action66 pos a b) stk
 ; S75 ((p,  "*") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "*") : input, end) (action66 pos a b) stk
 ; S75 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "+") : input, end) (action66 pos a b) stk
 ; S75 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ",") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ",") : input, end) (action66 pos a b) stk
 ; S76 ((p,  ")") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ")") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ")") : input, end) (action66 pos a b) stk
 ; S76 ((p,  "*") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "*") : input, end) (action66 pos a b) stk
 ; S76 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "+") : input, end) (action66 pos a b) stk
 ; S76 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ",") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ",") : input, end) (action66 pos a b) stk
 ; S76 ((p,  "=") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "=") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "=") : input, end) (action66 pos a b) stk
 ; S77 ((p,  ")") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ")") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ")") : input, end) (action66 pos a b) stk
 ; S77 ((p,  "*") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "*") : input, end) (action66 pos a b) stk
 ; S77 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "+") : input, end) (action66 pos a b) stk
 ; S77 ((p,  "=") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "=") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "=") : input, end) (action66 pos a b) stk
 ; S78 ((p,  ")") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ")") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ")") : input, end) (action70 pos e) stk
 ; S78 ((p,  "*") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "*") : input, end) (action70 pos e) stk
 ; S78 ((p,  "+") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "+") : input, end) (action70 pos e) stk
 ; S79 ((p,  ")") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ")") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ")") : input, end) (action70 pos e) stk
 ; S79 ((p,  "*") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "*") : input, end) (action70 pos e) stk
 ; S79 ((p,  "+") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "+") : input, end) (action70 pos e) stk
 ; S79 ((p,  ",") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ",") : input, end) (action70 pos e) stk
 ; S80 ((p,  ")") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ")") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ")") : input, end) (action70 pos e) stk
 ; S80 ((p,  "*") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "*") : input, end) (action70 pos e) stk
 ; S80 ((p,  "+") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "+") : input, end) (action70 pos e) stk
 ; S80 ((p,  ",") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ",") : input, end) (action70 pos e) stk
 ; S80 ((p,  "=") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "=") : input, end) (action70 pos e) stk
 ; S81 ((p,  ")") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ")") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ")") : input, end) (action70 pos e) stk
 ; S81 ((p,  "*") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "*") : input, end) (action70 pos e) stk
 ; S81 ((p,  "+") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "+") : input, end) (action70 pos e) stk
 ; S81 ((p,  "=") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "=") : input, end) (action70 pos e) stk
 ; S82 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "+") : input, end) (action63 pos a) stk
 ; S82 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ",") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ",") : input, end) (action63 pos a) stk
 ; S82 ((p,  ".") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ".") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ".") : input, end) (action63 pos a) stk
 ; S83 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "+") : input, end) (action63 pos a) stk
 ; S83 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ",") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ",") : input, end) (action63 pos a) stk
 ; S83 ((p,  ".") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ".") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ".") : input, end) (action63 pos a) stk
 ; S83 ((p,  "=") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "=") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "=") : input, end) (action63 pos a) stk
 ; S84 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "+") : input, end) (action63 pos a) stk
 ; S84 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ",") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ",") : input, end) (action63 pos a) stk
 ; S84 ((p,  ".") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ".") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ".") : input, end) (action63 pos a) stk
 ; S84 ((p,  "=") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "=") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "=") : input, end) (action63 pos a) stk
 ; S84 ((p,  "=>") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "=>") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "=>") : input, end) (action63 pos a) stk
 ; S85 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "+") : input, end) (action63 pos a) stk
 ; S85 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ",") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ",") : input, end) (action63 pos a) stk
 ; S85 ((p,  ".") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ".") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  ".") : input, end) (action63 pos a) stk
 ; S85 ((p,  "=>") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "=>") : input, end) (action64 pos a) stk
+    gotoExprAdd ((p,  "=>") : input, end) (action63 pos a) stk
 ; S86 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "+") : input, end) (action62 pos a b) stk
 ; S86 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ",") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ",") : input, end) (action62 pos a b) stk
 ; S86 ((p,  ".") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ".") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ".") : input, end) (action62 pos a b) stk
 ; S87 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "+") : input, end) (action62 pos a b) stk
 ; S87 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ",") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ",") : input, end) (action62 pos a b) stk
 ; S87 ((p,  ".") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ".") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ".") : input, end) (action62 pos a b) stk
 ; S87 ((p,  "=") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "=") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "=") : input, end) (action62 pos a b) stk
 ; S88 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "+") : input, end) (action62 pos a b) stk
 ; S88 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ",") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ",") : input, end) (action62 pos a b) stk
 ; S88 ((p,  ".") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ".") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ".") : input, end) (action62 pos a b) stk
 ; S88 ((p,  "=") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "=") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "=") : input, end) (action62 pos a b) stk
 ; S88 ((p,  "=>") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "=>") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "=>") : input, end) (action62 pos a b) stk
 ; S89 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "+") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "+") : input, end) (action62 pos a b) stk
 ; S89 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ",") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ",") : input, end) (action62 pos a b) stk
 ; S89 ((p,  ".") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  ".") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  ".") : input, end) (action62 pos a b) stk
 ; S89 ((p,  "=>") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprAdd ((p,  "=>") : input, end) (action63 pos a b) stk
+    gotoExprAdd ((p,  "=>") : input, end) (action62 pos a b) stk
 ; S90 ((p,  "*") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "*") : input, end) (action67 pos a) stk
 ; S90 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "+") : input, end) (action67 pos a) stk
 ; S90 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ",") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ",") : input, end) (action67 pos a) stk
 ; S90 ((p,  ".") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ".") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ".") : input, end) (action67 pos a) stk
 ; S91 ((p,  "*") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "*") : input, end) (action67 pos a) stk
 ; S91 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "+") : input, end) (action67 pos a) stk
 ; S91 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ",") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ",") : input, end) (action67 pos a) stk
 ; S91 ((p,  ".") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ".") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ".") : input, end) (action67 pos a) stk
 ; S91 ((p,  "=") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "=") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "=") : input, end) (action67 pos a) stk
 ; S92 ((p,  "*") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "*") : input, end) (action67 pos a) stk
 ; S92 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "+") : input, end) (action67 pos a) stk
 ; S92 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ",") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ",") : input, end) (action67 pos a) stk
 ; S92 ((p,  ".") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ".") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ".") : input, end) (action67 pos a) stk
 ; S92 ((p,  "=") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "=") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "=") : input, end) (action67 pos a) stk
 ; S92 ((p,  "=>") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "=>") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "=>") : input, end) (action67 pos a) stk
 ; S93 ((p,  "*") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "*") : input, end) (action67 pos a) stk
 ; S93 ((p,  "+") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "+") : input, end) (action67 pos a) stk
 ; S93 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ",") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ",") : input, end) (action67 pos a) stk
 ; S93 ((p,  ".") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ".") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  ".") : input, end) (action67 pos a) stk
 ; S93 ((p,  "=>") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "=>") : input, end) (action68 pos a) stk
+    gotoExprMult ((p,  "=>") : input, end) (action67 pos a) stk
 ; S98 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action71 pos n) stk
 ; S98 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action71 pos n) stk
 ; S98 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ",") : input, end) (action71 pos n) stk
 ; S98 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ".") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ".") : input, end) (action71 pos n) stk
 ; S99 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action71 pos n) stk
 ; S99 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action71 pos n) stk
 ; S99 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ",") : input, end) (action71 pos n) stk
 ; S99 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ".") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ".") : input, end) (action71 pos n) stk
 ; S99 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "=") : input, end) (action71 pos n) stk
 ; S100 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action71 pos n) stk
 ; S100 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action71 pos n) stk
 ; S100 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ",") : input, end) (action71 pos n) stk
 ; S100 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ".") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ".") : input, end) (action71 pos n) stk
 ; S100 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "=") : input, end) (action71 pos n) stk
 ; S100 ((p,  "=>") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=>") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "=>") : input, end) (action71 pos n) stk
 ; S101 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action71 pos n) stk
 ; S101 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action71 pos n) stk
 ; S101 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ",") : input, end) (action71 pos n) stk
 ; S101 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ".") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  ".") : input, end) (action71 pos n) stk
 ; S101 ((p,  "=>") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=>") : input, end) (action72 pos n) stk
+    gotoExprTerm ((p,  "=>") : input, end) (action71 pos n) stk
 ; S102 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
 ; S102 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
 ; S102 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ",") : input, end) (action72 pos n) stk
 ; S102 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ".") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ".") : input, end) (action72 pos n) stk
 ; S103 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
 ; S103 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
 ; S103 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ",") : input, end) (action72 pos n) stk
 ; S103 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ".") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ".") : input, end) (action72 pos n) stk
 ; S103 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "=") : input, end) (action72 pos n) stk
 ; S104 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
 ; S104 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
 ; S104 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ",") : input, end) (action72 pos n) stk
 ; S104 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ".") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ".") : input, end) (action72 pos n) stk
 ; S104 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "=") : input, end) (action72 pos n) stk
 ; S104 ((p,  "=>") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=>") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "=>") : input, end) (action72 pos n) stk
 ; S105 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "*") : input, end) (action72 pos n) stk
 ; S105 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "+") : input, end) (action72 pos n) stk
 ; S105 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ",") : input, end) (action72 pos n) stk
 ; S105 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ".") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  ".") : input, end) (action72 pos n) stk
 ; S105 ((p,  "=>") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=>") : input, end) (action73 pos n) stk
+    gotoExprTerm ((p,  "=>") : input, end) (action72 pos n) stk
 ; S106 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action75 pos n) stk
 ; S106 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action75 pos n) stk
 ; S106 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action75 pos n) stk
 ; S106 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ".") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ".") : input, end) (action75 pos n) stk
 ; S106 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "=") : input, end) (action75 pos n) stk
 ; S107 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action75 pos n) stk
 ; S107 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action75 pos n) stk
 ; S107 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action75 pos n) stk
 ; S107 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ".") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ".") : input, end) (action75 pos n) stk
 ; S107 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "=") : input, end) (action75 pos n) stk
 ; S107 ((p,  "=>") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=>") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "=>") : input, end) (action75 pos n) stk
 ; S108 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action75 pos n) stk
 ; S108 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action75 pos n) stk
 ; S108 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action75 pos n) stk
 ; S108 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ".") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ".") : input, end) (action75 pos n) stk
 ; S109 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action75 pos n) stk
 ; S109 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action75 pos n) stk
 ; S109 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action75 pos n) stk
 ; S109 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ".") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ".") : input, end) (action75 pos n) stk
 ; S109 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "=") : input, end) (action75 pos n) stk
 ; S110 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action75 pos n) stk
 ; S110 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action75 pos n) stk
 ; S110 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action75 pos n) stk
 ; S110 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ".") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ".") : input, end) (action75 pos n) stk
 ; S110 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "=") : input, end) (action75 pos n) stk
 ; S110 ((p,  "=>") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=>") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "=>") : input, end) (action75 pos n) stk
 ; S111 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action75 pos n) stk
 ; S111 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action75 pos n) stk
 ; S111 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action75 pos n) stk
 ; S111 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ".") : input, end) (action76 pos n) stk
+    gotoConst ((p,  ".") : input, end) (action75 pos n) stk
 ; S111 ((p,  "=>") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=>") : input, end) (action76 pos n) stk
+    gotoConst ((p,  "=>") : input, end) (action75 pos n) stk
 ; S112 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
 ; S112 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
 ; S112 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
 ; S112 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ".") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ".") : input, end) (action76 pos n) stk
 ; S113 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
 ; S113 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
 ; S113 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
 ; S113 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ".") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ".") : input, end) (action76 pos n) stk
 ; S113 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "=") : input, end) (action76 pos n) stk
 ; S114 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
 ; S114 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
 ; S114 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
 ; S114 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ".") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ".") : input, end) (action76 pos n) stk
 ; S114 ((p,  "=") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "=") : input, end) (action76 pos n) stk
 ; S114 ((p,  "=>") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=>") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "=>") : input, end) (action76 pos n) stk
 ; S115 ((p,  "*") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "*") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "*") : input, end) (action76 pos n) stk
 ; S115 ((p,  "+") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "+") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "+") : input, end) (action76 pos n) stk
 ; S115 ((p,  ",") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ",") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ",") : input, end) (action76 pos n) stk
 ; S115 ((p,  ".") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  ".") : input, end) (action77 pos n) stk
+    gotoConst ((p,  ".") : input, end) (action76 pos n) stk
 ; S115 ((p,  "=>") : input, end) (n :> stk@(_, pos, _)) ->
-    gotoConst ((p,  "=>") : input, end) (action77 pos n) stk
+    gotoConst ((p,  "=>") : input, end) (action76 pos n) stk
 ; S124 ((p,  "*") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "*") : input, end) (action66 pos a b) stk
 ; S124 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "+") : input, end) (action66 pos a b) stk
 ; S124 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ",") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ",") : input, end) (action66 pos a b) stk
 ; S124 ((p,  ".") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ".") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ".") : input, end) (action66 pos a b) stk
 ; S125 ((p,  "*") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "*") : input, end) (action66 pos a b) stk
 ; S125 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "+") : input, end) (action66 pos a b) stk
 ; S125 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ",") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ",") : input, end) (action66 pos a b) stk
 ; S125 ((p,  ".") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ".") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ".") : input, end) (action66 pos a b) stk
 ; S125 ((p,  "=") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "=") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "=") : input, end) (action66 pos a b) stk
 ; S126 ((p,  "*") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "*") : input, end) (action66 pos a b) stk
 ; S126 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "+") : input, end) (action66 pos a b) stk
 ; S126 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ",") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ",") : input, end) (action66 pos a b) stk
 ; S126 ((p,  ".") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ".") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ".") : input, end) (action66 pos a b) stk
 ; S126 ((p,  "=") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "=") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "=") : input, end) (action66 pos a b) stk
 ; S126 ((p,  "=>") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "=>") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "=>") : input, end) (action66 pos a b) stk
 ; S127 ((p,  "*") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "*") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "*") : input, end) (action66 pos a b) stk
 ; S127 ((p,  "+") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "+") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "+") : input, end) (action66 pos a b) stk
 ; S127 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ",") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ",") : input, end) (action66 pos a b) stk
 ; S127 ((p,  ".") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  ".") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  ".") : input, end) (action66 pos a b) stk
 ; S127 ((p,  "=>") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExprMult ((p,  "=>") : input, end) (action67 pos a b) stk
+    gotoExprMult ((p,  "=>") : input, end) (action66 pos a b) stk
 ; S128 ((p,  "*") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "*") : input, end) (action70 pos e) stk
 ; S128 ((p,  "+") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "+") : input, end) (action70 pos e) stk
 ; S128 ((p,  ",") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ",") : input, end) (action70 pos e) stk
 ; S128 ((p,  ".") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ".") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ".") : input, end) (action70 pos e) stk
 ; S129 ((p,  "*") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "*") : input, end) (action70 pos e) stk
 ; S129 ((p,  "+") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "+") : input, end) (action70 pos e) stk
 ; S129 ((p,  ",") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ",") : input, end) (action70 pos e) stk
 ; S129 ((p,  ".") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ".") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ".") : input, end) (action70 pos e) stk
 ; S129 ((p,  "=") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "=") : input, end) (action70 pos e) stk
 ; S130 ((p,  "*") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "*") : input, end) (action70 pos e) stk
 ; S130 ((p,  "+") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "+") : input, end) (action70 pos e) stk
 ; S130 ((p,  ",") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ",") : input, end) (action70 pos e) stk
 ; S130 ((p,  ".") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ".") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ".") : input, end) (action70 pos e) stk
 ; S130 ((p,  "=") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "=") : input, end) (action70 pos e) stk
 ; S130 ((p,  "=>") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=>") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "=>") : input, end) (action70 pos e) stk
 ; S131 ((p,  "*") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "*") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "*") : input, end) (action70 pos e) stk
 ; S131 ((p,  "+") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "+") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "+") : input, end) (action70 pos e) stk
 ; S131 ((p,  ",") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ",") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ",") : input, end) (action70 pos e) stk
 ; S131 ((p,  ".") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  ".") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  ".") : input, end) (action70 pos e) stk
 ; S131 ((p,  "=>") : input, end) (_ :> e :? _ :? stk@(_, pos, _)) ->
-    gotoExprTerm ((p,  "=>") : input, end) (action71 pos e) stk
+    gotoExprTerm ((p,  "=>") : input, end) (action70 pos e) stk
 ; S132 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExpr ((p,  ",") : input, end) (action60 pos a) stk
+    gotoExpr ((p,  ",") : input, end) (action59 pos a) stk
 ; S132 ((p,  ".") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExpr ((p,  ".") : input, end) (action60 pos a) stk
+    gotoExpr ((p,  ".") : input, end) (action59 pos a) stk
 ; S133 ((p,  ",") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExpr ((p,  ",") : input, end) (action60 pos a) stk
+    gotoExpr ((p,  ",") : input, end) (action59 pos a) stk
 ; S133 ((p,  ".") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExpr ((p,  ".") : input, end) (action60 pos a) stk
+    gotoExpr ((p,  ".") : input, end) (action59 pos a) stk
 ; S133 ((p,  "=>") : input, end) (a :> stk@(_, pos, _)) ->
-    gotoExpr ((p,  "=>") : input, end) (action60 pos a) stk
+    gotoExpr ((p,  "=>") : input, end) (action59 pos a) stk
 ; S134 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExpr ((p,  ",") : input, end) (action59 pos a b) stk
+    gotoExpr ((p,  ",") : input, end) (action58 pos a b) stk
 ; S134 ((p,  ".") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExpr ((p,  ".") : input, end) (action59 pos a b) stk
+    gotoExpr ((p,  ".") : input, end) (action58 pos a b) stk
 ; S135 ((p,  ",") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExpr ((p,  ",") : input, end) (action59 pos a b) stk
+    gotoExpr ((p,  ",") : input, end) (action58 pos a b) stk
 ; S135 ((p,  ".") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExpr ((p,  ".") : input, end) (action59 pos a b) stk
+    gotoExpr ((p,  ".") : input, end) (action58 pos a b) stk
 ; S135 ((p,  "=>") : input, end) (b :> _ :? a :? stk@(_, pos, _)) ->
-    gotoExpr ((p,  "=>") : input, end) (action59 pos a b) stk
+    gotoExpr ((p,  "=>") : input, end) (action58 pos a b) stk
 ; S142 ((p,  ",") : input, end) (c :> stk@(_, pos, _)) ->
-    gotoCond ((p,  ",") : input, end) (action43 pos c) stk
+    gotoCond ((p,  ",") : input, end) (action42 pos c) stk
 ; S142 ((p,  ".") : input, end) (c :> stk@(_, pos, _)) ->
-    gotoCond ((p,  ".") : input, end) (action43 pos c) stk
+    gotoCond ((p,  ".") : input, end) (action42 pos c) stk
 ; S143 ((p,  ",") : input, end) (c :> stk@(_, pos, _)) ->
-    gotoCond ((p,  ",") : input, end) (action43 pos c) stk
+    gotoCond ((p,  ",") : input, end) (action42 pos c) stk
 ; S143 ((p,  ".") : input, end) (c :> stk@(_, pos, _)) ->
-    gotoCond ((p,  ".") : input, end) (action43 pos c) stk
+    gotoCond ((p,  ".") : input, end) (action42 pos c) stk
 ; S143 ((p,  "=>") : input, end) (c :> stk@(_, pos, _)) ->
-    gotoCond ((p,  "=>") : input, end) (action43 pos c) stk
+    gotoCond ((p,  "=>") : input, end) (action42 pos c) stk
 ; S146 ((p,  ",") : input, end) (e :> stk@(_, pos, _)) ->
-    gotoCond ((p,  ",") : input, end) (action45 pos e) stk
+    gotoCond ((p,  ",") : input, end) (action44 pos e) stk
 ; S146 ((p,  ".") : input, end) (e :> stk@(_, pos, _)) ->
-    gotoCond ((p,  ".") : input, end) (action45 pos e) stk
+    gotoCond ((p,  ".") : input, end) (action44 pos e) stk
 ; S147 ((p,  ",") : input, end) (e :> stk@(_, pos, _)) ->
-    gotoCond ((p,  ",") : input, end) (action45 pos e) stk
+    gotoCond ((p,  ",") : input, end) (action44 pos e) stk
 ; S147 ((p,  ".") : input, end) (e :> stk@(_, pos, _)) ->
-    gotoCond ((p,  ".") : input, end) (action45 pos e) stk
+    gotoCond ((p,  ".") : input, end) (action44 pos e) stk
 ; S147 ((p,  "=>") : input, end) (e :> stk@(_, pos, _)) ->
-    gotoCond ((p,  "=>") : input, end) (action45 pos e) stk
+    gotoCond ((p,  "=>") : input, end) (action44 pos e) stk
 ; S152 ((p,  ",") : input, end) (c :> _ :? stk@(_, pos, _)) ->
-    gotoChange ((p,  ",") : input, end) (action31 pos c) stk
+    gotoChange ((p,  ",") : input, end) (action30 pos c) stk
 ; S152 ((p,  ".") : input, end) (c :> _ :? stk@(_, pos, _)) ->
-    gotoChange ((p,  ".") : input, end) (action31 pos c) stk
+    gotoChange ((p,  ".") : input, end) (action30 pos c) stk
 ; S153 ((p,  ",") : input, end) (c :> _ :? stk@(_, pos, _)) ->
-    gotoChange ((p,  ",") : input, end) (action32 pos c) stk
+    gotoChange ((p,  ",") : input, end) (action31 pos c) stk
 ; S153 ((p,  ".") : input, end) (c :> _ :? stk@(_, pos, _)) ->
-    gotoChange ((p,  ".") : input, end) (action32 pos c) stk
+    gotoChange ((p,  ".") : input, end) (action31 pos c) stk
 ; S154 ((p,  ",") : input, end) (c :> _ :? stk@(_, pos, _)) ->
-    gotoCond ((p,  ",") : input, end) (action44 pos c) stk
+    gotoCond ((p,  ",") : input, end) (action43 pos c) stk
 ; S154 ((p,  ".") : input, end) (c :> _ :? stk@(_, pos, _)) ->
-    gotoCond ((p,  ".") : input, end) (action44 pos c) stk
+    gotoCond ((p,  ".") : input, end) (action43 pos c) stk
 ; S155 ((p,  ",") : input, end) (c :> _ :? stk@(_, pos, _)) ->
-    gotoCond ((p,  ",") : input, end) (action44 pos c) stk
+    gotoCond ((p,  ",") : input, end) (action43 pos c) stk
 ; S155 ((p,  ".") : input, end) (c :> _ :? stk@(_, pos, _)) ->
-    gotoCond ((p,  ".") : input, end) (action44 pos c) stk
+    gotoCond ((p,  ".") : input, end) (action43 pos c) stk
 ; S155 ((p,  "=>") : input, end) (c :> _ :? stk@(_, pos, _)) ->
-    gotoCond ((p,  "=>") : input, end) (action44 pos c) stk
+    gotoCond ((p,  "=>") : input, end) (action43 pos c) stk
 ; S156 ((p,  ",") : input, end) (t :> pred :? stk@(_, pos, _)) ->
-    gotoCall ((p,  ",") : input, end) (action48 pos pred t) stk
+    gotoCall ((p,  ",") : input, end) (action47 pos pred t) stk
 ; S156 ((p,  ".") : input, end) (t :> pred :? stk@(_, pos, _)) ->
-    gotoCall ((p,  ".") : input, end) (action48 pos pred t) stk
+    gotoCall ((p,  ".") : input, end) (action47 pos pred t) stk
 ; S157 ((p,  ",") : input, end) (t :> pred :? stk@(_, pos, _)) ->
-    gotoCall ((p,  ",") : input, end) (action48 pos pred t) stk
+    gotoCall ((p,  ",") : input, end) (action47 pos pred t) stk
 ; S157 ((p,  ".") : input, end) (t :> pred :? stk@(_, pos, _)) ->
-    gotoCall ((p,  ".") : input, end) (action48 pos pred t) stk
+    gotoCall ((p,  ".") : input, end) (action47 pos pred t) stk
 ; S157 ((p,  "=>") : input, end) (t :> pred :? stk@(_, pos, _)) ->
-    gotoCall ((p,  "=>") : input, end) (action48 pos pred t) stk
+    gotoCall ((p,  "=>") : input, end) (action47 pos pred t) stk
 ; S158 ((p,  ",") : input, end) (_ :> _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  ",") : input, end) (action51 pos ) stk
+    gotoTuple ((p,  ",") : input, end) (action50 pos ) stk
 ; S158 ((p,  ".") : input, end) (_ :> _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  ".") : input, end) (action51 pos ) stk
+    gotoTuple ((p,  ".") : input, end) (action50 pos ) stk
 ; S159 ((p,  ",") : input, end) (_ :> _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  ",") : input, end) (action51 pos ) stk
+    gotoTuple ((p,  ",") : input, end) (action50 pos ) stk
 ; S159 ((p,  ".") : input, end) (_ :> _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  ".") : input, end) (action51 pos ) stk
+    gotoTuple ((p,  ".") : input, end) (action50 pos ) stk
 ; S159 ((p,  "=>") : input, end) (_ :> _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  "=>") : input, end) (action51 pos ) stk
+    gotoTuple ((p,  "=>") : input, end) (action50 pos ) stk
 ; S164 ((p,  ",") : input, end) (_ :> es :? _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  ",") : input, end) (action52 pos es) stk
+    gotoTuple ((p,  ",") : input, end) (action51 pos es) stk
 ; S164 ((p,  ".") : input, end) (_ :> es :? _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  ".") : input, end) (action52 pos es) stk
+    gotoTuple ((p,  ".") : input, end) (action51 pos es) stk
 ; S165 ((p,  ",") : input, end) (_ :> es :? _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  ",") : input, end) (action52 pos es) stk
+    gotoTuple ((p,  ",") : input, end) (action51 pos es) stk
 ; S165 ((p,  ".") : input, end) (_ :> es :? _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  ".") : input, end) (action52 pos es) stk
+    gotoTuple ((p,  ".") : input, end) (action51 pos es) stk
 ; S165 ((p,  "=>") : input, end) (_ :> es :? _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  "=>") : input, end) (action52 pos es) stk
+    gotoTuple ((p,  "=>") : input, end) (action51 pos es) stk
 ; S168 ((p,  "->") : input, end) (t :> pred :? stk@(_, pos, _)) ->
-    gotoCall ((p,  "->") : input, end) (action48 pos pred t) stk
+    gotoCall ((p,  "->") : input, end) (action47 pos pred t) stk
 ; S168 ((p,  ".") : input, end) (t :> pred :? stk@(_, pos, _)) ->
-    gotoCall ((p,  ".") : input, end) (action48 pos pred t) stk
+    gotoCall ((p,  ".") : input, end) (action47 pos pred t) stk
 ; S168 ((p,  "<-") : input, end) (t :> pred :? stk@(_, pos, _)) ->
-    gotoCall ((p,  "<-") : input, end) (action48 pos pred t) stk
+    gotoCall ((p,  "<-") : input, end) (action47 pos pred t) stk
 ; S168 ((p,  "=>") : input, end) (t :> pred :? stk@(_, pos, _)) ->
-    gotoCall ((p,  "=>") : input, end) (action48 pos pred t) stk
+    gotoCall ((p,  "=>") : input, end) (action47 pos pred t) stk
 ; S169 ((p,  "->") : input, end) (_ :> _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  "->") : input, end) (action51 pos ) stk
+    gotoTuple ((p,  "->") : input, end) (action50 pos ) stk
 ; S169 ((p,  ".") : input, end) (_ :> _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  ".") : input, end) (action51 pos ) stk
+    gotoTuple ((p,  ".") : input, end) (action50 pos ) stk
 ; S169 ((p,  "<-") : input, end) (_ :> _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  "<-") : input, end) (action51 pos ) stk
+    gotoTuple ((p,  "<-") : input, end) (action50 pos ) stk
 ; S169 ((p,  "=>") : input, end) (_ :> _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  "=>") : input, end) (action51 pos ) stk
+    gotoTuple ((p,  "=>") : input, end) (action50 pos ) stk
 ; S171 ((p,  "->") : input, end) (_ :> es :? _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  "->") : input, end) (action52 pos es) stk
+    gotoTuple ((p,  "->") : input, end) (action51 pos es) stk
 ; S171 ((p,  ".") : input, end) (_ :> es :? _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  ".") : input, end) (action52 pos es) stk
+    gotoTuple ((p,  ".") : input, end) (action51 pos es) stk
 ; S171 ((p,  "<-") : input, end) (_ :> es :? _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  "<-") : input, end) (action52 pos es) stk
+    gotoTuple ((p,  "<-") : input, end) (action51 pos es) stk
 ; S171 ((p,  "=>") : input, end) (_ :> es :? _ :? stk@(_, pos, _)) ->
-    gotoTuple ((p,  "=>") : input, end) (action52 pos es) stk
+    gotoTuple ((p,  "=>") : input, end) (action51 pos es) stk
 ; S172 ((p,  ".") : input, end) (c :> stk@(_, pos, _)) ->
-    gotoChanges ((p,  ".") : input, end) (action28 pos c) stk
+    gotoChanges ((p,  ".") : input, end) (action27 pos c) stk
 ; S173 ((p,  ".") : input, end) (c :> stk@(_, pos, _)) ->
-    gotoConds ((p,  ".") : input, end) (action40 pos c) stk
+    gotoConds ((p,  ".") : input, end) (action39 pos c) stk
 ; S174 ((p,  ".") : input, end) (c :> stk@(_, pos, _)) ->
-    gotoConds ((p,  ".") : input, end) (action40 pos c) stk
+    gotoConds ((p,  ".") : input, end) (action39 pos c) stk
 ; S174 ((p,  "=>") : input, end) (c :> stk@(_, pos, _)) ->
-    gotoConds ((p,  "=>") : input, end) (action40 pos c) stk
+    gotoConds ((p,  "=>") : input, end) (action39 pos c) stk
 ; S178 ((p,  ".") : input, end) (cs :> _ :? c :? stk@(_, pos, _)) ->
-    gotoChanges ((p,  ".") : input, end) (action27 pos c cs) stk
+    gotoChanges ((p,  ".") : input, end) (action26 pos c cs) stk
 ; S179 ((p,  ".") : input, end) (cs :> _ :? c :? stk@(_, pos, _)) ->
-    gotoConds ((p,  ".") : input, end) (action39 pos c cs) stk
+    gotoConds ((p,  ".") : input, end) (action38 pos c cs) stk
 ; S180 ((p,  ".") : input, end) (cs :> _ :? c :? stk@(_, pos, _)) ->
-    gotoConds ((p,  ".") : input, end) (action39 pos c cs) stk
+    gotoConds ((p,  ".") : input, end) (action38 pos c cs) stk
 ; S180 ((p,  "=>") : input, end) (cs :> _ :? c :? stk@(_, pos, _)) ->
-    gotoConds ((p,  "=>") : input, end) (action39 pos c cs) stk
+    gotoConds ((p,  "=>") : input, end) (action38 pos c cs) stk
 ; S0 input _ -> Left  (currentPos input, ["<name>"])
 ; S1 input _ -> Left  (currentPos input, ["$"])
 ; S2 input _ -> Left  (currentPos input, ["$"])
@@ -2002,89 +1998,86 @@ res
 ; action23 pos c cs =
 {-# LINE  23 "lr1-parser-example/src/language.grammar" #-}
                                                 Effect pos c cs [] 
-; action24 pos c =
-{-# LINE  24 "lr1-parser-example/src/language.grammar" #-}
-                                                Effect pos c [] [] 
-; action27 pos c cs =
-{-# LINE  27 "lr1-parser-example/src/language.grammar" #-}
+; action26 pos c cs =
+{-# LINE  26 "lr1-parser-example/src/language.grammar" #-}
                                 c : cs 
-; action28 pos c =
-{-# LINE  28 "lr1-parser-example/src/language.grammar" #-}
+; action27 pos c =
+{-# LINE  27 "lr1-parser-example/src/language.grammar" #-}
                                 [c] 
+; action30 pos c =
+{-# LINE  30 "lr1-parser-example/src/language.grammar" #-}
+                                Assert pos c 
 ; action31 pos c =
 {-# LINE  31 "lr1-parser-example/src/language.grammar" #-}
-                                Assert pos c 
-; action32 pos c =
-{-# LINE  32 "lr1-parser-example/src/language.grammar" #-}
                                 Refute pos c 
-; action35 pos c =
-{-# LINE  35 "lr1-parser-example/src/language.grammar" #-}
+; action34 pos c =
+{-# LINE  34 "lr1-parser-example/src/language.grammar" #-}
                                 Clause pos c [] 
-; action36 pos c cs =
-{-# LINE  36 "lr1-parser-example/src/language.grammar" #-}
+; action35 pos c cs =
+{-# LINE  35 "lr1-parser-example/src/language.grammar" #-}
                                 Clause pos c cs 
-; action39 pos c cs =
-{-# LINE  39 "lr1-parser-example/src/language.grammar" #-}
+; action38 pos c cs =
+{-# LINE  38 "lr1-parser-example/src/language.grammar" #-}
                                 c : cs 
-; action40 pos c =
-{-# LINE  40 "lr1-parser-example/src/language.grammar" #-}
+; action39 pos c =
+{-# LINE  39 "lr1-parser-example/src/language.grammar" #-}
                                 [c] 
+; action42 pos c =
+{-# LINE  42 "lr1-parser-example/src/language.grammar" #-}
+                                CondAssert pos c 
 ; action43 pos c =
 {-# LINE  43 "lr1-parser-example/src/language.grammar" #-}
-                                CondAssert pos c 
-; action44 pos c =
-{-# LINE  44 "lr1-parser-example/src/language.grammar" #-}
                                 CondRefute pos c 
-; action45 pos e =
-{-# LINE  45 "lr1-parser-example/src/language.grammar" #-}
+; action44 pos e =
+{-# LINE  44 "lr1-parser-example/src/language.grammar" #-}
                                 CondGuard  pos e 
-; action48 pos pred t =
-{-# LINE  48 "lr1-parser-example/src/language.grammar" #-}
+; action47 pos pred t =
+{-# LINE  47 "lr1-parser-example/src/language.grammar" #-}
                                 Call pos pred t 
-; action51 pos =
-{-# LINE  51 "lr1-parser-example/src/language.grammar" #-}
+; action50 pos =
+{-# LINE  50 "lr1-parser-example/src/language.grammar" #-}
                                 [] 
-; action52 pos es =
-{-# LINE  52 "lr1-parser-example/src/language.grammar" #-}
+; action51 pos es =
+{-# LINE  51 "lr1-parser-example/src/language.grammar" #-}
                                 es 
-; action55 pos e es =
-{-# LINE  55 "lr1-parser-example/src/language.grammar" #-}
+; action54 pos e es =
+{-# LINE  54 "lr1-parser-example/src/language.grammar" #-}
                                 e : es 
-; action56 pos e =
-{-# LINE  56 "lr1-parser-example/src/language.grammar" #-}
+; action55 pos e =
+{-# LINE  55 "lr1-parser-example/src/language.grammar" #-}
                                 [e] 
-; action59 pos a b =
-{-# LINE  59 "lr1-parser-example/src/language.grammar" #-}
+; action58 pos a b =
+{-# LINE  58 "lr1-parser-example/src/language.grammar" #-}
                                 ExprBinary pos a Equals b 
-; action60 pos a =
-{-# LINE  60 "lr1-parser-example/src/language.grammar" #-}
+; action59 pos a =
+{-# LINE  59 "lr1-parser-example/src/language.grammar" #-}
                                 a 
-; action63 pos a b =
-{-# LINE  63 "lr1-parser-example/src/language.grammar" #-}
+; action62 pos a b =
+{-# LINE  62 "lr1-parser-example/src/language.grammar" #-}
                                 ExprBinary pos a Add b 
-; action64 pos a =
-{-# LINE  64 "lr1-parser-example/src/language.grammar" #-}
+; action63 pos a =
+{-# LINE  63 "lr1-parser-example/src/language.grammar" #-}
                                 a 
-; action67 pos a b =
-{-# LINE  67 "lr1-parser-example/src/language.grammar" #-}
+; action66 pos a b =
+{-# LINE  66 "lr1-parser-example/src/language.grammar" #-}
                                 ExprBinary pos a Mult b 
-; action68 pos a =
-{-# LINE  68 "lr1-parser-example/src/language.grammar" #-}
+; action67 pos a =
+{-# LINE  67 "lr1-parser-example/src/language.grammar" #-}
                                 a 
-; action71 pos e =
-{-# LINE  71 "lr1-parser-example/src/language.grammar" #-}
+; action70 pos e =
+{-# LINE  70 "lr1-parser-example/src/language.grammar" #-}
                                 e 
+; action71 pos n =
+{-# LINE  71 "lr1-parser-example/src/language.grammar" #-}
+                                ExprVar   pos n 
 ; action72 pos n =
 {-# LINE  72 "lr1-parser-example/src/language.grammar" #-}
-                                ExprVar   pos n 
-; action73 pos n =
-{-# LINE  73 "lr1-parser-example/src/language.grammar" #-}
                                 ExprConst pos n 
+; action75 pos n =
+{-# LINE  75 "lr1-parser-example/src/language.grammar" #-}
+                                ConstNamed pos n 
 ; action76 pos n =
 {-# LINE  76 "lr1-parser-example/src/language.grammar" #-}
-                                ConstNamed pos n 
-; action77 pos n =
-{-# LINE  77 "lr1-parser-example/src/language.grammar" #-}
                                 ConstInt   pos n 
 }
   
