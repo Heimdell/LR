@@ -5,6 +5,7 @@ import Data.Function                  ((&))
 import Text.PrettyPrint.HughesPJClass (hang, punctuate, vcat, Pretty(pPrint))
 
 import Tables.Structure (Action(..), Table(..))
+import Decision()
 
 import Data.Map.Monoidal qualified as Map
 

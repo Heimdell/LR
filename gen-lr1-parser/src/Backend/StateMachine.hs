@@ -28,6 +28,7 @@ import Rule
 import Data.Text.Position
 import qualified Grammar.Check
 import System.Exit (exitFailure)
+import Control.Monad
 
 enumerateStates :: Table State -> Map State Int
 enumerateStates Table {actions} =
@@ -72,7 +73,14 @@ run grammarFile srcPath moduleName = do
 generateParserModule :: [Text] -> Grammar -> FilePath -> [String] -> IO ()
 generateParserModule addendum grammar pathToSrc moduleName = do
   let tables = makeTables grammar (startingState grammar)
-  let parser = makeParser grammar tables
+  let (table, states) = dematerialise tables
+  let problems = conflicts table
+  unless (null problems) do
+    for_ problems \problem -> do
+      print (pPrint problem)
+      putStrLn ""
+    exitFailure
+  let parser = makeParser grammar table states
   let fullPath = pathToSrc </> intercalate "/" moduleName <> ".hs"
   let
     terms = pPrint $ toList do
@@ -126,8 +134,8 @@ typeOf grammar entity = case toList (grammar.types ! entity) of
   [ty_] -> ty_
   other -> error $ "unexpected type set " <> show (entity ==> other) <> ", expected single type"
 
-makeParser :: Grammar -> Table State -> Doc
-makeParser grammar raw = vcat
+makeParser :: Grammar -> Table Int -> Map Int State -> Doc
+makeParser grammar table states = vcat
   [ genStateType grammar states
   , "  "
   , vcat do
@@ -145,7 +153,6 @@ makeParser grammar raw = vcat
   , "}"
   ]
   where
-    (table, states) = dematerialise raw
 
     reducerActions :: Map Int (Int, FilePath, [Text], Text)
     reducerActions =
