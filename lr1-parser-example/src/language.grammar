@@ -7,55 +7,71 @@
 
 start Program
 
-Program  = stmts:Stmts               { Program {stmts} }
+Program : Program = stmts:Stmts               { Program {stmts} }
 
-Stmts([Stmt])    = c:Stmt cs:Stmts           { c : cs }
-Stmts([Stmt])    = c:Stmt                    { [c] }
+Stmts : [Stmt]
+  = c:Stmt cs:Stmts           { c : cs }
+  | c:Stmt                    { [c] }
 
-Stmt     = c:Clause                  { StmtClause pos c }
-Stmt     = e:Effect                  { StmtEffect pos e }
+Stmt
+  = c:Clause                  { StmtClause pos c }
+  | e:Effect                  { StmtEffect pos e }
 
-Effect   = c:Call               "=>" ds:Changes "."  { Effect pos c [] ds }
-Effect   = c:Call "->" cs:Conds "=>" ds:Changes "."  { Effect pos c cs ds }
-Effect   = c:Call "->" cs:Conds                 "."  { Effect pos c cs [] }
-Effect   = c:Call                               "."  { Effect pos c [] [] }
+Effect
+  = c:Call               "=>" ds:Changes "."  { Effect pos c [] ds }
+  | c:Call "->" cs:Conds "=>" ds:Changes "."  { Effect pos c cs ds }
+  | c:Call "->" cs:Conds                 "."  { Effect pos c cs [] }
+  | c:Call                               "."  { Effect pos c [] [] }
 
-Changes([Change])  = c:Change "," cs:Changes   { c : cs }
-Changes([Change])  = c:Change                  { [c] }
+Changes : [Change]
+  = c:Change "," cs:Changes   { c : cs }
+  | c:Change                  { [c] }
 
-Change   = "+" c:Call                { Assert pos c }
-Change   = "-" c:Call                { Refute pos c }
+Change
+  = "+" c:Call                { Assert pos c }
+  | "-" c:Call                { Refute pos c }
 
-Clause   = c:Call               "."  { Clause pos c [] }
-Clause   = c:Call "<-" cs:Conds "."  { Clause pos c cs }
+Clause
+  = c:Call               "."  { Clause pos c [] }
+  | c:Call "<-" cs:Conds "."  { Clause pos c cs }
 
-Conds([Cond])    = c:Cond "," cs:Conds       { c : cs }
-Conds([Cond])    = c:Cond                    { [c] }
+Conds : [Cond]
+  = c:Cond "," cs:Conds       { c : cs }
+  | c:Cond                    { [c] }
 
-Cond     =     c:Call                { CondAssert pos c }
-Cond     = "~" c:Call                { CondRefute pos c }
-Cond     =     e:Expr                { CondGuard  pos e }
+Cond
+  =     c:Call                { CondAssert pos c }
+  | "~" c:Call                { CondRefute pos c }
+  |     e:Expr                { CondGuard  pos e }
 
-Call     = pred:"<name>" t:Tuple     { Call pos pred t }
+Call
+  = pred:"<name>" t:Tuple     { Call pos pred t }
 
-Tuple([Expr])    = "("           ")"         { [] }
-Tuple([Expr])    = "(" es:Exprs1 ")"         { es }
+Tuple : [Expr]
+  = "("           ")"         { [] }
+  | "(" es:Exprs1 ")"         { es }
 
-Exprs1([Expr])   = e:Expr     "," es:Exprs1  { e : es }
-Exprs1([Expr])   = e:Expr                    { [e] }
+Exprs1 : [Expr]
+  = e:Expr     "," es:Exprs1  { e : es }
+  | e:Expr                    { [e] }
 
-Expr     = a:ExprAdd  "=" b:ExprAdd  { ExprBinary pos a Equals b }
-Expr     = a:ExprAdd                 { a }
+Expr
+  = a:ExprAdd  "=" b:ExprAdd  { ExprBinary pos a Equals b }
+  | a:ExprAdd                 { a }
 
-ExprAdd(Expr)  = a:ExprAdd  "+" b:ExprMult { ExprBinary pos a Add b }
-ExprAdd(Expr)  = a:ExprMult                { a }
+ExprAdd: Expr
+  = a:ExprAdd  "+" b:ExprMult { ExprBinary pos a Add b }
+  | a:ExprMult                { a }
 
-ExprMult(Expr) = a:ExprMult "*" b:ExprTerm { ExprBinary pos a Mult b }
-ExprMult(Expr) = a:ExprTerm                { a }
+ExprMult : Expr
+  = a:ExprMult "*" b:ExprTerm { ExprBinary pos a Mult b }
+  | a:ExprTerm                { a }
 
-ExprTerm(Expr) = "(" e:Expr ")"            { e }
-ExprTerm(Expr) = n:"<Name>"                { ExprVar   pos n }
-ExprTerm(Expr) = n:Const                   { ExprConst pos n }
+ExprTerm : Expr
+  = "(" e:Expr ")"            { e }
+  | n:"<Name>"                { ExprVar   pos n }
+  | n:Const                   { ExprConst pos n }
 
-Const    = n:"<name>"                { ConstNamed pos n }
-Const    = n:"<num>"                 { ConstInt   pos n }
+Const
+  = n:"<name>"                { ConstNamed pos n }
+  | n:"<num>"                 { ConstInt   pos n }

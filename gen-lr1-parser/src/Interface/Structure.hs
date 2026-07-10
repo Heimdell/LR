@@ -1,22 +1,22 @@
 module Interface.Structure where
 
-import Control.Monad.State
-import Control.Monad.Logic
+-- import Control.Monad.State
+-- import Control.Monad.Logic
 
 
-import Term
-import Data.Text (Text)
-import Data.Map.Monoidal qualified as Map
-import Data.Map.Monoidal (type (==>), (==>))
-import Data.Set (Set)
-import Data.Foldable (asum, Foldable (fold))
-import Control.Monad (unless)
-import Data.Functor (void)
-import qualified Data.Set as Set
-import Data.Traversable (for)
-import Data.Maybe (mapMaybe, fromMaybe)
-import Text.PrettyPrint.HughesPJClass hiding (sep, (<>))
-import qualified Data.Text as Text
+-- import Term
+-- import Data.Text (Text)
+-- import Data.Map.Monoidal qualified as Map
+-- import Data.Map.Monoidal (type (==>), (==>))
+-- import Data.Set (Set)
+-- import Data.Foldable (asum, Foldable (fold))
+-- import Control.Monad (unless)
+-- import Data.Functor (void)
+-- import qualified Data.Set as Set
+-- import Data.Traversable (for)
+-- import Data.Maybe (mapMaybe, fromMaybe)
+-- import Text.PrettyPrint.HughesPJClass hiding (sep, (<>))
+-- import qualified Data.Text as Text
 
 -- data Point'
 --   = Point Point

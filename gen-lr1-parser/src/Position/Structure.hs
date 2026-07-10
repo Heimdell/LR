@@ -13,7 +13,7 @@ import Data.Set   qualified as Set
 import Data.Map.Monoidal (type (==>), (!), (==>))
 import Fixpoint          ((>>-))
 import Grammar           (Grammar(first, Grammar))
-import Rule              (Rule(..), mkRule)
+import Rule
 import Term              (Point(..), Entity, Term(Term))
 import Data.Foldable
 import Data.Text (Text)
@@ -24,7 +24,9 @@ import Data.Text (Text)
 data Position = Position
   { lookahead :: Term     -- ^ term expected right after rule is parsed
   , offset    :: Int      -- ^ mark of the rule
-  , rule      :: Rule     -- ^ reference to the rule
+  , clause    :: Clause   -- ^ reference to the rule
+  , type_     :: Maybe Text
+  , entity    :: Entity
   }
   deriving stock (Eq, Ord)
 
@@ -34,16 +36,13 @@ data Position = Position
   Current point of the position.
 -}
 instance HasField "locus" Position (Maybe Point) where
-  getField Position {rule, offset} =
-    if offset >= length rule.points
+  getField Position {clause, offset} =
+    if offset >= length clause.points
     then Nothing
-    else Just (rule.points Array.! offset)
-
-instance HasField "entity" Position Entity where
-  getField Position {rule} = rule.entity
+    else Just (clause.points Array.! offset)
 
 instance HasField "reducer" Position Text where
-  getField Position {rule} = rule.reducer
+  getField Position {clause} = clause.reducer
 
 {- |
   > E = E + T
@@ -55,24 +54,26 @@ instance HasField "reducer" Position Text where
   Next position.
 -}
 instance HasField "next" Position (Maybe Position) where
-  getField pos@Position{rule, offset} =
-    if offset >= length rule.points
+  getField pos@Position{clause, offset} =
+    if offset >= length clause.points
     then Nothing
     else Just (pos :: Position)
       { offset = offset + 1
       }
 
 instance HasField "parsed" Position [Point] where
-  getField Position {offset, rule} = take offset $ toList rule.points
+  getField Position {offset, clause} = take offset $ toList clause.points
 
 {- |
   Start parsing a rule, expecting given `lookahead` term.
 -}
-start :: Rule -> Term -> Position
-start rule lookahead = Position
+start :: Entity -> Maybe Text -> Clause -> Term -> Position
+start entity type_ clause lookahead = Position
   { offset = 0
   , lookahead
-  , rule
+  , clause
+  , entity
+  , type_
   }
 
 {- |

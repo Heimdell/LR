@@ -4,7 +4,7 @@ import Data.Foldable                  (toList)
 import Data.Function                  ((&))
 import Text.PrettyPrint.HughesPJClass (vcat, Pretty(pPrint))
 
-import Position        (groupPositionsByPrefices)
+-- import Position        (groupPositionsByPrefices)
 import State.Structure (State(..))
 
 instance Pretty State where
@@ -12,7 +12,7 @@ instance Pretty State where
     kernel
   -- pPrint State {positions} =
   --   positions
-      & groupPositionsByPrefices
+      -- & groupPositionsByPrefices
       & toList
       & map pPrint
       & vcat

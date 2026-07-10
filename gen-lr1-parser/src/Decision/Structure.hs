@@ -5,21 +5,21 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 
 import State             (State)
-import Rule              (Rule(entity))
-import Position          (Position(rule, lookahead))
+import Rule
+import Position
 import Term              (Term)
 import Data.Map.Monoidal (type (==>), (==>))
 
 data Decision state
   = Shift state
-  | Reduce Rule
+  | Reduce Clause
   | Accept
   deriving stock (Eq, Ord)
 
 doShift :: State -> Set (Decision State)
 doShift = Set.singleton . Shift
 
-doReduce :: Rule -> Set (Decision state)
+doReduce :: Clause -> Set (Decision state)
 doReduce = Set.singleton . Reduce
 
 doAccept :: Set (Decision state)
@@ -27,8 +27,8 @@ doAccept = Set.singleton Accept
 
 reducingDecision :: Position -> Term ==> Set (Decision state)
 reducingDecision pos
-  | pos.rule.entity == "S" = "$"           ==> doAccept
-  | otherwise              = pos.lookahead ==> doReduce pos.rule
+  | pos.entity == "S" = "$"           ==> doAccept
+  | otherwise         = pos.lookahead ==> doReduce pos.clause
 
 onlyShift :: (Decision State) -> [State]
 onlyShift = \case

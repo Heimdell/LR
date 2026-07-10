@@ -1,7 +1,7 @@
 module State.Structure where
 
 import Data.Set      (Set)
-import Data.Function (on)
+import Data.Function (on, (&))
 import GHC.Generics  (Generic, Generically(..))
 
 import Data.Set qualified as Set
@@ -9,7 +9,8 @@ import Data.Set qualified as Set
 import Data.Map.Monoidal ((!))
 import Fixpoint          ((>>-), graphClosure)
 import Grammar           (Grammar(rules))
-import Position          (Position, start, lookaheadAfterCurrentPoint)
+import Position
+import Rule
 import Term              (Point(E))
 
 {- |
@@ -65,7 +66,8 @@ instance Ord State where compare = compare `on` (.kernel)
   >       T = .number   { ) * + - / }
 -}
 closure :: Grammar -> Set Position -> State
-closure grammar kernel = State {kernel, positions}
+closure grammar kernel = do
+    State {kernel, positions}
   where
     {- Grow kernel set, until no new positions can be added.
     -}
@@ -88,9 +90,10 @@ closure grammar kernel = State {kernel, positions}
          start that tule with that term as a lookahead.
       -}
       Just (E _ entity) ->
-        grammar.rules ! entity                 >>- \rule ->
-        lookaheadAfterCurrentPoint grammar pos >>- \term ->
-          Set.singleton (start rule term)
+          grammar.rules ! entity                 >>- \rule ->
+          lookaheadAfterCurrentPoint grammar pos >>- \term ->
+          (rule.clauses :: [Clause])             >>- \clause ->
+            Set.singleton (start rule.entity rule.type_ clause term)
 
       _ -> mempty
 
@@ -98,4 +101,8 @@ closure grammar kernel = State {kernel, positions}
   Starting position for test grammar.
 -}
 startingState :: Grammar -> State
-startingState grammar = closure grammar (Set.map (`start` "$") (grammar.rules ! "Start"))
+startingState grammar =
+  closure grammar do
+    (grammar.rules ! "Start") & foldMap \rule -> do
+      rule.clauses >>- \clause -> do
+        Set.singleton (start rule.entity rule.type_ clause "$")

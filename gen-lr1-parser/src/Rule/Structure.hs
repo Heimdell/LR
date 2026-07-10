@@ -23,21 +23,28 @@ import Data.Text.Position (Pos)
 data Rule = Rule
   { entity  :: Entity          -- ^ entity constructed by rule
   , type_   :: Maybe Text
-  , mark    :: Int             -- ^ number unique to rule
+  , clauses :: [Clause]
+  }
+
+instance Eq  Rule where (==)    = (==)    `on` (.entity)
+instance Ord Rule where compare = compare `on` (.entity)
+
+instance Eq  Clause where (==)    = (==)    `on` (.mark)
+instance Ord Clause where compare = compare `on` (.mark)
+
+data Clause = Clause
+  { mark    :: Int             -- ^ number unique to rule
   , points  :: Array Int Point  -- ^ sequence of [non]terminals
   , pos     :: Pos
   , reducer :: Text            -- ^ action to perform
   }
-
-instance Eq  Rule where (==)    = (==)    `on` (.mark)
-instance Ord Rule where compare = compare `on` (.mark)
 
 {- |
   Terminals, mentioned in the rule.
 -}
 ruleTerminals :: Rule -> Set Term
 ruleTerminals rule
-  = foldMap (foldMap Set.singleton . pointTerminals) rule.points
+  = foldMap (foldMap (foldMap Set.singleton . pointTerminals) . (.points)) rule.clauses
 
 {- |
   Non-terminals, mentioned or declared in the rule.
@@ -45,19 +52,21 @@ ruleTerminals rule
 ruleEntities :: Rule -> Set Entity
 ruleEntities rule
   =  Set.singleton rule.entity
-  <> foldMap (foldMap Set.singleton . pointEntities) rule.points
+  <> foldMap (foldMap (foldMap Set.singleton . pointEntities) . (.points)) rule.clauses
 
-mkRule :: Entity -> [Point] -> Pos -> Text -> Rule
-mkRule entity pointList pos reducer = Rule
-  { entity
-  , points = Array.listArray (0, length pointList - 1) pointList
+mkClause :: [Point] -> Pos -> Text -> Clause
+mkClause pointList pos reducer = Clause
+  { points = Array.listArray (0, length pointList - 1) pointList
   , mark   = -1
   , reducer
   , pos
   }
 
-setNumber :: Int -> Rule -> Rule
-setNumber mark rule = rule {mark}
+setNumber :: Int -> Clause -> Clause
+setNumber mark clause = clause {mark}
 
 ruleTypes :: Rule -> Entity ==> Set Text
 ruleTypes rule = rule.entity ==> Set.singleton (fromMaybe rule.entity.entity rule.type_)
+
+forClauses :: (Clause -> Clause) -> Rule -> Rule
+forClauses f rule = rule {clauses = fmap f rule.clauses}

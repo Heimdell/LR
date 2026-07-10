@@ -141,9 +141,10 @@ makeParser grammar raw = vcat
     (table, states) = dematerialise raw
 
     reducerActions :: Map Int (Int, FilePath, [Text], Text)
-    reducerActions = (foldMap . foldMap) grabAction grammar.rules
+    reducerActions =
+      (foldMap . foldMap) (foldMap grabAction . (.clauses)) grammar.rules
 
-    grabAction :: Rule -> Map Int (Int, FilePath, [Text], Text)
+    grabAction :: Clause -> Map Int (Int, FilePath, [Text], Text)
     grabAction rule =
       Map.singleton rule.pos.line
         ( rule.pos.column
@@ -269,7 +270,7 @@ reduce state pos = vcat
       _       ->
         ("goto" <> pPrint pos.entity)
           <+> input
-          <+> ("(action" <> pPrint pos.rule.pos.line) <+> "pos" <+> (fsep params <> ")")
+          <+> ("(action" <> pPrint pos.clause.pos.line) <+> "pos" <+> (fsep params <> ")")
           <+> "stk"
   ]
   where
@@ -278,7 +279,7 @@ reduce state pos = vcat
       "$" -> "([], end)"
       tok -> parens (pointToBinder "p" "tok" tok <+> ":" <+> ("input" <> ",") <+> "end")
 
-    params = foldMap (maybeToList . fmap pPrint . (.name)) pos.rule.points
+    params = foldMap (maybeToList . fmap pPrint . (.name)) pos.clause.points
 
 stateReducers :: Int -> State -> Doc
 stateReducers number state =

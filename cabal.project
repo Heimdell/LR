@@ -5,3 +5,6 @@ packages:
   ./lr1-parser-example
   ./lr1-parser-lexeme
   ./lr1-parser-default-lexer
+
+program-options
+  ghc-options: -freverse-errors -O0 -j

@@ -5,9 +5,8 @@ import Text.Parsec.String
 import Text.ParserCombinators.Parsec.Language (haskell)
 import Rule
 import Term
-import Control.Applicative (asum, some)
+import Control.Applicative (some)
 import Text.Parsec.Token
-import Text.Lexer.Default hiding (eof, stringLiteral, spaces, char, noneOf, (<?>))
 import Text.Parsec
 import qualified Data.Text as Text
 import Data.Char (isLower, isUpper)
@@ -96,15 +95,19 @@ entityKind = flip (<?>) "entity" do
 rule :: Parser Rule
 rule = Rule
   <$> entityKind
-  <*> optionMaybe do parens haskell do Text.pack . snd <$> cover haskellType
+  <*> optionMaybe do
+    _ <- char ':'
+    spaces
+    Text.pack <$> manyTill anyChar (lookAhead (reservedOp haskell "="))
   <*  reservedOp haskell "="
-  <*> pure 0
-  <*> do listToArray <$> some point
-  <*  char '{'
-  <*> pos
-  <*> reducingAction
-  <*  char '}'
-  <*  spaces
+  <*> flip sepBy (reservedOp haskell "|") do
+    mkClause
+      <$> some point
+      <*  char '{'
+      <*> pos
+      <*> reducingAction
+      <*  char '}'
+      <*  spaces
 
 reducingAction :: Parser Text
 reducingAction = do
@@ -122,17 +125,6 @@ reducingActionLetter :: Parser ()
 reducingActionLetter = asum
   [ void do noneOf "{}"
   , braces haskell reducingActionText
-  ]
-
-haskellType :: Parser ()
-haskellType = do
-  void do
-    many haskellTypeLetter
-
-haskellTypeLetter :: Parser ()
-haskellTypeLetter = asum
-  [ void do noneOf "()"
-  , parens haskell haskellType
   ]
 
 cover :: (Monad m) => ParsecT [tok] u m a -> ParsecT [tok] u m (a, [tok])
