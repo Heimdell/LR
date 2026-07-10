@@ -74,7 +74,7 @@ generateParserModule :: [Text] -> Grammar -> FilePath -> [String] -> IO ()
 generateParserModule addendum grammar pathToSrc moduleName = do
   let tables = makeTables grammar (startingState grammar)
   let (table, states) = dematerialise tables
-  let problems = conflicts table
+  let problems = conflicts table states
   unless (null problems) do
     for_ problems \problem -> do
       print (pPrint problem)
@@ -83,7 +83,7 @@ generateParserModule addendum grammar pathToSrc moduleName = do
   let parser = makeParser grammar table states
   let fullPath = pathToSrc </> intercalate "/" moduleName <> ".hs"
   let
-    terms = pPrint $ toList do
+    terms = brackets $ fsep $ punctuate "," $ map (doubleQuotes . pPrint) $ toList do
       grammar.terminals \\ Set.fromList
         ["<num>", "<str>", "<Name>", "<name>", "<op>", "<pun>"]
   let
@@ -170,7 +170,7 @@ makeParser grammar table states = vcat
     createReducer :: Int -> (Int, FilePath, [Text], Text) -> Doc
     createReducer line (column, filePath, params, body) = vcat
       [ ("; action" <> pPrint line) <+> "pos" <+> fsep (map pPrint params) <+> "="
-      , "{-# LINE " <+> pPrint line <+> text (show filePath) <+> "#-}"
+      -- , "{-# LINE " <+> pPrint line <+> text (show filePath) <+> "#-}"
       , text (replicate (column - 1) ' ') <> pPrint body
       ]
 
@@ -308,7 +308,7 @@ stateErrors number state =
     hang (st number <+> "input" <+> "_" <+> "->") 2 do
       "Left " <+> parens
         ("currentPos input," <+> brackets
-          (fsep $ punctuate "," $ map (text . show) stateTerminals))
+          (fsep $ punctuate "," $ map (doubleQuotes . text . show) stateTerminals))
   where
     stateTerminals :: [Term]
     stateTerminals = Set.toList $ state.positions & foldMap \pos ->

@@ -1,45 +1,46 @@
 module Position.Pretty where
 
 import Data.Foldable                  (toList)
--- import Data.Function                  ((&))
--- import Data.Set                       (Set)
--- import GHC.Records                    (HasField(..))
+import Data.Function                  ((&))
+import Data.Set                       (Set)
+import GHC.Records                    (HasField(..))
 import Text.PrettyPrint.HughesPJClass (Pretty, pPrint, (<+>), fsep, braces)
 
--- import Data.Set qualified as Set
+import Data.Set qualified as Set
 
--- import Data.Map.Monoidal  ((==>))
+import Data.Map.Monoidal  ((==>))
 import Position.Structure
 import Rule
--- import Term               (Term)
+import Term               (Term, Entity)
 
--- import Data.Map.Monoidal qualified as Map
+import Data.Map.Monoidal qualified as Map
 
--- instance HasField "prefix" Position (Rule, Int) where
---   getField pos = (pos.rule, pos.offset)
+instance HasField "prefix" Position (Clause, Entity, Int) where
+  getField pos = (pos.clause, pos.entity, pos.offset)
 
--- groupPositionsByPrefices :: Set Position -> Set PrettyPosition
--- groupPositionsByPrefices set =
---   foldMap (\a -> a.prefix ==> Set.singleton a.lookahead) set
---     & Map.foldMapWithKey \(e, f) ts -> Set.singleton $ PrettyPosition e f ts
+groupPositionsByPrefices :: Set Position -> Set PrettyPosition
+groupPositionsByPrefices set =
+  foldMap (\a -> a.prefix ==> Set.singleton a.lookahead) set
+    & Map.foldMapWithKey \(e, c, f) ts -> Set.singleton $ PrettyPosition e f c ts
 
--- data PrettyPosition = PrettyPosition
---   { rule      :: Rule
---   , offset    :: Int
---   , lookahead :: Set Term
---   }
---   deriving stock (Eq, Ord)
+data PrettyPosition = PrettyPosition
+  { clause    :: Clause
+  , offset    :: Int
+  , entity    :: Entity
+  , lookahead :: Set Term
+  }
+  deriving stock (Eq, Ord)
 
--- instance Pretty PrettyPosition where
---   pPrint PrettyPosition {clause, entity, type_, offset, lookahead} =
---     pPrint rule.entity <+> "=" <+> fsep (map pPrint front) <+> (case rest of
---         [] -> "."
---         locus : other ->
---           ("." <> pPrint locus)
---             <+> fsep (map pPrint other)
---       ) <+> braces (fsep (map pPrint (toList lookahead)))
---     where
---       (front, rest) = splitAt offset (toList rule.points)
+instance Pretty PrettyPosition where
+  pPrint PrettyPosition {clause, entity, offset, lookahead} =
+    pPrint entity <+> "=" <+> fsep (map pPrint front) <+> (case rest of
+        [] -> "."
+        locus : other ->
+          ("." <> pPrint locus)
+            <+> fsep (map pPrint other)
+      ) <+> braces (fsep (map pPrint (toList lookahead)))
+    where
+      (front, rest) = splitAt offset (toList clause.points)
 
 instance Pretty Position where
   pPrint Position {entity, clause, offset, lookahead} =
