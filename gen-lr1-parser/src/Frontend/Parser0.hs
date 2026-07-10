@@ -9,7 +9,7 @@ import Control.Applicative (some)
 import Text.Parsec.Token
 import Text.Parsec
 import qualified Data.Text as Text
-import Data.Char (isLower, isUpper)
+import Data.Char (isLower, isUpper, isSpace)
 import Control.Monad
 import Data.Text (Text)
 import Data.Array (Array, listArray)
@@ -36,7 +36,7 @@ start = do
 addendum :: Parser [Text]
 addendum = many do
   reservedOp haskell "|"
-  Text.pack <$> anyChar `manyTill` char '\n'
+  Text.dropWhileEnd isSpace . Text.pack <$> anyChar `manyTill` char '\n'
 
 grammar :: Parser Grammar
 grammar = makeGrammar <$> start <*> many rule
@@ -98,7 +98,7 @@ rule = Rule
   <*> optionMaybe do
     _ <- char ':'
     spaces
-    Text.pack <$> manyTill anyChar (lookAhead (reservedOp haskell "="))
+    Text.dropWhileEnd isSpace . Text.pack <$> manyTill anyChar (lookAhead (reservedOp haskell "="))
   <*  reservedOp haskell "="
   <*> flip sepBy (reservedOp haskell "|") do
     mkClause
