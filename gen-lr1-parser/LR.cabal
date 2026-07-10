@@ -41,9 +41,12 @@ library
       Decision.Structure
       Fixpoint
       Grammar
-      Grammar.Example
+      Grammar.Check
       Grammar.Pretty
       Grammar.Structure
+      RawGrammar
+      RawGrammar.Pretty
+      RawGrammar.Structure
       Interface.Structure
       Position
       Position.Pretty

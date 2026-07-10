@@ -1,6 +1,5 @@
 module Frontend.Parser0 where
 
-import Grammar
 import Text.Parsec.String
 import Text.ParserCombinators.Parsec.Language (haskell)
 import Rule
@@ -15,11 +14,12 @@ import Data.Text (Text)
 import Data.Array (Array, listArray)
 import Data.Foldable
 import Data.Text.Position ( Pos(Pos) )
+import qualified RawGrammar as Raw
 
-parseGrammar :: FilePath -> IO ([Text], Grammar)
+parseGrammar :: FilePath -> IO ([Text], Raw.Grammar)
 parseGrammar path = either (error . show) id <$> parseFromFile program path
 
-program :: Parser ([Text], Grammar)
+program :: Parser ([Text], Raw.Grammar)
 program = (,)
   <$  spaces
   <*> addendum
@@ -38,8 +38,8 @@ addendum = many do
   reservedOp haskell "|"
   Text.dropWhileEnd isSpace . Text.pack <$> anyChar `manyTill` char '\n'
 
-grammar :: Parser Grammar
-grammar = makeGrammar <$> start <*> many rule
+grammar :: Parser Raw.Grammar
+grammar = Raw.Grammar <$> start <*> many rule
 
 pos :: Parser Pos
 pos = Pos

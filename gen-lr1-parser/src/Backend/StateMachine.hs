@@ -26,6 +26,8 @@ import Term
 import Text.PrettyPrint.HughesPJClass hiding ((<>))
 import Rule
 import Data.Text.Position
+import qualified Grammar.Check
+import System.Exit (exitFailure)
 
 enumerateStates :: Table State -> Map State Int
 enumerateStates Table {actions} =
@@ -56,11 +58,16 @@ dematerialise table =
 run :: FilePath -> FilePath -> [String] -> IO ()
 run grammarFile srcPath moduleName = do
   (addendum, grammar) <- parseGrammar grammarFile
-  generateParserModule
-    addendum
-    grammar
-    srcPath
-    moduleName
+  case Grammar.Check.check grammar of
+    Left errs -> do
+      for_ errs (print . pPrint)
+      exitFailure
+    Right grammar -> do
+      generateParserModule
+        addendum
+        grammar
+        srcPath
+        moduleName
 
 generateParserModule :: [Text] -> Grammar -> FilePath -> [String] -> IO ()
 generateParserModule addendum grammar pathToSrc moduleName = do
