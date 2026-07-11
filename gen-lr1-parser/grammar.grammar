@@ -1,0 +1,55 @@
+add
+  "import Rule"
+  "import Term"
+  "import Text.Lexer.Default"
+  "import Data.Text.Position"
+  "import Data.Text (Text)"
+  "import Data.Lexeme"
+  "import Data.Array"
+  "listToArray :: [a] -> Array Int a"
+  "listToArray as = Data.Array.listArray (0, length as - 1) as"
+
+start Grammar
+
+Term   = t:"<str>"  => "Term   t"
+Entity = e:"<Name>" => "Entity e"
+
+Point
+  = n:"<name>" ":" t:Term   => "T (Just n) t"
+  | n:"<name>" ":" e:Entity => "E (Just n) e"
+  |                t:Term   => "T  Nothing t"
+  |                e:Entity => "E  Nothing e"
+
+Points : "[Point]"
+  = p:Point           => "[p]"
+  | p:Point ps:Points => " p : ps"
+
+Clause
+  = points:Points "=>" reducer:"<str>" =>
+    "Clause {mark = 0, pos, points = listToArray points, reducer}"
+
+Clauses : "[Clause]"
+  = c:Clause                => "[c]"
+  | c:Clause "|" cs:Clauses => " c : cs"
+
+Rule
+  = entity:Entity ":" type_:"<str>" "=" clauses:Clauses => "Rule {entity, type_ = Just type_, clauses}"
+  | entity:Entity                   "=" clauses:Clauses => "Rule {entity, type_ = Nothing,    clauses}"
+
+Rules : "[Rule]"
+  = r:Rule          => "[r]"
+  | r:Rule rs:Rules => " r : rs"
+
+Additions : "[Text]"
+  = "add"          => "[]"
+  | "add" ls:Lines => "ls"
+
+Lines : "[Text]"
+  = t:"<str>"          => "[t]"
+  | t:"<str>" ts:Lines => " t : ts"
+
+Starter : "Entity"
+  = "start" e:Entity => "e"
+
+Grammar : "([Text], Entity, [Rule])"
+  = a:Additions s:Starter r:Rules => "(a, s, r)"

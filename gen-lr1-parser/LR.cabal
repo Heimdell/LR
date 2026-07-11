@@ -33,6 +33,7 @@ library
     exposed-modules:
       Backend.StateMachine
       Frontend.Parser0
+      Frontend.Parser
       Data.Map.Monoidal
       Data.Map.Monoidal.Pretty
       Data.Map.Monoidal.Structure

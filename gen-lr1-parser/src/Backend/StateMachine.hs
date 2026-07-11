@@ -14,7 +14,7 @@ import Data.Ord (comparing)
 import Data.Set ((\\))
 import Data.Text (Text)
 import Decision
-import Frontend.Parser0 (parseGrammar)
+import Frontend.Parser (parseGrammar)
 import Grammar
 import Position
 import qualified Data.Set as Set
@@ -29,6 +29,8 @@ import Data.Text.Position
 import qualified Grammar.Check
 import System.Exit (exitFailure)
 import Control.Monad
+import Text.Lexer.Default (dieOnLexerError, dieOnParserError)
+import qualified RawGrammar as Raw
 
 enumerateStates :: Table State -> Map State Int
 enumerateStates Table {actions} =
@@ -58,7 +60,8 @@ dematerialise table =
 
 run :: FilePath -> FilePath -> [String] -> IO ()
 run grammarFile srcPath moduleName = do
-  (addendum, grammar) <- parseGrammar grammarFile
+  (addendum, entity, rules) <- parseGrammar grammarFile >>= dieOnLexerError >>= dieOnParserError
+  let grammar = Raw.Grammar entity rules
   case Grammar.Check.check grammar of
     Left errs -> do
       for_ errs (print . pPrint)
@@ -119,7 +122,7 @@ generateParserModule addendum grammar pathToSrc moduleName = do
       , "  ([],           end) -> end"
       , "  ((pos, _) : _, _)   -> pos"
       , "  "
-      , "parse" <> pPrint grammar.starter <> " :: FilePath -> IO (Either LexerError (Either (Pos, [String]) " <> pPrint grammar.starter <> "))"
+      , "parse" <> pPrint grammar.starter <> " :: FilePath -> IO (Either LexerError (Either (Pos, [String]) " <> pPrint (grammar.types ! grammar.starter) <> "))"
       , "parse" <> pPrint grammar.starter <> " filepath = do"
       , "  text <- Text.readFile filepath"
       , "  case lexText filepath text" <+> terms <+> "of"
@@ -143,7 +146,7 @@ makeParser starter  grammar table states = vcat
         foldMap (pure . (\e -> gotoEntity starter (typeOf grammar grammar.starter) (typeOf grammar e) e table)) do
           Set.delete "Start" grammar.entities
   , "  "
-  , "__run" <> pPrint starter <> " :: St a -> ([Lexeme], Pos) -> Stack' a -> Either (Pos, [String]) " <> pPrint grammar.starter
+  , "__run" <> pPrint starter <> " :: St a -> ([Lexeme], Pos) -> Stack' a -> Either (Pos, [String]) " <> pPrint (grammar.types ! grammar.starter)
   , "__run" <> pPrint starter <> " = \\cases {"
   , vcat $ foldMap (pure . uncurry (stateShifts starter)) (Monoidal.assocs table.actions)
   , vcat $ foldMap (pure . uncurry stateReducers) (Map.assocs states)

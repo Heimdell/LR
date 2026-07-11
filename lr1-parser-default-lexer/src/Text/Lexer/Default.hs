@@ -156,7 +156,7 @@ stringLiteral = do
 operator :: M Text
 operator = consumed do
   some do
-    oneOf "operator" "!@#$%^&*-+=\\//<>.,~`:"
+    oneOf "operator" "!@#$%^&*-+=\\/|/<>.,~`:"
 
 punctuator :: M Text
 punctuator = consumed do oneOf "punctuator" "()[]{}"
