@@ -27,7 +27,7 @@ doAccept = Set.singleton Accept
 
 reducingDecision :: Position -> Term ==> Set (Decision state)
 reducingDecision pos
-  | pos.entity == "S" = "$"           ==> doAccept
+  | pos.entity == "S" = "<eof>"           ==> doAccept
   | otherwise         = pos.lookahead ==> doReduce pos.entity pos.clause
 
 onlyShift :: (Decision State) -> [State]

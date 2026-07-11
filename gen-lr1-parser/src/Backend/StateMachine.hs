@@ -49,9 +49,10 @@ instance Semigroup Int where
 instance Monoid Int where
   mempty = error "Monoid Int"
 
-dematerialise :: Table State -> (Table Int, Map Int State)
+dematerialise :: Table State -> (Table Int, Map State Int, Map Int State)
 dematerialise table =
   ( mapTableState (func stateNumbers) table
+  , stateNumbers
   , invert stateNumbers
   )
   where
@@ -75,9 +76,10 @@ run grammarFile srcPath moduleName = do
 
 generateParserModule :: [Text] -> Grammar -> FilePath -> [String] -> IO ()
 generateParserModule addendum grammar pathToSrc moduleName = do
-  let tables = makeTables grammar (startingState grammar)
-  let (table, states) = dematerialise tables
-  let problems = conflicts tables (states Map.! 0)
+  let starting = startingState grammar
+  let tables = makeTables grammar starting
+  let (table, inv, states) = dematerialise tables
+  let problems = conflicts tables starting
   unless (null problems) do
     for_ problems \problem -> do
       print (pPrint problem)
@@ -127,7 +129,7 @@ generateParserModule addendum grammar pathToSrc moduleName = do
       , "  text <- Text.readFile filepath"
       , "  case lexText filepath text" <+> terms <+> "of"
       , "    Left  err   -> pure (Left err)"
-      , ("    Right input -> pure (Right (__run" <> pPrint grammar.starter) <+> " S0 input Nil))"
+      , ("    Right input -> pure (Right (__run" <> pPrint grammar.starter) <+> (" S" <> pPrint (inv Map.! starting)) <+> "input Nil))"
 
       ]
   writeFile fullPath (show moduleBody)
@@ -293,7 +295,7 @@ reduce state pos = vcat
   where
     input :: Doc
     input = case pos.lookahead of
-      "$" -> "([], __end)"
+      "<eof>" -> "([], __end)"
       tok -> parens (pointToBinder "__p" "tok" tok <+> ":" <+> ("__input" <> ",") <+> "__end")
 
     params = foldMap (maybeToList . fmap pPrint . (.name)) pos.clause.points

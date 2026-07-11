@@ -105,4 +105,4 @@ startingState grammar =
   closure grammar do
     (grammar.rules ! "Start") & foldMap \rule -> do
       rule.clauses >>- \clause -> do
-        Set.singleton (start rule.entity rule.type_ clause "$")
+        Set.singleton (start rule.entity rule.type_ clause "<eof>")
