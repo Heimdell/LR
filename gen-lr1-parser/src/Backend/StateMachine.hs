@@ -173,7 +173,7 @@ makeParser starter  grammar table states = vcat
     createReducer :: Int -> (Int, FilePath, [Text], Text) -> Doc
     createReducer line (column, filePath, params, body) = vcat
       [ ("; action" <> pPrint line) <+> "pos" <+> fsep (map pPrint params) <+> "="
-      , "{-# LINE " <+> pPrint line <+> text (show filePath) <+> "#-}"
+      -- , "{-# LINE " <+> pPrint line <+> text (show filePath) <+> "#-}"
       , text (replicate (column - 1) ' ') <> pPrint body
       ]
 

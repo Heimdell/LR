@@ -372,70 +372,48 @@ __runGrammar = \cases {
 ; S37 __input _ -> Left  (currentPos __input, ["start"])
 } where {
 ; action0 pos res =
-{-# LINE  0 "<nowhere>" #-}
 res
 ; action14 pos t =
-{-# LINE  14 "gen-lr1-parser/grammar.grammar" #-}
          Term   t
 ; action15 pos e =
-{-# LINE  15 "gen-lr1-parser/grammar.grammar" #-}
          Entity e
 ; action18 pos n t =
-{-# LINE  18 "gen-lr1-parser/grammar.grammar" #-}
     T (Just n) t
 ; action19 pos n e =
-{-# LINE  19 "gen-lr1-parser/grammar.grammar" #-}
     E (Just n) e
 ; action20 pos t =
-{-# LINE  20 "gen-lr1-parser/grammar.grammar" #-}
                    T  Nothing t
 ; action21 pos e =
-{-# LINE  21 "gen-lr1-parser/grammar.grammar" #-}
                    E  Nothing e
 ; action24 pos p =
-{-# LINE  24 "gen-lr1-parser/grammar.grammar" #-}
     [p]
 ; action25 pos p ps =
-{-# LINE  25 "gen-lr1-parser/grammar.grammar" #-}
      p : ps
 ; action28 pos points reducer =
-{-# LINE  28 "gen-lr1-parser/grammar.grammar" #-}
     Clause {mark = 0, pos, points = listToArray points, reducer}
 ; action32 pos c =
-{-# LINE  32 "gen-lr1-parser/grammar.grammar" #-}
     [c]
 ; action33 pos c cs =
-{-# LINE  33 "gen-lr1-parser/grammar.grammar" #-}
      c : cs
 ; action36 pos entity type_ clauses =
-{-# LINE  36 "gen-lr1-parser/grammar.grammar" #-}
     Rule {entity, type_ = Just type_, clauses}
 ; action37 pos entity clauses =
-{-# LINE  37 "gen-lr1-parser/grammar.grammar" #-}
     Rule {entity, type_ = Nothing,    clauses}
 ; action40 pos r =
-{-# LINE  40 "gen-lr1-parser/grammar.grammar" #-}
     [r]
 ; action41 pos r rs =
-{-# LINE  41 "gen-lr1-parser/grammar.grammar" #-}
      r : rs
 ; action44 pos =
-{-# LINE  44 "gen-lr1-parser/grammar.grammar" #-}
     []
 ; action45 pos ls =
-{-# LINE  45 "gen-lr1-parser/grammar.grammar" #-}
     ls
 ; action48 pos t =
-{-# LINE  48 "gen-lr1-parser/grammar.grammar" #-}
     [t]
 ; action49 pos t ts =
-{-# LINE  49 "gen-lr1-parser/grammar.grammar" #-}
      t : ts
 ; action52 pos e =
-{-# LINE  52 "gen-lr1-parser/grammar.grammar" #-}
     e
 ; action55 pos a s r =
-{-# LINE  55 "gen-lr1-parser/grammar.grammar" #-}
     (a, s, r)
 }
   
