@@ -34,9 +34,9 @@ data PrettyPosition = PrettyPosition
 instance Pretty PrettyPosition where
   pPrint PrettyPosition {clause, entity, offset, lookahead} =
     pPrint entity <+> "=" <+> fsep (map pPrint front) <+> (case rest of
-        [] -> "."
+        [] -> "reducing on"
         locus : other ->
-          ("." <> pPrint locus)
+          ("[" <> pPrint locus <> "]")
             <+> fsep (map pPrint other)
       ) <+> braces (fsep (map pPrint (toList lookahead)))
     where
@@ -45,9 +45,9 @@ instance Pretty PrettyPosition where
 instance Pretty Position where
   pPrint Position {entity, clause, offset, lookahead} =
     pPrint entity <+> "=" <+> fsep (map pPrint front) <+> (case rest of
-        [] -> "."
+        [] -> "reducing on"
         locus : other ->
-          ("." <> pPrint locus)
+          ("[" <> pPrint locus <> "]")
             <+> fsep (map pPrint other)
       ) <+> braces (pPrint lookahead)
     where
