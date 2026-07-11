@@ -119,84 +119,84 @@ makeTables grammar firstState =
   graphClosure (adjacentSubgraph grammar) collectTargetStates firstState
 
 data Conflict = Conflict
-  { leading     :: [Point]
-  , divergences :: Set Line
-  , positions   :: Set Position
-  , term        :: Term
+  { leading   :: [Point]
+  , term      :: Term
+  , positions :: Set Position
   }
   deriving stock (Eq, Ord)
 
-data Line
-  = Reducing Entity Int
-  | Shifting
-  deriving stock (Eq, Ord)
+type Conflicts = Set Position ==> Set Conflict
 
-instance Pretty Conflict where
-  pPrint Conflict {leading, divergences, positions, term} = do
-    let
-      conflictingLines =
-        divergences & foldMap \case
-          Shifting -> mempty
-          Reducing e len -> e ==> Set.singleton do
-            let (before, after) = splitAt (length leading - len) leading
-            map blank before <> map squiggly after
-    vcat
-      ( hang "At input:" 2 do
-          vcat
-            ( fsep (map pPrint leading <> [pPrint term, "..."])
-            : do
-                conflictingLines & Monoidal.assocs & foldMap \(e, lines) -> do
-                  lines & foldMap \line -> do
-                    [fsep (map pPrint line) <+> (pPrint e <> "?")]
-            )
-      : "At state:"
-      : foldMap (\pos -> [nest 2 (pPrint' pos)]) (groupPositionsByPrefices positions)
-      )
-    where
-      blank = fill ' '
-      squiggly = fill '~'
-      fill c = \case
-        T n (Term   term)   -> T n (Term   (Text.map (const c) term))
-        E n (Entity entity) -> E n (Entity (Text.map (const c) entity))
+-- instance Pretty Conflict where
+--   pPrint Conflict {leading, divergences, positions, term} = do
+--     let
+--       conflictingLines =
+--         divergences & foldMap \case
+--           Shifting -> mempty
+--           Reducing e len -> e ==> Set.singleton do
+--             let (before, after) = splitAt (length leading - len) leading
+--             map blank before <> map squiggly after
+--     vcat
+--       ( hang "At input:" 2 do
+--           vcat
+--             ( fsep (map pPrint leading <> [pPrint term, "..."])
+--             : do
+--                 conflictingLines & Monoidal.assocs & foldMap \(e, lines) -> do
+--                   lines & foldMap \line -> do
+--                     [fsep (map pPrint line) <+> (pPrint e <> "?")]
+--             )
+--       : "At state:"
+--       : foldMap (\pos -> [nest 2 (pPrint' pos)]) (groupPositionsByPrefices positions)
+--       )
+--     where
+--       blank = fill ' '
+--       squiggly = fill '~'
+--       fill c = \case
+--         T n (Term   term)   -> T n (Term   (Text.map (const c) term))
+--         E n (Entity entity) -> E n (Entity (Text.map (const c) entity))
 
-      pPrint' :: PrettyPosition -> Doc
-      pPrint' = pPrint . resetNames
+--       pPrint' :: PrettyPosition -> Doc
+--       pPrint' = pPrint . resetNames
 
-      resetNames :: PrettyPosition -> PrettyPosition
-      resetNames pp = pp {clause = pp.clause {points = fmap noName pp.clause.points} }
+--       resetNames :: PrettyPosition -> PrettyPosition
+--       resetNames pp = pp {clause = pp.clause {points = fmap noName pp.clause.points} }
 
-      noName :: Point -> Point
-      noName = \case
-        T _ term   -> T Nothing term
-        E _ entity -> E Nothing entity
+--       noName :: Point -> Point
+--       noName = \case
+--         T _ term   -> T Nothing term
+--         E _ entity -> E Nothing entity
 
 
-conflicts :: Table Int -> Map Int State -> Set Conflict
-conflicts table states =
+conflicts :: Table State -> State -> Set Conflict
+conflicts table state =
   fold $ (.foundConflicts) do
     runIdentity do
       flip execStateT mempty do
         flip runReaderT [] do
-          tableToConflicts table states
+          tableToConflicts state table
 
 data Discovered = Discovered
-  { visitedStates :: Set Int
-  , foundConflicts :: Map (Set Position) (Set Conflict)
+  { visitedStates :: Set State
+  , foundConflicts :: Conflicts
   }
   deriving stock (Generic)
   deriving (Semigroup, Monoid) via Generically Discovered
 
 type ConflictM = ReaderT [Point] (StateT Discovered Identity)
 
-tableToConflicts :: Table Int -> Map Int State -> ConflictM ()
-tableToConflicts Table{actions = Monoidal actions} states = go 0
+tableToConflicts :: State -> Table State -> ConflictM ()
+tableToConflicts start Table{actions = Monoidal actions} = go start
   where
-    go :: Int -> ConflictM ()
+    go :: State -> ConflictM ()
     go st = do
       visited <- gets (Set.member st . (.visitedStates))
       unless visited do
         modify \disc -> disc {visitedStates = Set.insert st disc.visitedStates}
         let Action {action, goto} = actions ! st
+        for_ (Monoidal.assocs goto) \(point, st') -> do
+          local (++ [E Nothing point]) do
+            go st'
+
         for_ (Monoidal.assocs action) \(term, actions) -> do
           for_ actions \case
             Shift st' -> do
@@ -205,17 +205,13 @@ tableToConflicts Table{actions = Monoidal actions} states = go 0
             _ -> pure ()
 
           case toList actions of
-            [x] -> pure ()
-            xs  -> reportConflict st term xs
+            [_] -> pure ()
+            _   -> reportConflict st term
 
-        for_ (Monoidal.assocs goto) \(point, st') -> do
-          local (++ [E Nothing point]) do
-            go st'
-
-    reportConflict :: Int -> Term -> [Decision Int] -> ConflictM ()
-    reportConflict st term decisions = do
+    reportConflict :: State -> Term -> ConflictM ()
+    reportConflict st term = do
       let
-        positions = (states ! st).positions & Set.filter \pos ->
+        positions = st.positions & Set.filter \pos ->
           case pos.locus of
             Just (T _ term') -> term == term'
             Nothing          -> pos.lookahead == term
@@ -227,18 +223,15 @@ tableToConflicts Table{actions = Monoidal actions} states = go 0
             Just _  -> (pos :: Position) {lookahead = "?"}
 
         -- additional
-      reported <- gets (Map.member cutPositions . (.foundConflicts))
+      reported <- gets (Monoidal.member cutPositions . (.foundConflicts))
       unless reported do
         leading <- ask
-        let
-          divergences = foldMap (Set.singleton . decisionToLine) decisions
         modify \desc ->
           desc {foundConflicts =
-             Map.insert cutPositions (Set.singleton Conflict {leading, divergences, positions = cutPositions, term}) desc.foundConflicts
+              Monoidal.insert cutPositions
+              (Set.singleton Conflict
+                { leading
+                , positions = cutPositions
+                , term}
+              ) desc.foundConflicts
           }
-
-decisionToLine :: Decision Int -> Line
-decisionToLine = \case
-  Shift  _        -> Shifting
-  Reduce e clause -> Reducing e (length clause.points)
-  Accept          -> Reducing "Start" 1

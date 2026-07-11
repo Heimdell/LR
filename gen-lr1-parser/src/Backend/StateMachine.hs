@@ -74,7 +74,7 @@ generateParserModule :: [Text] -> Grammar -> FilePath -> [String] -> IO ()
 generateParserModule addendum grammar pathToSrc moduleName = do
   let tables = makeTables grammar (startingState grammar)
   let (table, states) = dematerialise tables
-  let problems = conflicts table states
+  let problems = conflicts tables (states Map.! 0)
   unless (null problems) do
     for_ problems \problem -> do
       print (pPrint problem)
