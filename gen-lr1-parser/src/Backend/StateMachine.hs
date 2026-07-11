@@ -80,7 +80,7 @@ generateParserModule addendum grammar pathToSrc moduleName = do
       print (pPrint problem)
       putStrLn ""
     exitFailure
-  let parser = makeParser grammar table states
+  let parser = makeParser grammar.starter grammar table states
   let fullPath = pathToSrc </> intercalate "/" moduleName <> ".hs"
   let
     terms = brackets $ fsep $ punctuate "," $ map (doubleQuotes . pPrint) $ toList do
@@ -93,7 +93,7 @@ generateParserModule addendum grammar pathToSrc moduleName = do
       , "{-# OPTIONS_GHC -Wno-unused-matches #-}"
       , "module"
           <+> cat (punctuate "." (map text moduleName))
-          <+> parens ("parse")
+          <+> parens ("parse" <> pPrint grammar.starter)
           <+> "where"
       , "  "
       , "import Data.Text.IO.Utf8 qualified as Text"
@@ -119,12 +119,12 @@ generateParserModule addendum grammar pathToSrc moduleName = do
       , "  ([],           end) -> end"
       , "  ((pos, _) : _, _)   -> pos"
       , "  "
-      , "parse :: FilePath -> IO (Either LexerError (Either (Pos, [String]) " <> pPrint grammar.starter <> "))"
-      , "parse filepath = do"
+      , "parse" <> pPrint grammar.starter <> " :: FilePath -> IO (Either LexerError (Either (Pos, [String]) " <> pPrint grammar.starter <> "))"
+      , "parse" <> pPrint grammar.starter <> " filepath = do"
       , "  text <- Text.readFile filepath"
       , "  case lexText filepath text" <+> terms <+> "of"
       , "    Left  err   -> pure (Left err)"
-      , "    Right input -> pure (Right (run S0 input Nil))"
+      , ("    Right input -> pure (Right (__run" <> pPrint grammar.starter) <+> " S0 input Nil))"
 
       ]
   writeFile fullPath (show moduleBody)
@@ -134,18 +134,18 @@ typeOf grammar entity = case toList (grammar.types ! entity) of
   [ty_] -> ty_
   other -> error $ "unexpected type set " <> show (entity ==> other) <> ", expected single type"
 
-makeParser :: Grammar -> Table Int -> Map Int State -> Doc
-makeParser grammar table states = vcat
+makeParser :: Entity -> Grammar -> Table Int -> Map Int State -> Doc
+makeParser starter  grammar table states = vcat
   [ genStateType grammar states
   , "  "
   , vcat do
       punctuate "\n" do
-        foldMap (pure . (\e -> gotoEntity (typeOf grammar grammar.starter) (typeOf grammar e) e table)) do
+        foldMap (pure . (\e -> gotoEntity starter (typeOf grammar grammar.starter) (typeOf grammar e) e table)) do
           Set.delete "Start" grammar.entities
   , "  "
-  , "run :: St a -> ([Lexeme], Pos) -> Stack' a -> Either (Pos, [String]) " <> pPrint grammar.starter
-  , "run = \\cases {"
-  , vcat $ foldMap (pure . uncurry stateShifts) (Monoidal.assocs table.actions)
+  , "__run" <> pPrint starter <> " :: St a -> ([Lexeme], Pos) -> Stack' a -> Either (Pos, [String]) " <> pPrint grammar.starter
+  , "__run" <> pPrint starter <> " = \\cases {"
+  , vcat $ foldMap (pure . uncurry (stateShifts starter)) (Monoidal.assocs table.actions)
   , vcat $ foldMap (pure . uncurry stateReducers) (Map.assocs states)
   , vcat $ foldMap (pure . uncurry stateErrors) (Map.assocs states)
   , "} where {"
@@ -170,12 +170,12 @@ makeParser grammar table states = vcat
     createReducer :: Int -> (Int, FilePath, [Text], Text) -> Doc
     createReducer line (column, filePath, params, body) = vcat
       [ ("; action" <> pPrint line) <+> "pos" <+> fsep (map pPrint params) <+> "="
-      -- , "{-# LINE " <+> pPrint line <+> text (show filePath) <+> "#-}"
+      , "{-# LINE " <+> pPrint line <+> text (show filePath) <+> "#-}"
       , text (replicate (column - 1) ' ') <> pPrint body
       ]
 
-gotoEntity :: Text -> Text -> Entity -> Table Int -> Doc
-gotoEntity starterType entityType entity Table {actions} = vcat
+gotoEntity :: Entity -> Text -> Text -> Entity -> Table Int -> Doc
+gotoEntity starter starterType entityType entity Table {actions} = vcat
   [ gotoName <+> do ":: ([Lexeme], Pos) -> " <> pPrint entityType <> " -> Stack a -> Either (Pos, [String]) " <> pPrint starterType
   , gotoName <+> "toks term stk@(state, _, _) = case state of"
   , vcat do
@@ -185,12 +185,12 @@ gotoEntity starterType entityType entity Table {actions} = vcat
   ]
   where
     gotoName :: Doc
-    gotoName = "goto" <> pPrint entity
+    gotoName = "__goto" <> pPrint entity
 
     stateTransition :: (Int, Action Int) -> Doc
     stateTransition (start, Action {goto})
       | Monoidal.member entity goto = do
-        "  " <> st start <> " -> run " <> st (goto ! entity) <> " toks (term :> stk)"
+        "  " <> st start <> " -> __run" <> pPrint starter <> " " <> st (goto ! entity) <> " toks (term :> stk)"
       | otherwise = mempty
 
 genStateType :: Grammar -> Map Int State -> Doc
@@ -235,7 +235,7 @@ positionBinders pos = case pos.locus of
 
 -- (t :> (_, _, _ :> (_, _, f :> stk@(_, pos, _))))
 stackToBinders :: [Point] -> Doc
-stackToBinders (start : rest) = pointBinder start <+> ":>" <+> foldr decorate "stk@(_, pos, _)" rest
+stackToBinders (start : rest) = pointBinder start <+> ":>" <+> foldr decorate "__stk@(_, __pos, _)" rest
   where
     decorate :: Point -> Doc -> Doc
     decorate point k = pointBinder point <+> ":?" <+> k
@@ -282,16 +282,16 @@ reduce state pos = vcat
       case pos.entity of
       "Start" -> "pure res"
       _       ->
-        ("goto" <> pPrint pos.entity)
+        ("__goto" <> pPrint pos.entity)
           <+> input
-          <+> ("(action" <> pPrint pos.clause.pos.line) <+> "pos" <+> (fsep params <> ")")
-          <+> "stk"
+          <+> ("(action" <> pPrint pos.clause.pos.line) <+> "__pos" <+> (fsep params <> ")")
+          <+> "__stk"
   ]
   where
     input :: Doc
     input = case pos.lookahead of
-      "$" -> "([], end)"
-      tok -> parens (pointToBinder "p" "tok" tok <+> ":" <+> ("input" <> ",") <+> "end")
+      "$" -> "([], __end)"
+      tok -> parens (pointToBinder "__p" "tok" tok <+> ":" <+> ("__input" <> ",") <+> "__end")
 
     params = foldMap (maybeToList . fmap pPrint . (.name)) pos.clause.points
 
@@ -305,9 +305,9 @@ stateReducers number state =
 stateErrors :: Int -> State -> Doc
 stateErrors number state =
   ";" <+>  do
-    hang (st number <+> "input" <+> "_" <+> "->") 2 do
+    hang (st number <+> "__input" <+> "_" <+> "->") 2 do
       "Left " <+> parens
-        ("currentPos input," <+> brackets
+        ("currentPos __input," <+> brackets
           (fsep $ punctuate "," $ map (doubleQuotes . text . show) stateTerminals))
   where
     stateTerminals :: [Term]
@@ -321,14 +321,14 @@ stateErrors number state =
   S0  (TNumber n : toks) stk -> run S5   toks (n     :> (S0 , stk))
 -}
 
-shift :: Int -> Term -> Int -> Doc
-shift from term to = do
+shift :: Entity -> Int -> Term -> Int -> Doc
+shift starter from term to = do
   ";" <+> do
     hang (st from
-      <+> parens (pointToBinder "p" "n" term <+> ":" <+> ("input" <> ",") <+> "end")
-      <+> "stk" <+> "->") 2
-      ("run" <+> st to <+> "(input, end)"
-        <+> parens ((if termIsBinding term then "n" else "()") <+> ":>" <+> parens (st from <> ", p, stk")))
+      <+> parens (pointToBinder "__p" "n" term <+> ":" <+> ("__input" <> ",") <+> "__end")
+      <+> "__stk" <+> "->") 2
+      (("__run" <> pPrint starter) <+> st to <+> "(__input, __end)"
+        <+> parens ((if termIsBinding term then "n" else "()") <+> ":>" <+> parens (st from <> ", __p, __stk")))
 
 st :: Int -> Doc
 st n = "S" <> int n
@@ -336,9 +336,9 @@ st n = "S" <> int n
 {-
   TODO: pull "to" from ACTION table.
 -}
-stateShifts :: Int -> Action Int -> Doc
-stateShifts from Action {action} =
+stateShifts :: Entity -> Int -> Action Int -> Doc
+stateShifts starter from Action {action} =
   vcat $ action & Monoidal.assocs & foldMap \(term, decisions) -> do
     decisions & foldMap \case
-      Shift to -> [shift from term to]
+      Shift to -> [shift starter from term to]
       _        -> []

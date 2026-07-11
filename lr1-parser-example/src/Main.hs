@@ -8,7 +8,7 @@ import System.Exit
 main = do
   getArgs >>= \case
     [file] -> do
-      res <- parse file >>= dieOnLexerError >>= dieOnParserError
+      res <- parseProgram file >>= dieOnLexerError >>= dieOnParserError
       print res
     _ -> do
       putStrLn "Usage: gen-lr1-parser-example <file-to-parse>"
