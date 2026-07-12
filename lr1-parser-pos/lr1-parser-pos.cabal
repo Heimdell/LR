@@ -17,6 +17,9 @@ common warnings
     ghc-options: -Wall
     default-extensions:
         OverloadedStrings
+        DuplicateRecordFields
+        NoFieldSelectors
+        OverloadedRecordDot
 
 library
     import:           warnings

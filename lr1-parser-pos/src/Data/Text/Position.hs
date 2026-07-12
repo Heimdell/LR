@@ -2,12 +2,17 @@ module Data.Text.Position where
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Function (on)
+import Control.Arrow
 
 data Pos = Pos
   { column, line :: Int
   , filename     :: FilePath
   -- , sourceLine   :: Text
   }
+
+instance Eq  Pos where (==)    = (==)    `on` ((.line) &&& (.column) &&& (.filename))
+instance Ord Pos where compare = compare `on` ((.line) &&& (.column) &&& (.filename))
 
 startPos :: FilePath -> Pos
 startPos filename = Pos {filename, line = 1, column = 1}
