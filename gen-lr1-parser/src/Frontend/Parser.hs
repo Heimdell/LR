@@ -1,7 +1,9 @@
 {-# language PatternSynonyms #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
-module Frontend.Parser (parseGrammar) where
+module Frontend.Parser (
+    parseGrammar
+) where
   
 import Data.Text.IO.Utf8 qualified as Text
 import Data.Kind qualified as Kind
@@ -12,422 +14,470 @@ import Data.Text.Position
 import Data.Text (Text)
 import Data.Lexeme
 import Data.Array
+import Data.Set qualified as Set
+import Data.Set (Set)
 listToArray :: [a] -> Array Int a
 listToArray as = Data.Array.listArray (0, length as - 1) as
   
-data Stack' xs where
-  Nil  ::      Stack' '[]
-  (:>) :: x -> Stack xs -> Stack' (x : xs)
+data StackGrammar' xs where
+  NilGrammar  ::      StackGrammar' '[]
+  PushGrammar :: x -> StackGrammar xs -> StackGrammar' (x : xs)
   
-type Stack a = (St a, Pos, Stack' a)
+type StackGrammar a = (StGrammar a, Pos, StackGrammar' a)
   
-pattern (:?) :: a -> Stack xs -> Stack (a : xs)
-pattern a :? xs <- (_, _, a :> xs)
+pattern PushGrammar' :: a -> StackGrammar xs -> StackGrammar (a : xs)
+pattern PushGrammar' a xs <- (_, _, PushGrammar a xs)
   
-infixr 2 :>, :?
+data StGrammar :: [Kind.Type] -> Kind.Type where
+  SGrammar0 :: StGrammar (a)
+  SGrammar1 :: StGrammar (([Text], Set Entity, [Rule]) : a)
+  SGrammar2 :: StGrammar ([Point] : a)
+  SGrammar3 :: StGrammar (Clause : a)
+  SGrammar4 :: StGrammar (Entity : a)
+  SGrammar5 :: StGrammar (Rule : a)
+  SGrammar6 :: StGrammar ([Text] : a)
+  SGrammar7 :: StGrammar (() : [Point] : a)
+  SGrammar8 :: StGrammar (() : Clause : a)
+  SGrammar9 :: StGrammar (() : Entity : a)
+  SGrammar10 :: StGrammar (() : Entity : a)
+  SGrammar11 :: StGrammar ([Rule] : Rule : a)
+  SGrammar12 :: StGrammar ([Entity] : [Text] : a)
+  SGrammar13 :: StGrammar (Text : () : [Point] : a)
+  SGrammar14 :: StGrammar ([Clause] : () : Clause : a)
+  SGrammar15 :: StGrammar (Text : () : Entity : a)
+  SGrammar16 :: StGrammar ([Clause] : () : Entity : a)
+  SGrammar17 :: StGrammar ([Rule] : [Entity] : [Text] : a)
+  SGrammar18 :: StGrammar (() : Text : () : Entity : a)
+  SGrammar19 :: StGrammar ([Clause] : () : Text : () : Entity : a)
+  SGrammar20 :: StGrammar (Text : a)
+  SGrammar21 :: StGrammar (Text : a)
+  SGrammar22 :: StGrammar (() : a)
+  SGrammar23 :: StGrammar (Entity : a)
+  SGrammar24 :: StGrammar ([Entity] : () : a)
+  SGrammar25 :: StGrammar (() : Entity : a)
+  SGrammar26 :: StGrammar ([Entity] : () : Entity : a)
+  SGrammar27 :: StGrammar (Text : a)
+  SGrammar28 :: StGrammar (Text : a)
+  SGrammar29 :: StGrammar (Text : a)
+  SGrammar30 :: StGrammar (Term : a)
+  SGrammar31 :: StGrammar (() : Text : a)
+  SGrammar32 :: StGrammar (Term : () : Text : a)
+  SGrammar33 :: StGrammar (Entity : () : Text : a)
+  SGrammar34 :: StGrammar (Point : a)
+  SGrammar35 :: StGrammar ([Point] : Point : a)
+  SGrammar36 :: StGrammar (() : a)
+  SGrammar37 :: StGrammar (Text : a)
+  SGrammar38 :: StGrammar ([Text] : () : a)
+  SGrammar39 :: StGrammar ([Text] : Text : a)
   
-data St :: [Kind.Type] -> Kind.Type where
-  S0 :: forall a. St (a)
-  S1 :: forall a. St (([Text], Entity, [Rule]) : a)
-  S2 :: forall a. St ([Point] : a)
-  S3 :: forall a. St (Clause : a)
-  S4 :: forall a. St (Entity : a)
-  S5 :: forall a. St (Rule : a)
-  S6 :: forall a. St ([Text] : a)
-  S7 :: forall a. St (() : [Point] : a)
-  S8 :: forall a. St (() : Clause : a)
-  S9 :: forall a. St (() : Entity : a)
-  S10 :: forall a. St (() : Entity : a)
-  S11 :: forall a. St ([Rule] : Rule : a)
-  S12 :: forall a. St (Entity : [Text] : a)
-  S13 :: forall a. St (Text : () : [Point] : a)
-  S14 :: forall a. St ([Clause] : () : Clause : a)
-  S15 :: forall a. St (Text : () : Entity : a)
-  S16 :: forall a. St ([Clause] : () : Entity : a)
-  S17 :: forall a. St ([Rule] : Entity : [Text] : a)
-  S18 :: forall a. St (() : Text : () : Entity : a)
-  S19 :: forall a. St ([Clause] : () : Text : () : Entity : a)
-  S20 :: forall a. St (Text : a)
-  S21 :: forall a. St (Text : a)
-  S22 :: forall a. St (Text : a)
-  S23 :: forall a. St (Text : a)
-  S24 :: forall a. St (Text : a)
-  S25 :: forall a. St (Term : a)
-  S26 :: forall a. St (Entity : a)
-  S27 :: forall a. St (() : a)
-  S28 :: forall a. St (() : Text : a)
-  S29 :: forall a. St (Entity : () : a)
-  S30 :: forall a. St (Term : () : Text : a)
-  S31 :: forall a. St (Entity : () : Text : a)
-  S32 :: forall a. St (Point : a)
-  S33 :: forall a. St ([Point] : Point : a)
-  S34 :: forall a. St (() : a)
-  S35 :: forall a. St (Text : a)
-  S36 :: forall a. St ([Text] : () : a)
-  S37 :: forall a. St ([Text] : Text : a)
-  
-__gotoAdditions :: ([Lexeme], Pos) -> [Text] -> Stack a -> Either (Pos, [String]) ([Text], Entity, [Rule])
-__gotoAdditions toks term stk@(state, _, _) = case state of
-  S0 -> __runGrammar S6 toks (term :> stk)
+__gotoAdditionsForGrammar :: ([Lexeme], Pos) -> [Text] -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoAdditionsForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar0 -> __runGrammar SGrammar6 toks (PushGrammar term stk)
   _ -> error ""
 
-__gotoClause :: ([Lexeme], Pos) -> Clause -> Stack a -> Either (Pos, [String]) ([Text], Entity, [Rule])
-__gotoClause toks term stk@(state, _, _) = case state of
-  S8 -> __runGrammar S3 toks (term :> stk)
-  S10 -> __runGrammar S3 toks (term :> stk)
-  S18 -> __runGrammar S3 toks (term :> stk)
+__gotoClauseForGrammar :: ([Lexeme], Pos) -> Clause -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoClauseForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar8 -> __runGrammar SGrammar3 toks (PushGrammar term stk)
+  SGrammar10 -> __runGrammar SGrammar3 toks (PushGrammar term stk)
+  SGrammar18 -> __runGrammar SGrammar3 toks (PushGrammar term stk)
   _ -> error ""
 
-__gotoClauses :: ([Lexeme], Pos) -> [Clause] -> Stack a -> Either (Pos, [String]) ([Text], Entity, [Rule])
-__gotoClauses toks term stk@(state, _, _) = case state of
-  S8 -> __runGrammar S14 toks (term :> stk)
-  S10 -> __runGrammar S16 toks (term :> stk)
-  S18 -> __runGrammar S19 toks (term :> stk)
+__gotoClausesForGrammar :: ([Lexeme], Pos) -> [Clause] -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoClausesForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar8 -> __runGrammar SGrammar14 toks (PushGrammar term stk)
+  SGrammar10 -> __runGrammar SGrammar16 toks (PushGrammar term stk)
+  SGrammar18 -> __runGrammar SGrammar19 toks (PushGrammar term stk)
   _ -> error ""
 
-__gotoEntity :: ([Lexeme], Pos) -> Entity -> Stack a -> Either (Pos, [String]) ([Text], Entity, [Rule])
-__gotoEntity toks term stk@(state, _, _) = case state of
-  S5 -> __runGrammar S4 toks (term :> stk)
-  S8 -> __runGrammar S26 toks (term :> stk)
-  S10 -> __runGrammar S26 toks (term :> stk)
-  S12 -> __runGrammar S4 toks (term :> stk)
-  S18 -> __runGrammar S26 toks (term :> stk)
-  S27 -> __runGrammar S29 toks (term :> stk)
-  S28 -> __runGrammar S31 toks (term :> stk)
-  S32 -> __runGrammar S26 toks (term :> stk)
+__gotoEntitiesForGrammar :: ([Lexeme], Pos) -> [Entity] -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoEntitiesForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar22 -> __runGrammar SGrammar24 toks (PushGrammar term stk)
+  SGrammar25 -> __runGrammar SGrammar26 toks (PushGrammar term stk)
   _ -> error ""
 
-__gotoGrammar :: ([Lexeme], Pos) -> ([Text], Entity, [Rule]) -> Stack a -> Either (Pos, [String]) ([Text], Entity, [Rule])
-__gotoGrammar toks term stk@(state, _, _) = case state of
-  S0 -> __runGrammar S1 toks (term :> stk)
+__gotoEntityForGrammar :: ([Lexeme], Pos) -> Entity -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoEntityForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar5 -> __runGrammar SGrammar4 toks (PushGrammar term stk)
+  SGrammar12 -> __runGrammar SGrammar4 toks (PushGrammar term stk)
+  SGrammar22 -> __runGrammar SGrammar23 toks (PushGrammar term stk)
+  SGrammar25 -> __runGrammar SGrammar23 toks (PushGrammar term stk)
+  SGrammar31 -> __runGrammar SGrammar33 toks (PushGrammar term stk)
   _ -> error ""
 
-__gotoLines :: ([Lexeme], Pos) -> [Text] -> Stack a -> Either (Pos, [String]) ([Text], Entity, [Rule])
-__gotoLines toks term stk@(state, _, _) = case state of
-  S34 -> __runGrammar S36 toks (term :> stk)
-  S35 -> __runGrammar S37 toks (term :> stk)
+__gotoGrammarForGrammar :: ([Lexeme], Pos) -> ([Text], Set Entity, [Rule]) -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoGrammarForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar0 -> __runGrammar SGrammar1 toks (PushGrammar term stk)
   _ -> error ""
 
-__gotoPoint :: ([Lexeme], Pos) -> Point -> Stack a -> Either (Pos, [String]) ([Text], Entity, [Rule])
-__gotoPoint toks term stk@(state, _, _) = case state of
-  S8 -> __runGrammar S32 toks (term :> stk)
-  S10 -> __runGrammar S32 toks (term :> stk)
-  S18 -> __runGrammar S32 toks (term :> stk)
-  S32 -> __runGrammar S32 toks (term :> stk)
+__gotoLinesForGrammar :: ([Lexeme], Pos) -> [Text] -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoLinesForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar36 -> __runGrammar SGrammar38 toks (PushGrammar term stk)
+  SGrammar37 -> __runGrammar SGrammar39 toks (PushGrammar term stk)
   _ -> error ""
 
-__gotoPoints :: ([Lexeme], Pos) -> [Point] -> Stack a -> Either (Pos, [String]) ([Text], Entity, [Rule])
-__gotoPoints toks term stk@(state, _, _) = case state of
-  S8 -> __runGrammar S2 toks (term :> stk)
-  S10 -> __runGrammar S2 toks (term :> stk)
-  S18 -> __runGrammar S2 toks (term :> stk)
-  S32 -> __runGrammar S33 toks (term :> stk)
+__gotoPointForGrammar :: ([Lexeme], Pos) -> Point -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoPointForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar8 -> __runGrammar SGrammar34 toks (PushGrammar term stk)
+  SGrammar10 -> __runGrammar SGrammar34 toks (PushGrammar term stk)
+  SGrammar18 -> __runGrammar SGrammar34 toks (PushGrammar term stk)
+  SGrammar34 -> __runGrammar SGrammar34 toks (PushGrammar term stk)
   _ -> error ""
 
-__gotoRule :: ([Lexeme], Pos) -> Rule -> Stack a -> Either (Pos, [String]) ([Text], Entity, [Rule])
-__gotoRule toks term stk@(state, _, _) = case state of
-  S5 -> __runGrammar S5 toks (term :> stk)
-  S12 -> __runGrammar S5 toks (term :> stk)
+__gotoPointsForGrammar :: ([Lexeme], Pos) -> [Point] -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoPointsForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar8 -> __runGrammar SGrammar2 toks (PushGrammar term stk)
+  SGrammar10 -> __runGrammar SGrammar2 toks (PushGrammar term stk)
+  SGrammar18 -> __runGrammar SGrammar2 toks (PushGrammar term stk)
+  SGrammar34 -> __runGrammar SGrammar35 toks (PushGrammar term stk)
   _ -> error ""
 
-__gotoRules :: ([Lexeme], Pos) -> [Rule] -> Stack a -> Either (Pos, [String]) ([Text], Entity, [Rule])
-__gotoRules toks term stk@(state, _, _) = case state of
-  S5 -> __runGrammar S11 toks (term :> stk)
-  S12 -> __runGrammar S17 toks (term :> stk)
+__gotoRuleForGrammar :: ([Lexeme], Pos) -> Rule -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoRuleForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar5 -> __runGrammar SGrammar5 toks (PushGrammar term stk)
+  SGrammar12 -> __runGrammar SGrammar5 toks (PushGrammar term stk)
   _ -> error ""
 
-__gotoStarter :: ([Lexeme], Pos) -> Entity -> Stack a -> Either (Pos, [String]) ([Text], Entity, [Rule])
-__gotoStarter toks term stk@(state, _, _) = case state of
-  S6 -> __runGrammar S12 toks (term :> stk)
+__gotoRulesForGrammar :: ([Lexeme], Pos) -> [Rule] -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoRulesForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar5 -> __runGrammar SGrammar11 toks (PushGrammar term stk)
+  SGrammar12 -> __runGrammar SGrammar17 toks (PushGrammar term stk)
   _ -> error ""
 
-__gotoTerm :: ([Lexeme], Pos) -> Term -> Stack a -> Either (Pos, [String]) ([Text], Entity, [Rule])
-__gotoTerm toks term stk@(state, _, _) = case state of
-  S8 -> __runGrammar S25 toks (term :> stk)
-  S10 -> __runGrammar S25 toks (term :> stk)
-  S18 -> __runGrammar S25 toks (term :> stk)
-  S28 -> __runGrammar S30 toks (term :> stk)
-  S32 -> __runGrammar S25 toks (term :> stk)
+__gotoStartersForGrammar :: ([Lexeme], Pos) -> [Entity] -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoStartersForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar6 -> __runGrammar SGrammar12 toks (PushGrammar term stk)
+  _ -> error ""
+
+__gotoTermForGrammar :: ([Lexeme], Pos) -> Term -> StackGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoTermForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar8 -> __runGrammar SGrammar30 toks (PushGrammar term stk)
+  SGrammar10 -> __runGrammar SGrammar30 toks (PushGrammar term stk)
+  SGrammar18 -> __runGrammar SGrammar30 toks (PushGrammar term stk)
+  SGrammar31 -> __runGrammar SGrammar32 toks (PushGrammar term stk)
+  SGrammar34 -> __runGrammar SGrammar30 toks (PushGrammar term stk)
   _ -> error ""
   
-__runGrammar :: St a -> ([Lexeme], Pos) -> Stack' a -> Either (Pos, [String]) ([Text], Entity, [Rule])
+__runGrammar :: StGrammar a -> ([Lexeme], Pos) -> StackGrammar' a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
 __runGrammar = \cases {
-; S0 ((__p,  "add") : __input, __end) __stk ->
-    __runGrammar S34 (__input, __end) (() :> (S0, __p, __stk))
-; S2 ((__p,  "=>") : __input, __end) __stk ->
-    __runGrammar S7 (__input, __end) (() :> (S2, __p, __stk))
-; S3 ((__p,  "|") : __input, __end) __stk ->
-    __runGrammar S8 (__input, __end) (() :> (S3, __p, __stk))
-; S4 ((__p,  ":") : __input, __end) __stk ->
-    __runGrammar S9 (__input, __end) (() :> (S4, __p, __stk))
-; S4 ((__p,  "=") : __input, __end) __stk ->
-    __runGrammar S10 (__input, __end) (() :> (S4, __p, __stk))
-; S5 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar S20 (__input, __end) (n :> (S5, __p, __stk))
-; S6 ((__p,  "start") : __input, __end) __stk ->
-    __runGrammar S27 (__input, __end) (() :> (S6, __p, __stk))
-; S7 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar S13 (__input, __end) (n :> (S7, __p, __stk))
-; S8 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar S23 (__input, __end) (n :> (S8, __p, __stk))
-; S8 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runGrammar S24 (__input, __end) (n :> (S8, __p, __stk))
-; S8 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar S21 (__input, __end) (n :> (S8, __p, __stk))
-; S9 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar S15 (__input, __end) (n :> (S9, __p, __stk))
-; S10 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar S23 (__input, __end) (n :> (S10, __p, __stk))
-; S10 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runGrammar S24 (__input, __end) (n :> (S10, __p, __stk))
-; S10 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar S21 (__input, __end) (n :> (S10, __p, __stk))
-; S12 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar S20 (__input, __end) (n :> (S12, __p, __stk))
-; S15 ((__p,  "=") : __input, __end) __stk ->
-    __runGrammar S18 (__input, __end) (() :> (S15, __p, __stk))
-; S18 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar S23 (__input, __end) (n :> (S18, __p, __stk))
-; S18 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runGrammar S24 (__input, __end) (n :> (S18, __p, __stk))
-; S18 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar S21 (__input, __end) (n :> (S18, __p, __stk))
-; S24 ((__p,  ":") : __input, __end) __stk ->
-    __runGrammar S28 (__input, __end) (() :> (S24, __p, __stk))
-; S27 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar S22 (__input, __end) (n :> (S27, __p, __stk))
-; S28 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar S23 (__input, __end) (n :> (S28, __p, __stk))
-; S28 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar S21 (__input, __end) (n :> (S28, __p, __stk))
-; S32 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar S23 (__input, __end) (n :> (S32, __p, __stk))
-; S32 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runGrammar S24 (__input, __end) (n :> (S32, __p, __stk))
-; S32 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar S21 (__input, __end) (n :> (S32, __p, __stk))
-; S34 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar S35 (__input, __end) (n :> (S34, __p, __stk))
-; S35 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar S35 (__input, __end) (n :> (S35, __p, __stk))
-; S1 ([], __end) (res :> __stk@(_, __pos, _)) -> pure res
-; S3 ([], __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoClauses ([], __end) (action32 __pos c) __stk
-; S3 ((__p, UppercaseName tok) : __input, __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoClauses ((__p, UppercaseName tok) : __input, __end) (action32 __pos c) __stk
-; S5 ([], __end) (r :> __stk@(_, __pos, _)) ->
-    __gotoRules ([], __end) (action40 __pos r) __stk
-; S11 ([], __end) (rs :> r :? __stk@(_, __pos, _)) ->
-    __gotoRules ([], __end) (action41 __pos r rs) __stk
-; S13 ([], __end) (reducer :> _ :? points :? __stk@(_, __pos, _)) ->
-    __gotoClause ([], __end) (action28 __pos points reducer) __stk
-; S13 ((__p, UppercaseName tok) : __input, __end) (reducer :> _ :? points :? __stk@(_, __pos, _)) ->
-    __gotoClause ((__p, UppercaseName tok) : __input, __end) (action28 __pos points
-                                                                             reducer) __stk
-; S13 ((__p,  "|") : __input, __end) (reducer :> _ :? points :? __stk@(_, __pos, _)) ->
-    __gotoClause ((__p,  "|") : __input, __end) (action28 __pos points
-                                                                reducer) __stk
-; S14 ([], __end) (cs :> _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoClauses ([], __end) (action33 __pos c cs) __stk
-; S14 ((__p, UppercaseName tok) : __input, __end) (cs :> _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoClauses ((__p, UppercaseName tok) : __input, __end) (action33 __pos c
-                                                                              cs) __stk
-; S16 ([], __end) (clauses :> _ :? entity :? __stk@(_, __pos, _)) ->
-    __gotoRule ([], __end) (action37 __pos entity clauses) __stk
-; S16 ((__p, UppercaseName tok) : __input, __end) (clauses :> _ :? entity :? __stk@(_, __pos, _)) ->
-    __gotoRule ((__p, UppercaseName tok) : __input, __end) (action37 __pos entity
-                                                                           clauses) __stk
-; S17 ([], __end) (r :> s :? a :? __stk@(_, __pos, _)) ->
-    __gotoGrammar ([], __end) (action55 __pos a s r) __stk
-; S19 ([], __end) (clauses :> _ :? type_ :? _ :? entity :? __stk@(_, __pos, _)) ->
-    __gotoRule ([], __end) (action36 __pos entity type_ clauses) __stk
-; S19 ((__p, UppercaseName tok) : __input, __end) (clauses :> _ :? type_ :? _ :? entity :? __stk@(_, __pos, _)) ->
-    __gotoRule ((__p, UppercaseName tok) : __input, __end) (action36 __pos entity
-                                                                           type_ clauses) __stk
-; S20 ((__p,  ":") : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoEntity ((__p,  ":") : __input, __end) (action15 __pos e) __stk
-; S20 ((__p,  "=") : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoEntity ((__p,  "=") : __input, __end) (action15 __pos e) __stk
-; S21 ((__p, UppercaseName tok) : __input, __end) (t :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p, UppercaseName tok) : __input, __end) (action14 __pos t) __stk
-; S21 ((__p, LowercaseName tok) : __input, __end) (t :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p, LowercaseName tok) : __input, __end) (action14 __pos t) __stk
-; S21 ((__p, StringLiteral tok) : __input, __end) (t :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p, StringLiteral tok) : __input, __end) (action14 __pos t) __stk
-; S21 ((__p,  "=>") : __input, __end) (t :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=>") : __input, __end) (action14 __pos t) __stk
-; S22 ((__p, UppercaseName tok) : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoEntity ((__p, UppercaseName tok) : __input, __end) (action15 __pos e) __stk
-; S23 ((__p, UppercaseName tok) : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoEntity ((__p, UppercaseName tok) : __input, __end) (action15 __pos e) __stk
-; S23 ((__p, LowercaseName tok) : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoEntity ((__p, LowercaseName tok) : __input, __end) (action15 __pos e) __stk
-; S23 ((__p, StringLiteral tok) : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoEntity ((__p, StringLiteral tok) : __input, __end) (action15 __pos e) __stk
-; S23 ((__p,  "=>") : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoEntity ((__p,  "=>") : __input, __end) (action15 __pos e) __stk
-; S25 ((__p, UppercaseName tok) : __input, __end) (t :> __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p, UppercaseName tok) : __input, __end) (action20 __pos t) __stk
-; S25 ((__p, LowercaseName tok) : __input, __end) (t :> __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p, LowercaseName tok) : __input, __end) (action20 __pos t) __stk
-; S25 ((__p, StringLiteral tok) : __input, __end) (t :> __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p, StringLiteral tok) : __input, __end) (action20 __pos t) __stk
-; S25 ((__p,  "=>") : __input, __end) (t :> __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p,  "=>") : __input, __end) (action20 __pos t) __stk
-; S26 ((__p, UppercaseName tok) : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p, UppercaseName tok) : __input, __end) (action21 __pos e) __stk
-; S26 ((__p, LowercaseName tok) : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p, LowercaseName tok) : __input, __end) (action21 __pos e) __stk
-; S26 ((__p, StringLiteral tok) : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p, StringLiteral tok) : __input, __end) (action21 __pos e) __stk
-; S26 ((__p,  "=>") : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p,  "=>") : __input, __end) (action21 __pos e) __stk
-; S29 ((__p, UppercaseName tok) : __input, __end) (e :> _ :? __stk@(_, __pos, _)) ->
-    __gotoStarter ((__p, UppercaseName tok) : __input, __end) (action52 __pos e) __stk
-; S30 ((__p, UppercaseName tok) : __input, __end) (t :> _ :? n :? __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p, UppercaseName tok) : __input, __end) (action18 __pos n
-                                                                            t) __stk
-; S30 ((__p, LowercaseName tok) : __input, __end) (t :> _ :? n :? __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p, LowercaseName tok) : __input, __end) (action18 __pos n
-                                                                            t) __stk
-; S30 ((__p, StringLiteral tok) : __input, __end) (t :> _ :? n :? __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p, StringLiteral tok) : __input, __end) (action18 __pos n
-                                                                            t) __stk
-; S30 ((__p,  "=>") : __input, __end) (t :> _ :? n :? __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p,  "=>") : __input, __end) (action18 __pos n
-                                                                t) __stk
-; S31 ((__p, UppercaseName tok) : __input, __end) (e :> _ :? n :? __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p, UppercaseName tok) : __input, __end) (action19 __pos n
-                                                                            e) __stk
-; S31 ((__p, LowercaseName tok) : __input, __end) (e :> _ :? n :? __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p, LowercaseName tok) : __input, __end) (action19 __pos n
-                                                                            e) __stk
-; S31 ((__p, StringLiteral tok) : __input, __end) (e :> _ :? n :? __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p, StringLiteral tok) : __input, __end) (action19 __pos n
-                                                                            e) __stk
-; S31 ((__p,  "=>") : __input, __end) (e :> _ :? n :? __stk@(_, __pos, _)) ->
-    __gotoPoint ((__p,  "=>") : __input, __end) (action19 __pos n
-                                                                e) __stk
-; S32 ((__p,  "=>") : __input, __end) (p :> __stk@(_, __pos, _)) ->
-    __gotoPoints ((__p,  "=>") : __input, __end) (action24 __pos p) __stk
-; S33 ((__p,  "=>") : __input, __end) (ps :> p :? __stk@(_, __pos, _)) ->
-    __gotoPoints ((__p,  "=>") : __input, __end) (action25 __pos p
-                                                                 ps) __stk
-; S34 ((__p,  "start") : __input, __end) (_ :> __stk@(_, __pos, _)) ->
-    __gotoAdditions ((__p,  "start") : __input, __end) (action44 __pos ) __stk
-; S35 ((__p,  "start") : __input, __end) (t :> __stk@(_, __pos, _)) ->
-    __gotoLines ((__p,  "start") : __input, __end) (action48 __pos t) __stk
-; S36 ((__p,  "start") : __input, __end) (ls :> _ :? __stk@(_, __pos, _)) ->
-    __gotoAdditions ((__p,  "start") : __input, __end) (action45 __pos ls) __stk
-; S37 ((__p,  "start") : __input, __end) (ts :> t :? __stk@(_, __pos, _)) ->
-    __gotoLines ((__p,  "start") : __input, __end) (action49 __pos t
-                                                                   ts) __stk
-; S0 __input _ -> Left  (currentPos __input, ["add"])
-; S1 __input _ -> Left  (currentPos __input, ["<eof>"])
-; S2 __input _ -> Left  (currentPos __input, ["=>"])
-; S3 __input _ ->
+; SGrammar0 ((__p,  "add") : __input, __end) __stk ->
+    __runGrammar SGrammar36 (__input, __end) (PushGrammar () (SGrammar0, __p, __stk))
+; SGrammar2 ((__p,  "=>") : __input, __end) __stk ->
+    __runGrammar SGrammar7 (__input, __end) (PushGrammar () (SGrammar2, __p, __stk))
+; SGrammar3 ((__p,  "|") : __input, __end) __stk ->
+    __runGrammar SGrammar8 (__input, __end) (PushGrammar () (SGrammar3, __p, __stk))
+; SGrammar4 ((__p,  ":") : __input, __end) __stk ->
+    __runGrammar SGrammar9 (__input, __end) (PushGrammar () (SGrammar4, __p, __stk))
+; SGrammar4 ((__p,  "=") : __input, __end) __stk ->
+    __runGrammar SGrammar10 (__input, __end) (PushGrammar () (SGrammar4, __p, __stk))
+; SGrammar5 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runGrammar SGrammar21 (__input, __end) (PushGrammar n (SGrammar5, __p, __stk))
+; SGrammar6 ((__p,  "start") : __input, __end) __stk ->
+    __runGrammar SGrammar22 (__input, __end) (PushGrammar () (SGrammar6, __p, __stk))
+; SGrammar7 ((__p, StringLiteral n) : __input, __end) __stk ->
+    __runGrammar SGrammar13 (__input, __end) (PushGrammar n (SGrammar7, __p, __stk))
+; SGrammar8 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runGrammar SGrammar29 (__input, __end) (PushGrammar n (SGrammar8, __p, __stk))
+; SGrammar8 ((__p, StringLiteral n) : __input, __end) __stk ->
+    __runGrammar SGrammar27 (__input, __end) (PushGrammar n (SGrammar8, __p, __stk))
+; SGrammar9 ((__p, StringLiteral n) : __input, __end) __stk ->
+    __runGrammar SGrammar15 (__input, __end) (PushGrammar n (SGrammar9, __p, __stk))
+; SGrammar10 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runGrammar SGrammar29 (__input, __end) (PushGrammar n (SGrammar10, __p, __stk))
+; SGrammar10 ((__p, StringLiteral n) : __input, __end) __stk ->
+    __runGrammar SGrammar27 (__input, __end) (PushGrammar n (SGrammar10, __p, __stk))
+; SGrammar12 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runGrammar SGrammar21 (__input, __end) (PushGrammar n (SGrammar12, __p, __stk))
+; SGrammar15 ((__p,  "=") : __input, __end) __stk ->
+    __runGrammar SGrammar18 (__input, __end) (PushGrammar () (SGrammar15, __p, __stk))
+; SGrammar18 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runGrammar SGrammar29 (__input, __end) (PushGrammar n (SGrammar18, __p, __stk))
+; SGrammar18 ((__p, StringLiteral n) : __input, __end) __stk ->
+    __runGrammar SGrammar27 (__input, __end) (PushGrammar n (SGrammar18, __p, __stk))
+; SGrammar22 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runGrammar SGrammar20 (__input, __end) (PushGrammar n (SGrammar22, __p, __stk))
+; SGrammar23 ((__p,  ",") : __input, __end) __stk ->
+    __runGrammar SGrammar25 (__input, __end) (PushGrammar () (SGrammar23, __p, __stk))
+; SGrammar25 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runGrammar SGrammar20 (__input, __end) (PushGrammar n (SGrammar25, __p, __stk))
+; SGrammar29 ((__p,  ":") : __input, __end) __stk ->
+    __runGrammar SGrammar31 (__input, __end) (PushGrammar () (SGrammar29, __p, __stk))
+; SGrammar31 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runGrammar SGrammar28 (__input, __end) (PushGrammar n (SGrammar31, __p, __stk))
+; SGrammar31 ((__p, StringLiteral n) : __input, __end) __stk ->
+    __runGrammar SGrammar27 (__input, __end) (PushGrammar n (SGrammar31, __p, __stk))
+; SGrammar34 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runGrammar SGrammar29 (__input, __end) (PushGrammar n (SGrammar34, __p, __stk))
+; SGrammar34 ((__p, StringLiteral n) : __input, __end) __stk ->
+    __runGrammar SGrammar27 (__input, __end) (PushGrammar n (SGrammar34, __p, __stk))
+; SGrammar36 ((__p, StringLiteral n) : __input, __end) __stk ->
+    __runGrammar SGrammar37 (__input, __end) (PushGrammar n (SGrammar36, __p, __stk))
+; SGrammar37 ((__p, StringLiteral n) : __input, __end) __stk ->
+    __runGrammar SGrammar37 (__input, __end) (PushGrammar n (SGrammar37, __p, __stk))
+-- lookahead Nothing, entity Grammar
+; SGrammar1 ([], __end) ((PushGrammar res __stk@(_, __pos, _))) ->
+    pure res
+-- lookahead Nothing, entity Clauses
+; SGrammar3 ([], __end) ((PushGrammar c __stk@(_, __pos, _))) ->
+    __gotoClausesForGrammar ([], __end) (action34 __pos c) __stk
+-- lookahead Just <Name>, entity Clauses
+; SGrammar3 ((__p, UppercaseName tok) : __input, __end) ((PushGrammar c __stk@(_, __pos, _))) ->
+    __gotoClausesForGrammar ((__p, UppercaseName tok) : __input, __end) (action34 __pos c) __stk
+-- lookahead Nothing, entity Rules
+; SGrammar5 ([], __end) ((PushGrammar r __stk@(_, __pos, _))) ->
+    __gotoRulesForGrammar ([], __end) (action42 __pos r) __stk
+-- lookahead Nothing, entity Rules
+; SGrammar11 ([], __end) ((PushGrammar rs (PushGrammar' r __stk@(_, __pos, _)))) ->
+    __gotoRulesForGrammar ([], __end) (action43 __pos r rs) __stk
+-- lookahead Nothing, entity Clause
+; SGrammar13 ([], __end) ((PushGrammar reducer (PushGrammar' _ (PushGrammar' points __stk@(_, __pos, _))))) ->
+    __gotoClauseForGrammar ([], __end) (action30 __pos points
+                                                       reducer) __stk
+-- lookahead Just <Name>, entity Clause
+; SGrammar13 ((__p, UppercaseName tok) : __input, __end) ((PushGrammar reducer (PushGrammar' _ (PushGrammar' points __stk@(_, __pos, _))))) ->
+    __gotoClauseForGrammar ((__p, UppercaseName tok) : __input, __end) (action30 __pos points
+                                                                                       reducer) __stk
+-- lookahead Just |, entity Clause
+; SGrammar13 ((__p,  "|") : __input, __end) ((PushGrammar reducer (PushGrammar' _ (PushGrammar' points __stk@(_, __pos, _))))) ->
+    __gotoClauseForGrammar ((__p,  "|") : __input, __end) (action30 __pos points
+                                                                          reducer) __stk
+-- lookahead Nothing, entity Clauses
+; SGrammar14 ([], __end) ((PushGrammar cs (PushGrammar' _ (PushGrammar' c __stk@(_, __pos, _))))) ->
+    __gotoClausesForGrammar ([], __end) (action35 __pos c cs) __stk
+-- lookahead Just <Name>, entity Clauses
+; SGrammar14 ((__p, UppercaseName tok) : __input, __end) ((PushGrammar cs (PushGrammar' _ (PushGrammar' c __stk@(_, __pos, _))))) ->
+    __gotoClausesForGrammar ((__p, UppercaseName tok) : __input, __end) (action35 __pos c
+                                                                                        cs) __stk
+-- lookahead Nothing, entity Rule
+; SGrammar16 ([], __end) ((PushGrammar clauses (PushGrammar' _ (PushGrammar' entity __stk@(_, __pos, _))))) ->
+    __gotoRuleForGrammar ([], __end) (action39 __pos entity
+                                                     clauses) __stk
+-- lookahead Just <Name>, entity Rule
+; SGrammar16 ((__p, UppercaseName tok) : __input, __end) ((PushGrammar clauses (PushGrammar' _ (PushGrammar' entity __stk@(_, __pos, _))))) ->
+    __gotoRuleForGrammar ((__p, UppercaseName tok) : __input, __end) (action39 __pos entity
+                                                                                     clauses) __stk
+-- lookahead Nothing, entity Grammar
+; SGrammar17 ([], __end) ((PushGrammar r (PushGrammar' s (PushGrammar' a __stk@(_, __pos, _))))) ->
+    __gotoGrammarForGrammar ([], __end) (action62 __pos a s r) __stk
+-- lookahead Nothing, entity Rule
+; SGrammar19 ([], __end) ((PushGrammar clauses (PushGrammar' _ (PushGrammar' type_ (PushGrammar' _ (PushGrammar' entity __stk@(_, __pos, _))))))) ->
+    __gotoRuleForGrammar ([], __end) (action38 __pos entity type_
+                                                     clauses) __stk
+-- lookahead Just <Name>, entity Rule
+; SGrammar19 ((__p, UppercaseName tok) : __input, __end) ((PushGrammar clauses (PushGrammar' _ (PushGrammar' type_ (PushGrammar' _ (PushGrammar' entity __stk@(_, __pos, _))))))) ->
+    __gotoRuleForGrammar ((__p, UppercaseName tok) : __input, __end) (action38 __pos entity
+                                                                                     type_
+                                                                                     clauses) __stk
+-- lookahead Just ,, entity Entity
+; SGrammar20 ((__p,  ",") : __input, __end) ((PushGrammar e __stk@(_, __pos, _))) ->
+    __gotoEntityForGrammar ((__p,  ",") : __input, __end) (action18 __pos e) __stk
+-- lookahead Just <Name>, entity Entity
+; SGrammar20 ((__p, UppercaseName tok) : __input, __end) ((PushGrammar e __stk@(_, __pos, _))) ->
+    __gotoEntityForGrammar ((__p, UppercaseName tok) : __input, __end) (action18 __pos e) __stk
+-- lookahead Just :, entity Entity
+; SGrammar21 ((__p,  ":") : __input, __end) ((PushGrammar e __stk@(_, __pos, _))) ->
+    __gotoEntityForGrammar ((__p,  ":") : __input, __end) (action18 __pos e) __stk
+-- lookahead Just =, entity Entity
+; SGrammar21 ((__p,  "=") : __input, __end) ((PushGrammar e __stk@(_, __pos, _))) ->
+    __gotoEntityForGrammar ((__p,  "=") : __input, __end) (action18 __pos e) __stk
+-- lookahead Just <Name>, entity Entities
+; SGrammar23 ((__p, UppercaseName tok) : __input, __end) ((PushGrammar e __stk@(_, __pos, _))) ->
+    __gotoEntitiesForGrammar ((__p, UppercaseName tok) : __input, __end) (action57 __pos e) __stk
+-- lookahead Just <Name>, entity Starters
+; SGrammar24 ((__p, UppercaseName tok) : __input, __end) ((PushGrammar es (PushGrammar' _ __stk@(_, __pos, _)))) ->
+    __gotoStartersForGrammar ((__p, UppercaseName tok) : __input, __end) (action54 __pos es) __stk
+-- lookahead Just <Name>, entity Entities
+; SGrammar26 ((__p, UppercaseName tok) : __input, __end) ((PushGrammar es (PushGrammar' _ (PushGrammar' e __stk@(_, __pos, _))))) ->
+    __gotoEntitiesForGrammar ((__p, UppercaseName tok) : __input, __end) (action58 __pos e
+                                                                                         es) __stk
+-- lookahead Just <name>, entity Term
+; SGrammar27 ((__p, LowercaseName tok) : __input, __end) ((PushGrammar t __stk@(_, __pos, _))) ->
+    __gotoTermForGrammar ((__p, LowercaseName tok) : __input, __end) (action17 __pos t) __stk
+-- lookahead Just <str>, entity Term
+; SGrammar27 ((__p, StringLiteral tok) : __input, __end) ((PushGrammar t __stk@(_, __pos, _))) ->
+    __gotoTermForGrammar ((__p, StringLiteral tok) : __input, __end) (action17 __pos t) __stk
+-- lookahead Just =>, entity Term
+; SGrammar27 ((__p,  "=>") : __input, __end) ((PushGrammar t __stk@(_, __pos, _))) ->
+    __gotoTermForGrammar ((__p,  "=>") : __input, __end) (action17 __pos t) __stk
+-- lookahead Just <name>, entity Entity
+; SGrammar28 ((__p, LowercaseName tok) : __input, __end) ((PushGrammar e __stk@(_, __pos, _))) ->
+    __gotoEntityForGrammar ((__p, LowercaseName tok) : __input, __end) (action18 __pos e) __stk
+-- lookahead Just <str>, entity Entity
+; SGrammar28 ((__p, StringLiteral tok) : __input, __end) ((PushGrammar e __stk@(_, __pos, _))) ->
+    __gotoEntityForGrammar ((__p, StringLiteral tok) : __input, __end) (action18 __pos e) __stk
+-- lookahead Just =>, entity Entity
+; SGrammar28 ((__p,  "=>") : __input, __end) ((PushGrammar e __stk@(_, __pos, _))) ->
+    __gotoEntityForGrammar ((__p,  "=>") : __input, __end) (action18 __pos e) __stk
+-- lookahead Just <name>, entity Point
+; SGrammar30 ((__p, LowercaseName tok) : __input, __end) ((PushGrammar t __stk@(_, __pos, _))) ->
+    __gotoPointForGrammar ((__p, LowercaseName tok) : __input, __end) (action23 __pos t) __stk
+-- lookahead Just <str>, entity Point
+; SGrammar30 ((__p, StringLiteral tok) : __input, __end) ((PushGrammar t __stk@(_, __pos, _))) ->
+    __gotoPointForGrammar ((__p, StringLiteral tok) : __input, __end) (action23 __pos t) __stk
+-- lookahead Just =>, entity Point
+; SGrammar30 ((__p,  "=>") : __input, __end) ((PushGrammar t __stk@(_, __pos, _))) ->
+    __gotoPointForGrammar ((__p,  "=>") : __input, __end) (action23 __pos t) __stk
+-- lookahead Just <name>, entity Point
+; SGrammar32 ((__p, LowercaseName tok) : __input, __end) ((PushGrammar t (PushGrammar' _ (PushGrammar' n __stk@(_, __pos, _))))) ->
+    __gotoPointForGrammar ((__p, LowercaseName tok) : __input, __end) (action21 __pos n
+                                                                                      t) __stk
+-- lookahead Just <str>, entity Point
+; SGrammar32 ((__p, StringLiteral tok) : __input, __end) ((PushGrammar t (PushGrammar' _ (PushGrammar' n __stk@(_, __pos, _))))) ->
+    __gotoPointForGrammar ((__p, StringLiteral tok) : __input, __end) (action21 __pos n
+                                                                                      t) __stk
+-- lookahead Just =>, entity Point
+; SGrammar32 ((__p,  "=>") : __input, __end) ((PushGrammar t (PushGrammar' _ (PushGrammar' n __stk@(_, __pos, _))))) ->
+    __gotoPointForGrammar ((__p,  "=>") : __input, __end) (action21 __pos n
+                                                                          t) __stk
+-- lookahead Just <name>, entity Point
+; SGrammar33 ((__p, LowercaseName tok) : __input, __end) ((PushGrammar e (PushGrammar' _ (PushGrammar' n __stk@(_, __pos, _))))) ->
+    __gotoPointForGrammar ((__p, LowercaseName tok) : __input, __end) (action22 __pos n
+                                                                                      e) __stk
+-- lookahead Just <str>, entity Point
+; SGrammar33 ((__p, StringLiteral tok) : __input, __end) ((PushGrammar e (PushGrammar' _ (PushGrammar' n __stk@(_, __pos, _))))) ->
+    __gotoPointForGrammar ((__p, StringLiteral tok) : __input, __end) (action22 __pos n
+                                                                                      e) __stk
+-- lookahead Just =>, entity Point
+; SGrammar33 ((__p,  "=>") : __input, __end) ((PushGrammar e (PushGrammar' _ (PushGrammar' n __stk@(_, __pos, _))))) ->
+    __gotoPointForGrammar ((__p,  "=>") : __input, __end) (action22 __pos n
+                                                                          e) __stk
+-- lookahead Just =>, entity Points
+; SGrammar34 ((__p,  "=>") : __input, __end) ((PushGrammar p __stk@(_, __pos, _))) ->
+    __gotoPointsForGrammar ((__p,  "=>") : __input, __end) (action26 __pos p) __stk
+-- lookahead Just =>, entity Points
+; SGrammar35 ((__p,  "=>") : __input, __end) ((PushGrammar ps (PushGrammar' p __stk@(_, __pos, _)))) ->
+    __gotoPointsForGrammar ((__p,  "=>") : __input, __end) (action27 __pos p
+                                                                           ps) __stk
+-- lookahead Just start, entity Additions
+; SGrammar36 ((__p,  "start") : __input, __end) ((PushGrammar _ __stk@(_, __pos, _))) ->
+    __gotoAdditionsForGrammar ((__p,  "start") : __input, __end) (action46 __pos ) __stk
+-- lookahead Just start, entity Lines
+; SGrammar37 ((__p,  "start") : __input, __end) ((PushGrammar t __stk@(_, __pos, _))) ->
+    __gotoLinesForGrammar ((__p,  "start") : __input, __end) (action50 __pos t) __stk
+-- lookahead Just start, entity Additions
+; SGrammar38 ((__p,  "start") : __input, __end) ((PushGrammar ls (PushGrammar' _ __stk@(_, __pos, _)))) ->
+    __gotoAdditionsForGrammar ((__p,  "start") : __input, __end) (action47 __pos ls) __stk
+-- lookahead Just start, entity Lines
+; SGrammar39 ((__p,  "start") : __input, __end) ((PushGrammar ts (PushGrammar' t __stk@(_, __pos, _)))) ->
+    __gotoLinesForGrammar ((__p,  "start") : __input, __end) (action51 __pos t
+                                                                             ts) __stk
+; SGrammar0 __input _ -> Left  (currentPos __input, ["add"])
+; SGrammar1 __input _ -> Left  (currentPos __input, ["<eof>"])
+; SGrammar2 __input _ -> Left  (currentPos __input, ["=>"])
+; SGrammar3 __input _ ->
     Left  (currentPos __input, ["<eof>", "<Name>", "|"])
-; S4 __input _ -> Left  (currentPos __input, [":", "="])
-; S5 __input _ -> Left  (currentPos __input, ["<eof>", "<Name>"])
-; S6 __input _ -> Left  (currentPos __input, ["start"])
-; S7 __input _ -> Left  (currentPos __input, ["<str>"])
-; S8 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<name>", "<str>"])
-; S9 __input _ -> Left  (currentPos __input, ["<str>"])
-; S10 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<name>", "<str>"])
-; S11 __input _ -> Left  (currentPos __input, ["<eof>"])
-; S12 __input _ -> Left  (currentPos __input, ["<Name>"])
-; S13 __input _ ->
+; SGrammar4 __input _ -> Left  (currentPos __input, [":", "="])
+; SGrammar5 __input _ ->
+    Left  (currentPos __input, ["<eof>", "<Name>"])
+; SGrammar6 __input _ -> Left  (currentPos __input, ["start"])
+; SGrammar7 __input _ -> Left  (currentPos __input, ["<str>"])
+; SGrammar8 __input _ ->
+    Left  (currentPos __input, ["<name>", "<str>"])
+; SGrammar9 __input _ -> Left  (currentPos __input, ["<str>"])
+; SGrammar10 __input _ ->
+    Left  (currentPos __input, ["<name>", "<str>"])
+; SGrammar11 __input _ -> Left  (currentPos __input, ["<eof>"])
+; SGrammar12 __input _ -> Left  (currentPos __input, ["<Name>"])
+; SGrammar13 __input _ ->
     Left  (currentPos __input, ["<eof>", "<Name>", "|"])
-; S14 __input _ -> Left  (currentPos __input, ["<eof>", "<Name>"])
-; S15 __input _ -> Left  (currentPos __input, ["="])
-; S16 __input _ -> Left  (currentPos __input, ["<eof>", "<Name>"])
-; S17 __input _ -> Left  (currentPos __input, ["<eof>"])
-; S18 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<name>", "<str>"])
-; S19 __input _ -> Left  (currentPos __input, ["<eof>", "<Name>"])
-; S20 __input _ -> Left  (currentPos __input, [":", "="])
-; S21 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<name>", "<str>", "=>"])
-; S22 __input _ -> Left  (currentPos __input, ["<Name>"])
-; S23 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<name>", "<str>", "=>"])
-; S24 __input _ -> Left  (currentPos __input, [":"])
-; S25 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<name>", "<str>", "=>"])
-; S26 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<name>", "<str>", "=>"])
-; S27 __input _ -> Left  (currentPos __input, ["<Name>"])
-; S28 __input _ -> Left  (currentPos __input, ["<Name>", "<str>"])
-; S29 __input _ -> Left  (currentPos __input, ["<Name>"])
-; S30 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<name>", "<str>", "=>"])
-; S31 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<name>", "<str>", "=>"])
-; S32 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<name>", "<str>", "=>"])
-; S33 __input _ -> Left  (currentPos __input, ["=>"])
-; S34 __input _ -> Left  (currentPos __input, ["<str>", "start"])
-; S35 __input _ -> Left  (currentPos __input, ["<str>", "start"])
-; S36 __input _ -> Left  (currentPos __input, ["start"])
-; S37 __input _ -> Left  (currentPos __input, ["start"])
+; SGrammar14 __input _ ->
+    Left  (currentPos __input, ["<eof>", "<Name>"])
+; SGrammar15 __input _ -> Left  (currentPos __input, ["="])
+; SGrammar16 __input _ ->
+    Left  (currentPos __input, ["<eof>", "<Name>"])
+; SGrammar17 __input _ -> Left  (currentPos __input, ["<eof>"])
+; SGrammar18 __input _ ->
+    Left  (currentPos __input, ["<name>", "<str>"])
+; SGrammar19 __input _ ->
+    Left  (currentPos __input, ["<eof>", "<Name>"])
+; SGrammar20 __input _ ->
+    Left  (currentPos __input, [",", "<Name>"])
+; SGrammar21 __input _ -> Left  (currentPos __input, [":", "="])
+; SGrammar22 __input _ -> Left  (currentPos __input, ["<Name>"])
+; SGrammar23 __input _ ->
+    Left  (currentPos __input, [",", "<Name>"])
+; SGrammar24 __input _ -> Left  (currentPos __input, ["<Name>"])
+; SGrammar25 __input _ -> Left  (currentPos __input, ["<Name>"])
+; SGrammar26 __input _ -> Left  (currentPos __input, ["<Name>"])
+; SGrammar27 __input _ ->
+    Left  (currentPos __input, ["<name>", "<str>", "=>"])
+; SGrammar28 __input _ ->
+    Left  (currentPos __input, ["<name>", "<str>", "=>"])
+; SGrammar29 __input _ -> Left  (currentPos __input, [":"])
+; SGrammar30 __input _ ->
+    Left  (currentPos __input, ["<name>", "<str>", "=>"])
+; SGrammar31 __input _ ->
+    Left  (currentPos __input, ["<Name>", "<str>"])
+; SGrammar32 __input _ ->
+    Left  (currentPos __input, ["<name>", "<str>", "=>"])
+; SGrammar33 __input _ ->
+    Left  (currentPos __input, ["<name>", "<str>", "=>"])
+; SGrammar34 __input _ ->
+    Left  (currentPos __input, ["<name>", "<str>", "=>"])
+; SGrammar35 __input _ -> Left  (currentPos __input, ["=>"])
+; SGrammar36 __input _ ->
+    Left  (currentPos __input, ["<str>", "start"])
+; SGrammar37 __input _ ->
+    Left  (currentPos __input, ["<str>", "start"])
+; SGrammar38 __input _ -> Left  (currentPos __input, ["start"])
+; SGrammar39 __input _ -> Left  (currentPos __input, ["start"])
 } where {
 ; action0 pos res =
 res
-; action14 pos t =
+; action17 pos t =
          Term   t
-; action15 pos e =
+; action18 pos e =
          Entity e
-; action18 pos n t =
+; action21 pos n t =
     T (Just n) t
-; action19 pos n e =
+; action22 pos n e =
     E (Just n) e
-; action20 pos t =
+; action23 pos t =
                    T  Nothing t
-; action21 pos e =
-                   E  Nothing e
-; action24 pos p =
+; action26 pos p =
     [p]
-; action25 pos p ps =
+; action27 pos p ps =
      p : ps
-; action28 pos points reducer =
+; action30 pos points reducer =
     Clause {mark = 0, pos, points = listToArray points, reducer}
-; action32 pos c =
+; action34 pos c =
     [c]
-; action33 pos c cs =
+; action35 pos c cs =
      c : cs
-; action36 pos entity type_ clauses =
+; action38 pos entity type_ clauses =
     Rule {entity, type_ = Just type_, clauses}
-; action37 pos entity clauses =
+; action39 pos entity clauses =
     Rule {entity, type_ = Nothing,    clauses}
-; action40 pos r =
+; action42 pos r =
     [r]
-; action41 pos r rs =
+; action43 pos r rs =
      r : rs
-; action44 pos =
+; action46 pos =
     []
-; action45 pos ls =
+; action47 pos ls =
     ls
-; action48 pos t =
+; action50 pos t =
     [t]
-; action49 pos t ts =
+; action51 pos t ts =
      t : ts
-; action52 pos e =
-    e
-; action55 pos a s r =
-    (a, s, r)
+; action54 pos es =
+    es
+; action57 pos e =
+    [e]
+; action58 pos e es =
+     e : es
+; action62 pos a s r =
+    (a, Set.fromList s, r)
 }
+parseGrammar :: FilePath -> IO (Either LexerError (Either (Pos, [String]) ([Text], Set Entity, [Rule])))
+parseGrammar filepath = do
+  text <- Text.readFile filepath
+  case lexText filepath text [",", ":", "=", "=>", "add", "start",
+                              "|"] of
+    Left  err   -> pure (Left err)
+    Right input -> pure (Right (__runGrammar SGrammar0 input NilGrammar))
   
 currentPos :: ([Lexeme], Pos) -> Pos
 currentPos = \case
   ([],           end) -> end
   ((pos, _) : _, _)   -> pos
   
-parseGrammar :: FilePath -> IO (Either LexerError (Either (Pos, [String]) ([Text], Entity, [Rule])))
-parseGrammar filepath = do
-  text <- Text.readFile filepath
-  case lexText filepath text [":", "=", "=>", "add", "start",
-                              "|"] of
-    Left  err   -> pure (Left err)
-    Right input -> pure (Right (__runGrammar  S0 input Nil))

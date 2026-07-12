@@ -105,3 +105,19 @@ data Program = Program {stmts :: [Stmt]}
 
 instance Show Program where
   show Program {stmts} = unlines (map show stmts)
+
+data Test
+  = Expect Pos Call
+  | Notify Pos Call
+  | Guard  Pos Expr
+
+instance Show Test where
+  show = \case
+    Expect _ c -> "expect " <> show c
+    Notify _ c -> "notify " <> show c
+    Guard  _ e -> "guard  " <> show e
+
+data TestSuite = TestSuite {tests :: [Test]}
+
+instance Show TestSuite where
+  show TestSuite {tests} = unlines (map show tests)

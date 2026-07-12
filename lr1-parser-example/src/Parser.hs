@@ -2,7 +2,8 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 module Parser (
-    parseProgram
+    parseProgram,
+    parseTestSuite
 ) where
   
 import Data.Text.IO.Utf8 qualified as Text
@@ -13,2445 +14,2533 @@ import Data.Lexeme
 import AST
 import Data.Text (Text)
   
-data Stack' xs where
-  Nil  ::      Stack' '[]
-  (:>) :: x -> Stack xs -> Stack' (x : xs)
+data StackProgram' xs where
+  NilProgram  ::      StackProgram' '[]
+  PushProgram :: x -> StackProgram xs -> StackProgram' (x : xs)
   
-type Stack a = (St a, Pos, Stack' a)
+type StackProgram a = (StProgram a, Pos, StackProgram' a)
   
-pattern (:?) :: a -> Stack xs -> Stack (a : xs)
-pattern a :? xs <- (_, _, a :> xs)
+pattern PushProgram' :: a -> StackProgram xs -> StackProgram (a : xs)
+pattern PushProgram' a xs <- (_, _, PushProgram a xs)
   
-infixr 2 :>, :?
+data StProgram :: [Kind.Type] -> Kind.Type where
+  SProgram0 :: StProgram (a)
+  SProgram1 :: StProgram (Program : a)
+  SProgram2 :: StProgram ([Stmt] : a)
+  SProgram3 :: StProgram (Stmt : a)
+  SProgram4 :: StProgram (Clause : a)
+  SProgram5 :: StProgram (Effect : a)
+  SProgram6 :: StProgram (Call : a)
+  SProgram7 :: StProgram ([Stmt] : Stmt : a)
+  SProgram8 :: StProgram (() : Call : a)
+  SProgram9 :: StProgram (() : Call : a)
+  SProgram10 :: StProgram (() : Call : a)
+  SProgram11 :: StProgram (() : Call : a)
+  SProgram12 :: StProgram ([Change] : () : Call : a)
+  SProgram13 :: StProgram ([Cond] : () : Call : a)
+  SProgram14 :: StProgram ([Cond] : () : Call : a)
+  SProgram15 :: StProgram (() : [Change] : () : Call : a)
+  SProgram16 :: StProgram (() : [Cond] : () : Call : a)
+  SProgram17 :: StProgram (() : [Cond] : () : Call : a)
+  SProgram18 :: StProgram (() : [Cond] : () : Call : a)
+  SProgram19 :: StProgram ([Change] : () : [Cond] : () : Call : a)
+  SProgram20 :: StProgram (() : [Change] : () : [Cond] : () : Call :
+                           a)
+  SProgram21 :: StProgram (Expr : a)
+  SProgram22 :: StProgram (Expr : a)
+  SProgram23 :: StProgram (Expr : a)
+  SProgram24 :: StProgram (Expr : () : Expr : a)
+  SProgram25 :: StProgram (Expr : () : Expr : a)
+  SProgram26 :: StProgram (Expr : a)
+  SProgram27 :: StProgram (Expr : a)
+  SProgram28 :: StProgram (Expr : a)
+  SProgram29 :: StProgram (Expr : a)
+  SProgram30 :: StProgram (Expr : () : Expr : a)
+  SProgram31 :: StProgram (Expr : () : Expr : a)
+  SProgram32 :: StProgram (Expr : () : Expr : a)
+  SProgram33 :: StProgram (Expr : () : Expr : a)
+  SProgram34 :: StProgram (Expr : a)
+  SProgram35 :: StProgram (Expr : a)
+  SProgram36 :: StProgram (Expr : a)
+  SProgram37 :: StProgram (Expr : a)
+  SProgram38 :: StProgram (() : a)
+  SProgram39 :: StProgram (() : a)
+  SProgram40 :: StProgram (() : a)
+  SProgram41 :: StProgram (() : a)
+  SProgram42 :: StProgram (Text : a)
+  SProgram43 :: StProgram (Text : a)
+  SProgram44 :: StProgram (Text : a)
+  SProgram45 :: StProgram (Text : a)
+  SProgram46 :: StProgram (Const : a)
+  SProgram47 :: StProgram (Const : a)
+  SProgram48 :: StProgram (Const : a)
+  SProgram49 :: StProgram (Const : a)
+  SProgram50 :: StProgram (Text : a)
+  SProgram51 :: StProgram (Text : a)
+  SProgram52 :: StProgram (Text : a)
+  SProgram53 :: StProgram (Text : a)
+  SProgram54 :: StProgram (Integer : a)
+  SProgram55 :: StProgram (Integer : a)
+  SProgram56 :: StProgram (Integer : a)
+  SProgram57 :: StProgram (Integer : a)
+  SProgram58 :: StProgram (() : Expr : a)
+  SProgram59 :: StProgram (() : Expr : a)
+  SProgram60 :: StProgram (() : Expr : a)
+  SProgram61 :: StProgram (() : Expr : a)
+  SProgram62 :: StProgram (() : Expr : a)
+  SProgram63 :: StProgram (() : Expr : a)
+  SProgram64 :: StProgram (() : Expr : a)
+  SProgram65 :: StProgram (() : Expr : a)
+  SProgram66 :: StProgram (() : Expr : a)
+  SProgram67 :: StProgram (() : Expr : a)
+  SProgram68 :: StProgram (() : Expr : a)
+  SProgram69 :: StProgram (Expr : () : a)
+  SProgram70 :: StProgram (Expr : () : a)
+  SProgram71 :: StProgram (Expr : () : a)
+  SProgram72 :: StProgram (Expr : () : a)
+  SProgram73 :: StProgram ([Expr] : () : Expr : a)
+  SProgram74 :: StProgram (Expr : () : Expr : a)
+  SProgram75 :: StProgram (Expr : () : Expr : a)
+  SProgram76 :: StProgram (Expr : () : Expr : a)
+  SProgram77 :: StProgram (Expr : () : Expr : a)
+  SProgram78 :: StProgram (() : Expr : () : a)
+  SProgram79 :: StProgram (() : Expr : () : a)
+  SProgram80 :: StProgram (() : Expr : () : a)
+  SProgram81 :: StProgram (() : Expr : () : a)
+  SProgram82 :: StProgram (Expr : a)
+  SProgram83 :: StProgram (Expr : a)
+  SProgram84 :: StProgram (Expr : a)
+  SProgram85 :: StProgram (Expr : a)
+  SProgram86 :: StProgram (Expr : () : Expr : a)
+  SProgram87 :: StProgram (Expr : () : Expr : a)
+  SProgram88 :: StProgram (Expr : () : Expr : a)
+  SProgram89 :: StProgram (Expr : () : Expr : a)
+  SProgram90 :: StProgram (Expr : a)
+  SProgram91 :: StProgram (Expr : a)
+  SProgram92 :: StProgram (Expr : a)
+  SProgram93 :: StProgram (Expr : a)
+  SProgram94 :: StProgram (() : a)
+  SProgram95 :: StProgram (() : a)
+  SProgram96 :: StProgram (() : a)
+  SProgram97 :: StProgram (() : a)
+  SProgram98 :: StProgram (Text : a)
+  SProgram99 :: StProgram (Text : a)
+  SProgram100 :: StProgram (Text : a)
+  SProgram101 :: StProgram (Text : a)
+  SProgram102 :: StProgram (Const : a)
+  SProgram103 :: StProgram (Const : a)
+  SProgram104 :: StProgram (Const : a)
+  SProgram105 :: StProgram (Const : a)
+  SProgram106 :: StProgram (Text : a)
+  SProgram107 :: StProgram (Text : a)
+  SProgram108 :: StProgram (Text : a)
+  SProgram109 :: StProgram (Text : a)
+  SProgram110 :: StProgram (Text : a)
+  SProgram111 :: StProgram (Text : a)
+  SProgram112 :: StProgram (Integer : a)
+  SProgram113 :: StProgram (Integer : a)
+  SProgram114 :: StProgram (Integer : a)
+  SProgram115 :: StProgram (Integer : a)
+  SProgram116 :: StProgram (() : Expr : a)
+  SProgram117 :: StProgram (() : Expr : a)
+  SProgram118 :: StProgram (() : Expr : a)
+  SProgram119 :: StProgram (() : Expr : a)
+  SProgram120 :: StProgram (Expr : () : a)
+  SProgram121 :: StProgram (Expr : () : a)
+  SProgram122 :: StProgram (Expr : () : a)
+  SProgram123 :: StProgram (Expr : () : a)
+  SProgram124 :: StProgram (Expr : () : Expr : a)
+  SProgram125 :: StProgram (Expr : () : Expr : a)
+  SProgram126 :: StProgram (Expr : () : Expr : a)
+  SProgram127 :: StProgram (Expr : () : Expr : a)
+  SProgram128 :: StProgram (() : Expr : () : a)
+  SProgram129 :: StProgram (() : Expr : () : a)
+  SProgram130 :: StProgram (() : Expr : () : a)
+  SProgram131 :: StProgram (() : Expr : () : a)
+  SProgram132 :: StProgram (Expr : a)
+  SProgram133 :: StProgram (Expr : a)
+  SProgram134 :: StProgram (Expr : () : Expr : a)
+  SProgram135 :: StProgram (Expr : () : Expr : a)
+  SProgram136 :: StProgram (() : Expr : a)
+  SProgram137 :: StProgram (() : Expr : a)
+  SProgram138 :: StProgram (() : Expr : a)
+  SProgram139 :: StProgram (() : Expr : a)
+  SProgram140 :: StProgram (() : a)
+  SProgram141 :: StProgram (() : a)
+  SProgram142 :: StProgram (Call : a)
+  SProgram143 :: StProgram (Call : a)
+  SProgram144 :: StProgram (() : a)
+  SProgram145 :: StProgram (() : a)
+  SProgram146 :: StProgram (Expr : a)
+  SProgram147 :: StProgram (Expr : a)
+  SProgram148 :: StProgram (Text : a)
+  SProgram149 :: StProgram (Text : a)
+  SProgram150 :: StProgram (() : a)
+  SProgram151 :: StProgram (() : a)
+  SProgram152 :: StProgram (Call : () : a)
+  SProgram153 :: StProgram (Call : () : a)
+  SProgram154 :: StProgram (Call : () : a)
+  SProgram155 :: StProgram (Call : () : a)
+  SProgram156 :: StProgram ([Expr] : Text : a)
+  SProgram157 :: StProgram ([Expr] : Text : a)
+  SProgram158 :: StProgram (() : () : a)
+  SProgram159 :: StProgram (() : () : a)
+  SProgram160 :: StProgram ([Expr] : () : a)
+  SProgram161 :: StProgram ([Expr] : () : a)
+  SProgram162 :: StProgram (() : Expr : a)
+  SProgram163 :: StProgram (() : Expr : a)
+  SProgram164 :: StProgram (() : [Expr] : () : a)
+  SProgram165 :: StProgram (() : [Expr] : () : a)
+  SProgram166 :: StProgram (Text : a)
+  SProgram167 :: StProgram (() : a)
+  SProgram168 :: StProgram ([Expr] : Text : a)
+  SProgram169 :: StProgram (() : () : a)
+  SProgram170 :: StProgram ([Expr] : () : a)
+  SProgram171 :: StProgram (() : [Expr] : () : a)
+  SProgram172 :: StProgram (Change : a)
+  SProgram173 :: StProgram (Cond : a)
+  SProgram174 :: StProgram (Cond : a)
+  SProgram175 :: StProgram (() : Change : a)
+  SProgram176 :: StProgram (() : Cond : a)
+  SProgram177 :: StProgram (() : Cond : a)
+  SProgram178 :: StProgram ([Change] : () : Change : a)
+  SProgram179 :: StProgram ([Cond] : () : Cond : a)
+  SProgram180 :: StProgram ([Cond] : () : Cond : a)
   
-data St :: [Kind.Type] -> Kind.Type where
-  S0 :: forall a. St (a)
-  S1 :: forall a. St (Program : a)
-  S2 :: forall a. St ([Stmt] : a)
-  S3 :: forall a. St (Stmt : a)
-  S4 :: forall a. St (Clause : a)
-  S5 :: forall a. St (Effect : a)
-  S6 :: forall a. St (Call : a)
-  S7 :: forall a. St ([Stmt] : Stmt : a)
-  S8 :: forall a. St (() : Call : a)
-  S9 :: forall a. St (() : Call : a)
-  S10 :: forall a. St (() : Call : a)
-  S11 :: forall a. St (() : Call : a)
-  S12 :: forall a. St ([Change] : () : Call : a)
-  S13 :: forall a. St ([Cond] : () : Call : a)
-  S14 :: forall a. St ([Cond] : () : Call : a)
-  S15 :: forall a. St (() : [Change] : () : Call : a)
-  S16 :: forall a. St (() : [Cond] : () : Call : a)
-  S17 :: forall a. St (() : [Cond] : () : Call : a)
-  S18 :: forall a. St (() : [Cond] : () : Call : a)
-  S19 :: forall a. St ([Change] : () : [Cond] : () : Call : a)
-  S20 :: forall a. St (() : [Change] : () : [Cond] : () : Call : a)
-  S21 :: forall a. St (Expr : a)
-  S22 :: forall a. St (Expr : a)
-  S23 :: forall a. St (Expr : a)
-  S24 :: forall a. St (Expr : () : Expr : a)
-  S25 :: forall a. St (Expr : () : Expr : a)
-  S26 :: forall a. St (Expr : a)
-  S27 :: forall a. St (Expr : a)
-  S28 :: forall a. St (Expr : a)
-  S29 :: forall a. St (Expr : a)
-  S30 :: forall a. St (Expr : () : Expr : a)
-  S31 :: forall a. St (Expr : () : Expr : a)
-  S32 :: forall a. St (Expr : () : Expr : a)
-  S33 :: forall a. St (Expr : () : Expr : a)
-  S34 :: forall a. St (Expr : a)
-  S35 :: forall a. St (Expr : a)
-  S36 :: forall a. St (Expr : a)
-  S37 :: forall a. St (Expr : a)
-  S38 :: forall a. St (() : a)
-  S39 :: forall a. St (() : a)
-  S40 :: forall a. St (() : a)
-  S41 :: forall a. St (() : a)
-  S42 :: forall a. St (Text : a)
-  S43 :: forall a. St (Text : a)
-  S44 :: forall a. St (Text : a)
-  S45 :: forall a. St (Text : a)
-  S46 :: forall a. St (Const : a)
-  S47 :: forall a. St (Const : a)
-  S48 :: forall a. St (Const : a)
-  S49 :: forall a. St (Const : a)
-  S50 :: forall a. St (Text : a)
-  S51 :: forall a. St (Text : a)
-  S52 :: forall a. St (Text : a)
-  S53 :: forall a. St (Text : a)
-  S54 :: forall a. St (Integer : a)
-  S55 :: forall a. St (Integer : a)
-  S56 :: forall a. St (Integer : a)
-  S57 :: forall a. St (Integer : a)
-  S58 :: forall a. St (() : Expr : a)
-  S59 :: forall a. St (() : Expr : a)
-  S60 :: forall a. St (() : Expr : a)
-  S61 :: forall a. St (() : Expr : a)
-  S62 :: forall a. St (() : Expr : a)
-  S63 :: forall a. St (() : Expr : a)
-  S64 :: forall a. St (() : Expr : a)
-  S65 :: forall a. St (() : Expr : a)
-  S66 :: forall a. St (() : Expr : a)
-  S67 :: forall a. St (() : Expr : a)
-  S68 :: forall a. St (() : Expr : a)
-  S69 :: forall a. St (Expr : () : a)
-  S70 :: forall a. St (Expr : () : a)
-  S71 :: forall a. St (Expr : () : a)
-  S72 :: forall a. St (Expr : () : a)
-  S73 :: forall a. St ([Expr] : () : Expr : a)
-  S74 :: forall a. St (Expr : () : Expr : a)
-  S75 :: forall a. St (Expr : () : Expr : a)
-  S76 :: forall a. St (Expr : () : Expr : a)
-  S77 :: forall a. St (Expr : () : Expr : a)
-  S78 :: forall a. St (() : Expr : () : a)
-  S79 :: forall a. St (() : Expr : () : a)
-  S80 :: forall a. St (() : Expr : () : a)
-  S81 :: forall a. St (() : Expr : () : a)
-  S82 :: forall a. St (Expr : a)
-  S83 :: forall a. St (Expr : a)
-  S84 :: forall a. St (Expr : a)
-  S85 :: forall a. St (Expr : a)
-  S86 :: forall a. St (Expr : () : Expr : a)
-  S87 :: forall a. St (Expr : () : Expr : a)
-  S88 :: forall a. St (Expr : () : Expr : a)
-  S89 :: forall a. St (Expr : () : Expr : a)
-  S90 :: forall a. St (Expr : a)
-  S91 :: forall a. St (Expr : a)
-  S92 :: forall a. St (Expr : a)
-  S93 :: forall a. St (Expr : a)
-  S94 :: forall a. St (() : a)
-  S95 :: forall a. St (() : a)
-  S96 :: forall a. St (() : a)
-  S97 :: forall a. St (() : a)
-  S98 :: forall a. St (Text : a)
-  S99 :: forall a. St (Text : a)
-  S100 :: forall a. St (Text : a)
-  S101 :: forall a. St (Text : a)
-  S102 :: forall a. St (Const : a)
-  S103 :: forall a. St (Const : a)
-  S104 :: forall a. St (Const : a)
-  S105 :: forall a. St (Const : a)
-  S106 :: forall a. St (Text : a)
-  S107 :: forall a. St (Text : a)
-  S108 :: forall a. St (Text : a)
-  S109 :: forall a. St (Text : a)
-  S110 :: forall a. St (Text : a)
-  S111 :: forall a. St (Text : a)
-  S112 :: forall a. St (Integer : a)
-  S113 :: forall a. St (Integer : a)
-  S114 :: forall a. St (Integer : a)
-  S115 :: forall a. St (Integer : a)
-  S116 :: forall a. St (() : Expr : a)
-  S117 :: forall a. St (() : Expr : a)
-  S118 :: forall a. St (() : Expr : a)
-  S119 :: forall a. St (() : Expr : a)
-  S120 :: forall a. St (Expr : () : a)
-  S121 :: forall a. St (Expr : () : a)
-  S122 :: forall a. St (Expr : () : a)
-  S123 :: forall a. St (Expr : () : a)
-  S124 :: forall a. St (Expr : () : Expr : a)
-  S125 :: forall a. St (Expr : () : Expr : a)
-  S126 :: forall a. St (Expr : () : Expr : a)
-  S127 :: forall a. St (Expr : () : Expr : a)
-  S128 :: forall a. St (() : Expr : () : a)
-  S129 :: forall a. St (() : Expr : () : a)
-  S130 :: forall a. St (() : Expr : () : a)
-  S131 :: forall a. St (() : Expr : () : a)
-  S132 :: forall a. St (Expr : a)
-  S133 :: forall a. St (Expr : a)
-  S134 :: forall a. St (Expr : () : Expr : a)
-  S135 :: forall a. St (Expr : () : Expr : a)
-  S136 :: forall a. St (() : Expr : a)
-  S137 :: forall a. St (() : Expr : a)
-  S138 :: forall a. St (() : Expr : a)
-  S139 :: forall a. St (() : Expr : a)
-  S140 :: forall a. St (() : a)
-  S141 :: forall a. St (() : a)
-  S142 :: forall a. St (Call : a)
-  S143 :: forall a. St (Call : a)
-  S144 :: forall a. St (() : a)
-  S145 :: forall a. St (() : a)
-  S146 :: forall a. St (Expr : a)
-  S147 :: forall a. St (Expr : a)
-  S148 :: forall a. St (Text : a)
-  S149 :: forall a. St (Text : a)
-  S150 :: forall a. St (() : a)
-  S151 :: forall a. St (() : a)
-  S152 :: forall a. St (Call : () : a)
-  S153 :: forall a. St (Call : () : a)
-  S154 :: forall a. St (Call : () : a)
-  S155 :: forall a. St (Call : () : a)
-  S156 :: forall a. St ([Expr] : Text : a)
-  S157 :: forall a. St ([Expr] : Text : a)
-  S158 :: forall a. St (() : () : a)
-  S159 :: forall a. St (() : () : a)
-  S160 :: forall a. St ([Expr] : () : a)
-  S161 :: forall a. St ([Expr] : () : a)
-  S162 :: forall a. St (() : Expr : a)
-  S163 :: forall a. St (() : Expr : a)
-  S164 :: forall a. St (() : [Expr] : () : a)
-  S165 :: forall a. St (() : [Expr] : () : a)
-  S166 :: forall a. St (Text : a)
-  S167 :: forall a. St (() : a)
-  S168 :: forall a. St ([Expr] : Text : a)
-  S169 :: forall a. St (() : () : a)
-  S170 :: forall a. St ([Expr] : () : a)
-  S171 :: forall a. St (() : [Expr] : () : a)
-  S172 :: forall a. St (Change : a)
-  S173 :: forall a. St (Cond : a)
-  S174 :: forall a. St (Cond : a)
-  S175 :: forall a. St (() : Change : a)
-  S176 :: forall a. St (() : Cond : a)
-  S177 :: forall a. St (() : Cond : a)
-  S178 :: forall a. St ([Change] : () : Change : a)
-  S179 :: forall a. St ([Cond] : () : Cond : a)
-  S180 :: forall a. St ([Cond] : () : Cond : a)
-  
-__gotoAdd :: ([Lexeme], Pos) -> Expr -> Stack a -> Either (Pos, [String]) Program
-__gotoAdd toks term stk@(state, _, _) = case state of
-  S9 -> __runProgram S133 toks (term :> stk)
-  S11 -> __runProgram S132 toks (term :> stk)
-  S38 -> __runProgram S23 toks (term :> stk)
-  S39 -> __runProgram S23 toks (term :> stk)
-  S40 -> __runProgram S23 toks (term :> stk)
-  S41 -> __runProgram S23 toks (term :> stk)
-  S58 -> __runProgram S22 toks (term :> stk)
-  S59 -> __runProgram S24 toks (term :> stk)
-  S60 -> __runProgram S25 toks (term :> stk)
-  S94 -> __runProgram S23 toks (term :> stk)
-  S95 -> __runProgram S23 toks (term :> stk)
-  S96 -> __runProgram S23 toks (term :> stk)
-  S97 -> __runProgram S23 toks (term :> stk)
-  S150 -> __runProgram S22 toks (term :> stk)
-  S151 -> __runProgram S22 toks (term :> stk)
-  S162 -> __runProgram S134 toks (term :> stk)
-  S163 -> __runProgram S135 toks (term :> stk)
-  S167 -> __runProgram S22 toks (term :> stk)
-  S176 -> __runProgram S132 toks (term :> stk)
-  S177 -> __runProgram S133 toks (term :> stk)
+__gotoAddForProgram :: ([Lexeme], Pos) -> Expr -> StackProgram a -> Either (Pos, [String]) Program
+__gotoAddForProgram toks term stk@(state, _, _) = case state of
+  SProgram9 -> __runProgram SProgram133 toks (PushProgram term stk)
+  SProgram11 -> __runProgram SProgram132 toks (PushProgram term stk)
+  SProgram38 -> __runProgram SProgram23 toks (PushProgram term stk)
+  SProgram39 -> __runProgram SProgram23 toks (PushProgram term stk)
+  SProgram40 -> __runProgram SProgram23 toks (PushProgram term stk)
+  SProgram41 -> __runProgram SProgram23 toks (PushProgram term stk)
+  SProgram58 -> __runProgram SProgram22 toks (PushProgram term stk)
+  SProgram59 -> __runProgram SProgram24 toks (PushProgram term stk)
+  SProgram60 -> __runProgram SProgram25 toks (PushProgram term stk)
+  SProgram94 -> __runProgram SProgram23 toks (PushProgram term stk)
+  SProgram95 -> __runProgram SProgram23 toks (PushProgram term stk)
+  SProgram96 -> __runProgram SProgram23 toks (PushProgram term stk)
+  SProgram97 -> __runProgram SProgram23 toks (PushProgram term stk)
+  SProgram150 -> __runProgram SProgram22 toks (PushProgram term stk)
+  SProgram151 -> __runProgram SProgram22 toks (PushProgram term stk)
+  SProgram162 -> __runProgram SProgram134 toks (PushProgram term stk)
+  SProgram163 -> __runProgram SProgram135 toks (PushProgram term stk)
+  SProgram167 -> __runProgram SProgram22 toks (PushProgram term stk)
+  SProgram176 -> __runProgram SProgram132 toks (PushProgram term stk)
+  SProgram177 -> __runProgram SProgram133 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoCall :: ([Lexeme], Pos) -> Call -> Stack a -> Either (Pos, [String]) Program
-__gotoCall toks term stk@(state, _, _) = case state of
-  S0 -> __runProgram S6 toks (term :> stk)
-  S3 -> __runProgram S6 toks (term :> stk)
-  S9 -> __runProgram S143 toks (term :> stk)
-  S11 -> __runProgram S142 toks (term :> stk)
-  S140 -> __runProgram S152 toks (term :> stk)
-  S141 -> __runProgram S153 toks (term :> stk)
-  S144 -> __runProgram S154 toks (term :> stk)
-  S145 -> __runProgram S155 toks (term :> stk)
-  S176 -> __runProgram S142 toks (term :> stk)
-  S177 -> __runProgram S143 toks (term :> stk)
+__gotoCallForProgram :: ([Lexeme], Pos) -> Call -> StackProgram a -> Either (Pos, [String]) Program
+__gotoCallForProgram toks term stk@(state, _, _) = case state of
+  SProgram0 -> __runProgram SProgram6 toks (PushProgram term stk)
+  SProgram3 -> __runProgram SProgram6 toks (PushProgram term stk)
+  SProgram9 -> __runProgram SProgram143 toks (PushProgram term stk)
+  SProgram11 -> __runProgram SProgram142 toks (PushProgram term stk)
+  SProgram140 -> __runProgram SProgram152 toks (PushProgram term stk)
+  SProgram141 -> __runProgram SProgram153 toks (PushProgram term stk)
+  SProgram144 -> __runProgram SProgram154 toks (PushProgram term stk)
+  SProgram145 -> __runProgram SProgram155 toks (PushProgram term stk)
+  SProgram176 -> __runProgram SProgram142 toks (PushProgram term stk)
+  SProgram177 -> __runProgram SProgram143 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoChange :: ([Lexeme], Pos) -> Change -> Stack a -> Either (Pos, [String]) Program
-__gotoChange toks term stk@(state, _, _) = case state of
-  S8 -> __runProgram S172 toks (term :> stk)
-  S16 -> __runProgram S172 toks (term :> stk)
-  S175 -> __runProgram S172 toks (term :> stk)
+__gotoChangeForProgram :: ([Lexeme], Pos) -> Change -> StackProgram a -> Either (Pos, [String]) Program
+__gotoChangeForProgram toks term stk@(state, _, _) = case state of
+  SProgram8 -> __runProgram SProgram172 toks (PushProgram term stk)
+  SProgram16 -> __runProgram SProgram172 toks (PushProgram term stk)
+  SProgram175 -> __runProgram SProgram172 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoChanges :: ([Lexeme], Pos) -> [Change] -> Stack a -> Either (Pos, [String]) Program
-__gotoChanges toks term stk@(state, _, _) = case state of
-  S8 -> __runProgram S12 toks (term :> stk)
-  S16 -> __runProgram S19 toks (term :> stk)
-  S175 -> __runProgram S178 toks (term :> stk)
+__gotoChangesForProgram :: ([Lexeme], Pos) -> [Change] -> StackProgram a -> Either (Pos, [String]) Program
+__gotoChangesForProgram toks term stk@(state, _, _) = case state of
+  SProgram8 -> __runProgram SProgram12 toks (PushProgram term stk)
+  SProgram16 -> __runProgram SProgram19 toks (PushProgram term stk)
+  SProgram175 -> __runProgram SProgram178 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoClause :: ([Lexeme], Pos) -> Clause -> Stack a -> Either (Pos, [String]) Program
-__gotoClause toks term stk@(state, _, _) = case state of
-  S0 -> __runProgram S4 toks (term :> stk)
-  S3 -> __runProgram S4 toks (term :> stk)
+__gotoClauseForProgram :: ([Lexeme], Pos) -> Clause -> StackProgram a -> Either (Pos, [String]) Program
+__gotoClauseForProgram toks term stk@(state, _, _) = case state of
+  SProgram0 -> __runProgram SProgram4 toks (PushProgram term stk)
+  SProgram3 -> __runProgram SProgram4 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoCond :: ([Lexeme], Pos) -> Cond -> Stack a -> Either (Pos, [String]) Program
-__gotoCond toks term stk@(state, _, _) = case state of
-  S9 -> __runProgram S174 toks (term :> stk)
-  S11 -> __runProgram S173 toks (term :> stk)
-  S176 -> __runProgram S173 toks (term :> stk)
-  S177 -> __runProgram S174 toks (term :> stk)
+__gotoCondForProgram :: ([Lexeme], Pos) -> Cond -> StackProgram a -> Either (Pos, [String]) Program
+__gotoCondForProgram toks term stk@(state, _, _) = case state of
+  SProgram9 -> __runProgram SProgram174 toks (PushProgram term stk)
+  SProgram11 -> __runProgram SProgram173 toks (PushProgram term stk)
+  SProgram176 -> __runProgram SProgram173 toks (PushProgram term stk)
+  SProgram177 -> __runProgram SProgram174 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoConds :: ([Lexeme], Pos) -> [Cond] -> Stack a -> Either (Pos, [String]) Program
-__gotoConds toks term stk@(state, _, _) = case state of
-  S9 -> __runProgram S13 toks (term :> stk)
-  S11 -> __runProgram S14 toks (term :> stk)
-  S176 -> __runProgram S179 toks (term :> stk)
-  S177 -> __runProgram S180 toks (term :> stk)
+__gotoCondsForProgram :: ([Lexeme], Pos) -> [Cond] -> StackProgram a -> Either (Pos, [String]) Program
+__gotoCondsForProgram toks term stk@(state, _, _) = case state of
+  SProgram9 -> __runProgram SProgram13 toks (PushProgram term stk)
+  SProgram11 -> __runProgram SProgram14 toks (PushProgram term stk)
+  SProgram176 -> __runProgram SProgram179 toks (PushProgram term stk)
+  SProgram177 -> __runProgram SProgram180 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoConst :: ([Lexeme], Pos) -> Const -> Stack a -> Either (Pos, [String]) Program
-__gotoConst toks term stk@(state, _, _) = case state of
-  S9 -> __runProgram S104 toks (term :> stk)
-  S11 -> __runProgram S103 toks (term :> stk)
-  S38 -> __runProgram S49 toks (term :> stk)
-  S39 -> __runProgram S49 toks (term :> stk)
-  S40 -> __runProgram S49 toks (term :> stk)
-  S41 -> __runProgram S49 toks (term :> stk)
-  S58 -> __runProgram S48 toks (term :> stk)
-  S59 -> __runProgram S46 toks (term :> stk)
-  S60 -> __runProgram S47 toks (term :> stk)
-  S61 -> __runProgram S46 toks (term :> stk)
-  S62 -> __runProgram S47 toks (term :> stk)
-  S63 -> __runProgram S48 toks (term :> stk)
-  S64 -> __runProgram S49 toks (term :> stk)
-  S65 -> __runProgram S46 toks (term :> stk)
-  S66 -> __runProgram S47 toks (term :> stk)
-  S67 -> __runProgram S48 toks (term :> stk)
-  S68 -> __runProgram S49 toks (term :> stk)
-  S94 -> __runProgram S49 toks (term :> stk)
-  S95 -> __runProgram S49 toks (term :> stk)
-  S96 -> __runProgram S49 toks (term :> stk)
-  S97 -> __runProgram S49 toks (term :> stk)
-  S116 -> __runProgram S102 toks (term :> stk)
-  S117 -> __runProgram S103 toks (term :> stk)
-  S118 -> __runProgram S104 toks (term :> stk)
-  S119 -> __runProgram S105 toks (term :> stk)
-  S136 -> __runProgram S102 toks (term :> stk)
-  S137 -> __runProgram S103 toks (term :> stk)
-  S138 -> __runProgram S104 toks (term :> stk)
-  S139 -> __runProgram S105 toks (term :> stk)
-  S150 -> __runProgram S48 toks (term :> stk)
-  S151 -> __runProgram S48 toks (term :> stk)
-  S162 -> __runProgram S102 toks (term :> stk)
-  S163 -> __runProgram S105 toks (term :> stk)
-  S167 -> __runProgram S48 toks (term :> stk)
-  S176 -> __runProgram S103 toks (term :> stk)
-  S177 -> __runProgram S104 toks (term :> stk)
+__gotoConstForProgram :: ([Lexeme], Pos) -> Const -> StackProgram a -> Either (Pos, [String]) Program
+__gotoConstForProgram toks term stk@(state, _, _) = case state of
+  SProgram9 -> __runProgram SProgram104 toks (PushProgram term stk)
+  SProgram11 -> __runProgram SProgram103 toks (PushProgram term stk)
+  SProgram38 -> __runProgram SProgram49 toks (PushProgram term stk)
+  SProgram39 -> __runProgram SProgram49 toks (PushProgram term stk)
+  SProgram40 -> __runProgram SProgram49 toks (PushProgram term stk)
+  SProgram41 -> __runProgram SProgram49 toks (PushProgram term stk)
+  SProgram58 -> __runProgram SProgram48 toks (PushProgram term stk)
+  SProgram59 -> __runProgram SProgram46 toks (PushProgram term stk)
+  SProgram60 -> __runProgram SProgram47 toks (PushProgram term stk)
+  SProgram61 -> __runProgram SProgram46 toks (PushProgram term stk)
+  SProgram62 -> __runProgram SProgram47 toks (PushProgram term stk)
+  SProgram63 -> __runProgram SProgram48 toks (PushProgram term stk)
+  SProgram64 -> __runProgram SProgram49 toks (PushProgram term stk)
+  SProgram65 -> __runProgram SProgram46 toks (PushProgram term stk)
+  SProgram66 -> __runProgram SProgram47 toks (PushProgram term stk)
+  SProgram67 -> __runProgram SProgram48 toks (PushProgram term stk)
+  SProgram68 -> __runProgram SProgram49 toks (PushProgram term stk)
+  SProgram94 -> __runProgram SProgram49 toks (PushProgram term stk)
+  SProgram95 -> __runProgram SProgram49 toks (PushProgram term stk)
+  SProgram96 -> __runProgram SProgram49 toks (PushProgram term stk)
+  SProgram97 -> __runProgram SProgram49 toks (PushProgram term stk)
+  SProgram116 -> __runProgram SProgram102 toks (PushProgram term stk)
+  SProgram117 -> __runProgram SProgram103 toks (PushProgram term stk)
+  SProgram118 -> __runProgram SProgram104 toks (PushProgram term stk)
+  SProgram119 -> __runProgram SProgram105 toks (PushProgram term stk)
+  SProgram136 -> __runProgram SProgram102 toks (PushProgram term stk)
+  SProgram137 -> __runProgram SProgram103 toks (PushProgram term stk)
+  SProgram138 -> __runProgram SProgram104 toks (PushProgram term stk)
+  SProgram139 -> __runProgram SProgram105 toks (PushProgram term stk)
+  SProgram150 -> __runProgram SProgram48 toks (PushProgram term stk)
+  SProgram151 -> __runProgram SProgram48 toks (PushProgram term stk)
+  SProgram162 -> __runProgram SProgram102 toks (PushProgram term stk)
+  SProgram163 -> __runProgram SProgram105 toks (PushProgram term stk)
+  SProgram167 -> __runProgram SProgram48 toks (PushProgram term stk)
+  SProgram176 -> __runProgram SProgram103 toks (PushProgram term stk)
+  SProgram177 -> __runProgram SProgram104 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoEffect :: ([Lexeme], Pos) -> Effect -> Stack a -> Either (Pos, [String]) Program
-__gotoEffect toks term stk@(state, _, _) = case state of
-  S0 -> __runProgram S5 toks (term :> stk)
-  S3 -> __runProgram S5 toks (term :> stk)
+__gotoEffectForProgram :: ([Lexeme], Pos) -> Effect -> StackProgram a -> Either (Pos, [String]) Program
+__gotoEffectForProgram toks term stk@(state, _, _) = case state of
+  SProgram0 -> __runProgram SProgram5 toks (PushProgram term stk)
+  SProgram3 -> __runProgram SProgram5 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoExpr :: ([Lexeme], Pos) -> Expr -> Stack a -> Either (Pos, [String]) Program
-__gotoExpr toks term stk@(state, _, _) = case state of
-  S9 -> __runProgram S147 toks (term :> stk)
-  S11 -> __runProgram S146 toks (term :> stk)
-  S38 -> __runProgram S69 toks (term :> stk)
-  S39 -> __runProgram S70 toks (term :> stk)
-  S40 -> __runProgram S71 toks (term :> stk)
-  S41 -> __runProgram S72 toks (term :> stk)
-  S58 -> __runProgram S21 toks (term :> stk)
-  S94 -> __runProgram S120 toks (term :> stk)
-  S95 -> __runProgram S121 toks (term :> stk)
-  S96 -> __runProgram S122 toks (term :> stk)
-  S97 -> __runProgram S123 toks (term :> stk)
-  S150 -> __runProgram S21 toks (term :> stk)
-  S151 -> __runProgram S21 toks (term :> stk)
-  S167 -> __runProgram S21 toks (term :> stk)
-  S176 -> __runProgram S146 toks (term :> stk)
-  S177 -> __runProgram S147 toks (term :> stk)
+__gotoExprForProgram :: ([Lexeme], Pos) -> Expr -> StackProgram a -> Either (Pos, [String]) Program
+__gotoExprForProgram toks term stk@(state, _, _) = case state of
+  SProgram9 -> __runProgram SProgram147 toks (PushProgram term stk)
+  SProgram11 -> __runProgram SProgram146 toks (PushProgram term stk)
+  SProgram38 -> __runProgram SProgram69 toks (PushProgram term stk)
+  SProgram39 -> __runProgram SProgram70 toks (PushProgram term stk)
+  SProgram40 -> __runProgram SProgram71 toks (PushProgram term stk)
+  SProgram41 -> __runProgram SProgram72 toks (PushProgram term stk)
+  SProgram58 -> __runProgram SProgram21 toks (PushProgram term stk)
+  SProgram94 -> __runProgram SProgram120 toks (PushProgram term stk)
+  SProgram95 -> __runProgram SProgram121 toks (PushProgram term stk)
+  SProgram96 -> __runProgram SProgram122 toks (PushProgram term stk)
+  SProgram97 -> __runProgram SProgram123 toks (PushProgram term stk)
+  SProgram150 -> __runProgram SProgram21 toks (PushProgram term stk)
+  SProgram151 -> __runProgram SProgram21 toks (PushProgram term stk)
+  SProgram167 -> __runProgram SProgram21 toks (PushProgram term stk)
+  SProgram176 -> __runProgram SProgram146 toks (PushProgram term stk)
+  SProgram177 -> __runProgram SProgram147 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoExprs1 :: ([Lexeme], Pos) -> [Expr] -> Stack a -> Either (Pos, [String]) Program
-__gotoExprs1 toks term stk@(state, _, _) = case state of
-  S58 -> __runProgram S73 toks (term :> stk)
-  S150 -> __runProgram S160 toks (term :> stk)
-  S151 -> __runProgram S161 toks (term :> stk)
-  S167 -> __runProgram S170 toks (term :> stk)
+__gotoExprs1ForProgram :: ([Lexeme], Pos) -> [Expr] -> StackProgram a -> Either (Pos, [String]) Program
+__gotoExprs1ForProgram toks term stk@(state, _, _) = case state of
+  SProgram58 -> __runProgram SProgram73 toks (PushProgram term stk)
+  SProgram150 -> __runProgram SProgram160 toks (PushProgram term stk)
+  SProgram151 -> __runProgram SProgram161 toks (PushProgram term stk)
+  SProgram167 -> __runProgram SProgram170 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoMult :: ([Lexeme], Pos) -> Expr -> Stack a -> Either (Pos, [String]) Program
-__gotoMult toks term stk@(state, _, _) = case state of
-  S9 -> __runProgram S84 toks (term :> stk)
-  S11 -> __runProgram S83 toks (term :> stk)
-  S38 -> __runProgram S29 toks (term :> stk)
-  S39 -> __runProgram S29 toks (term :> stk)
-  S40 -> __runProgram S29 toks (term :> stk)
-  S41 -> __runProgram S29 toks (term :> stk)
-  S58 -> __runProgram S28 toks (term :> stk)
-  S59 -> __runProgram S26 toks (term :> stk)
-  S60 -> __runProgram S27 toks (term :> stk)
-  S61 -> __runProgram S30 toks (term :> stk)
-  S62 -> __runProgram S31 toks (term :> stk)
-  S63 -> __runProgram S32 toks (term :> stk)
-  S64 -> __runProgram S33 toks (term :> stk)
-  S94 -> __runProgram S29 toks (term :> stk)
-  S95 -> __runProgram S29 toks (term :> stk)
-  S96 -> __runProgram S29 toks (term :> stk)
-  S97 -> __runProgram S29 toks (term :> stk)
-  S136 -> __runProgram S86 toks (term :> stk)
-  S137 -> __runProgram S87 toks (term :> stk)
-  S138 -> __runProgram S88 toks (term :> stk)
-  S139 -> __runProgram S89 toks (term :> stk)
-  S150 -> __runProgram S28 toks (term :> stk)
-  S151 -> __runProgram S28 toks (term :> stk)
-  S162 -> __runProgram S82 toks (term :> stk)
-  S163 -> __runProgram S85 toks (term :> stk)
-  S167 -> __runProgram S28 toks (term :> stk)
-  S176 -> __runProgram S83 toks (term :> stk)
-  S177 -> __runProgram S84 toks (term :> stk)
+__gotoMultForProgram :: ([Lexeme], Pos) -> Expr -> StackProgram a -> Either (Pos, [String]) Program
+__gotoMultForProgram toks term stk@(state, _, _) = case state of
+  SProgram9 -> __runProgram SProgram84 toks (PushProgram term stk)
+  SProgram11 -> __runProgram SProgram83 toks (PushProgram term stk)
+  SProgram38 -> __runProgram SProgram29 toks (PushProgram term stk)
+  SProgram39 -> __runProgram SProgram29 toks (PushProgram term stk)
+  SProgram40 -> __runProgram SProgram29 toks (PushProgram term stk)
+  SProgram41 -> __runProgram SProgram29 toks (PushProgram term stk)
+  SProgram58 -> __runProgram SProgram28 toks (PushProgram term stk)
+  SProgram59 -> __runProgram SProgram26 toks (PushProgram term stk)
+  SProgram60 -> __runProgram SProgram27 toks (PushProgram term stk)
+  SProgram61 -> __runProgram SProgram30 toks (PushProgram term stk)
+  SProgram62 -> __runProgram SProgram31 toks (PushProgram term stk)
+  SProgram63 -> __runProgram SProgram32 toks (PushProgram term stk)
+  SProgram64 -> __runProgram SProgram33 toks (PushProgram term stk)
+  SProgram94 -> __runProgram SProgram29 toks (PushProgram term stk)
+  SProgram95 -> __runProgram SProgram29 toks (PushProgram term stk)
+  SProgram96 -> __runProgram SProgram29 toks (PushProgram term stk)
+  SProgram97 -> __runProgram SProgram29 toks (PushProgram term stk)
+  SProgram136 -> __runProgram SProgram86 toks (PushProgram term stk)
+  SProgram137 -> __runProgram SProgram87 toks (PushProgram term stk)
+  SProgram138 -> __runProgram SProgram88 toks (PushProgram term stk)
+  SProgram139 -> __runProgram SProgram89 toks (PushProgram term stk)
+  SProgram150 -> __runProgram SProgram28 toks (PushProgram term stk)
+  SProgram151 -> __runProgram SProgram28 toks (PushProgram term stk)
+  SProgram162 -> __runProgram SProgram82 toks (PushProgram term stk)
+  SProgram163 -> __runProgram SProgram85 toks (PushProgram term stk)
+  SProgram167 -> __runProgram SProgram28 toks (PushProgram term stk)
+  SProgram176 -> __runProgram SProgram83 toks (PushProgram term stk)
+  SProgram177 -> __runProgram SProgram84 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoProgram :: ([Lexeme], Pos) -> Program -> Stack a -> Either (Pos, [String]) Program
-__gotoProgram toks term stk@(state, _, _) = case state of
-  S0 -> __runProgram S1 toks (term :> stk)
+__gotoProgramForProgram :: ([Lexeme], Pos) -> Program -> StackProgram a -> Either (Pos, [String]) Program
+__gotoProgramForProgram toks term stk@(state, _, _) = case state of
+  SProgram0 -> __runProgram SProgram1 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoStmt :: ([Lexeme], Pos) -> Stmt -> Stack a -> Either (Pos, [String]) Program
-__gotoStmt toks term stk@(state, _, _) = case state of
-  S0 -> __runProgram S3 toks (term :> stk)
-  S3 -> __runProgram S3 toks (term :> stk)
+__gotoStmtForProgram :: ([Lexeme], Pos) -> Stmt -> StackProgram a -> Either (Pos, [String]) Program
+__gotoStmtForProgram toks term stk@(state, _, _) = case state of
+  SProgram0 -> __runProgram SProgram3 toks (PushProgram term stk)
+  SProgram3 -> __runProgram SProgram3 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoStmts :: ([Lexeme], Pos) -> [Stmt] -> Stack a -> Either (Pos, [String]) Program
-__gotoStmts toks term stk@(state, _, _) = case state of
-  S0 -> __runProgram S2 toks (term :> stk)
-  S3 -> __runProgram S7 toks (term :> stk)
+__gotoStmtsForProgram :: ([Lexeme], Pos) -> [Stmt] -> StackProgram a -> Either (Pos, [String]) Program
+__gotoStmtsForProgram toks term stk@(state, _, _) = case state of
+  SProgram0 -> __runProgram SProgram2 toks (PushProgram term stk)
+  SProgram3 -> __runProgram SProgram7 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoTerm :: ([Lexeme], Pos) -> Expr -> Stack a -> Either (Pos, [String]) Program
-__gotoTerm toks term stk@(state, _, _) = case state of
-  S9 -> __runProgram S92 toks (term :> stk)
-  S11 -> __runProgram S91 toks (term :> stk)
-  S38 -> __runProgram S37 toks (term :> stk)
-  S39 -> __runProgram S37 toks (term :> stk)
-  S40 -> __runProgram S37 toks (term :> stk)
-  S41 -> __runProgram S37 toks (term :> stk)
-  S58 -> __runProgram S36 toks (term :> stk)
-  S59 -> __runProgram S34 toks (term :> stk)
-  S60 -> __runProgram S35 toks (term :> stk)
-  S61 -> __runProgram S34 toks (term :> stk)
-  S62 -> __runProgram S35 toks (term :> stk)
-  S63 -> __runProgram S36 toks (term :> stk)
-  S64 -> __runProgram S37 toks (term :> stk)
-  S65 -> __runProgram S74 toks (term :> stk)
-  S66 -> __runProgram S75 toks (term :> stk)
-  S67 -> __runProgram S76 toks (term :> stk)
-  S68 -> __runProgram S77 toks (term :> stk)
-  S94 -> __runProgram S37 toks (term :> stk)
-  S95 -> __runProgram S37 toks (term :> stk)
-  S96 -> __runProgram S37 toks (term :> stk)
-  S97 -> __runProgram S37 toks (term :> stk)
-  S116 -> __runProgram S124 toks (term :> stk)
-  S117 -> __runProgram S125 toks (term :> stk)
-  S118 -> __runProgram S126 toks (term :> stk)
-  S119 -> __runProgram S127 toks (term :> stk)
-  S136 -> __runProgram S90 toks (term :> stk)
-  S137 -> __runProgram S91 toks (term :> stk)
-  S138 -> __runProgram S92 toks (term :> stk)
-  S139 -> __runProgram S93 toks (term :> stk)
-  S150 -> __runProgram S36 toks (term :> stk)
-  S151 -> __runProgram S36 toks (term :> stk)
-  S162 -> __runProgram S90 toks (term :> stk)
-  S163 -> __runProgram S93 toks (term :> stk)
-  S167 -> __runProgram S36 toks (term :> stk)
-  S176 -> __runProgram S91 toks (term :> stk)
-  S177 -> __runProgram S92 toks (term :> stk)
+__gotoTermForProgram :: ([Lexeme], Pos) -> Expr -> StackProgram a -> Either (Pos, [String]) Program
+__gotoTermForProgram toks term stk@(state, _, _) = case state of
+  SProgram9 -> __runProgram SProgram92 toks (PushProgram term stk)
+  SProgram11 -> __runProgram SProgram91 toks (PushProgram term stk)
+  SProgram38 -> __runProgram SProgram37 toks (PushProgram term stk)
+  SProgram39 -> __runProgram SProgram37 toks (PushProgram term stk)
+  SProgram40 -> __runProgram SProgram37 toks (PushProgram term stk)
+  SProgram41 -> __runProgram SProgram37 toks (PushProgram term stk)
+  SProgram58 -> __runProgram SProgram36 toks (PushProgram term stk)
+  SProgram59 -> __runProgram SProgram34 toks (PushProgram term stk)
+  SProgram60 -> __runProgram SProgram35 toks (PushProgram term stk)
+  SProgram61 -> __runProgram SProgram34 toks (PushProgram term stk)
+  SProgram62 -> __runProgram SProgram35 toks (PushProgram term stk)
+  SProgram63 -> __runProgram SProgram36 toks (PushProgram term stk)
+  SProgram64 -> __runProgram SProgram37 toks (PushProgram term stk)
+  SProgram65 -> __runProgram SProgram74 toks (PushProgram term stk)
+  SProgram66 -> __runProgram SProgram75 toks (PushProgram term stk)
+  SProgram67 -> __runProgram SProgram76 toks (PushProgram term stk)
+  SProgram68 -> __runProgram SProgram77 toks (PushProgram term stk)
+  SProgram94 -> __runProgram SProgram37 toks (PushProgram term stk)
+  SProgram95 -> __runProgram SProgram37 toks (PushProgram term stk)
+  SProgram96 -> __runProgram SProgram37 toks (PushProgram term stk)
+  SProgram97 -> __runProgram SProgram37 toks (PushProgram term stk)
+  SProgram116 -> __runProgram SProgram124 toks (PushProgram term stk)
+  SProgram117 -> __runProgram SProgram125 toks (PushProgram term stk)
+  SProgram118 -> __runProgram SProgram126 toks (PushProgram term stk)
+  SProgram119 -> __runProgram SProgram127 toks (PushProgram term stk)
+  SProgram136 -> __runProgram SProgram90 toks (PushProgram term stk)
+  SProgram137 -> __runProgram SProgram91 toks (PushProgram term stk)
+  SProgram138 -> __runProgram SProgram92 toks (PushProgram term stk)
+  SProgram139 -> __runProgram SProgram93 toks (PushProgram term stk)
+  SProgram150 -> __runProgram SProgram36 toks (PushProgram term stk)
+  SProgram151 -> __runProgram SProgram36 toks (PushProgram term stk)
+  SProgram162 -> __runProgram SProgram90 toks (PushProgram term stk)
+  SProgram163 -> __runProgram SProgram93 toks (PushProgram term stk)
+  SProgram167 -> __runProgram SProgram36 toks (PushProgram term stk)
+  SProgram176 -> __runProgram SProgram91 toks (PushProgram term stk)
+  SProgram177 -> __runProgram SProgram92 toks (PushProgram term stk)
   _ -> error ""
 
-__gotoTuple :: ([Lexeme], Pos) -> [Expr] -> Stack a -> Either (Pos, [String]) Program
-__gotoTuple toks term stk@(state, _, _) = case state of
-  S106 -> __runProgram S156 toks (term :> stk)
-  S107 -> __runProgram S157 toks (term :> stk)
-  S148 -> __runProgram S156 toks (term :> stk)
-  S149 -> __runProgram S157 toks (term :> stk)
-  S166 -> __runProgram S168 toks (term :> stk)
+__gotoTestForProgram :: ([Lexeme], Pos) -> Test -> StackProgram a -> Either (Pos, [String]) Program
+__gotoTestForProgram toks term stk@(state, _, _) = case state of
+  _ -> error ""
+
+__gotoTestSuiteForProgram :: ([Lexeme], Pos) -> TestSuite -> StackProgram a -> Either (Pos, [String]) Program
+__gotoTestSuiteForProgram toks term stk@(state, _, _) = case state of
+  _ -> error ""
+
+__gotoTestsForProgram :: ([Lexeme], Pos) -> [Test] -> StackProgram a -> Either (Pos, [String]) Program
+__gotoTestsForProgram toks term stk@(state, _, _) = case state of
+  _ -> error ""
+
+__gotoTupleForProgram :: ([Lexeme], Pos) -> [Expr] -> StackProgram a -> Either (Pos, [String]) Program
+__gotoTupleForProgram toks term stk@(state, _, _) = case state of
+  SProgram106 -> __runProgram SProgram156 toks (PushProgram term stk)
+  SProgram107 -> __runProgram SProgram157 toks (PushProgram term stk)
+  SProgram148 -> __runProgram SProgram156 toks (PushProgram term stk)
+  SProgram149 -> __runProgram SProgram157 toks (PushProgram term stk)
+  SProgram166 -> __runProgram SProgram168 toks (PushProgram term stk)
   _ -> error ""
   
-__runProgram :: St a -> ([Lexeme], Pos) -> Stack' a -> Either (Pos, [String]) Program
+__runProgram :: StProgram a -> ([Lexeme], Pos) -> StackProgram' a -> Either (Pos, [String]) Program
 __runProgram = \cases {
-; S0 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S166 (__input, __end) (n :> (S0, __p, __stk))
-; S3 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S166 (__input, __end) (n :> (S3, __p, __stk))
-; S6 ((__p,  "->") : __input, __end) __stk ->
-    __runProgram S9 (__input, __end) (() :> (S6, __p, __stk))
-; S6 ((__p,  ".") : __input, __end) __stk ->
-    __runProgram S10 (__input, __end) (() :> (S6, __p, __stk))
-; S6 ((__p,  "<-") : __input, __end) __stk ->
-    __runProgram S11 (__input, __end) (() :> (S6, __p, __stk))
-; S6 ((__p,  "=>") : __input, __end) __stk ->
-    __runProgram S8 (__input, __end) (() :> (S6, __p, __stk))
-; S8 ((__p,  "+") : __input, __end) __stk ->
-    __runProgram S140 (__input, __end) (() :> (S8, __p, __stk))
-; S8 ((__p,  "-") : __input, __end) __stk ->
-    __runProgram S141 (__input, __end) (() :> (S8, __p, __stk))
-; S9 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S96 (__input, __end) (() :> (S9, __p, __stk))
-; S9 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S100 (__input, __end) (n :> (S9, __p, __stk))
-; S9 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S107 (__input, __end) (n :> (S9, __p, __stk))
-; S9 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S114 (__input, __end) (n :> (S9, __p, __stk))
-; S9 ((__p,  "~") : __input, __end) __stk ->
-    __runProgram S145 (__input, __end) (() :> (S9, __p, __stk))
-; S11 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S95 (__input, __end) (() :> (S11, __p, __stk))
-; S11 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S99 (__input, __end) (n :> (S11, __p, __stk))
-; S11 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S106 (__input, __end) (n :> (S11, __p, __stk))
-; S11 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S113 (__input, __end) (n :> (S11, __p, __stk))
-; S11 ((__p,  "~") : __input, __end) __stk ->
-    __runProgram S144 (__input, __end) (() :> (S11, __p, __stk))
-; S12 ((__p,  ".") : __input, __end) __stk ->
-    __runProgram S15 (__input, __end) (() :> (S12, __p, __stk))
-; S13 ((__p,  ".") : __input, __end) __stk ->
-    __runProgram S17 (__input, __end) (() :> (S13, __p, __stk))
-; S13 ((__p,  "=>") : __input, __end) __stk ->
-    __runProgram S16 (__input, __end) (() :> (S13, __p, __stk))
-; S14 ((__p,  ".") : __input, __end) __stk ->
-    __runProgram S18 (__input, __end) (() :> (S14, __p, __stk))
-; S16 ((__p,  "+") : __input, __end) __stk ->
-    __runProgram S140 (__input, __end) (() :> (S16, __p, __stk))
-; S16 ((__p,  "-") : __input, __end) __stk ->
-    __runProgram S141 (__input, __end) (() :> (S16, __p, __stk))
-; S19 ((__p,  ".") : __input, __end) __stk ->
-    __runProgram S20 (__input, __end) (() :> (S19, __p, __stk))
-; S21 ((__p,  ",") : __input, __end) __stk ->
-    __runProgram S58 (__input, __end) (() :> (S21, __p, __stk))
-; S22 ((__p,  "+") : __input, __end) __stk ->
-    __runProgram S63 (__input, __end) (() :> (S22, __p, __stk))
-; S22 ((__p,  "=") : __input, __end) __stk ->
-    __runProgram S60 (__input, __end) (() :> (S22, __p, __stk))
-; S23 ((__p,  "+") : __input, __end) __stk ->
-    __runProgram S64 (__input, __end) (() :> (S23, __p, __stk))
-; S23 ((__p,  "=") : __input, __end) __stk ->
-    __runProgram S59 (__input, __end) (() :> (S23, __p, __stk))
-; S24 ((__p,  "+") : __input, __end) __stk ->
-    __runProgram S61 (__input, __end) (() :> (S24, __p, __stk))
-; S25 ((__p,  "+") : __input, __end) __stk ->
-    __runProgram S62 (__input, __end) (() :> (S25, __p, __stk))
-; S26 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S65 (__input, __end) (() :> (S26, __p, __stk))
-; S27 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S66 (__input, __end) (() :> (S27, __p, __stk))
-; S28 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S67 (__input, __end) (() :> (S28, __p, __stk))
-; S29 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S68 (__input, __end) (() :> (S29, __p, __stk))
-; S30 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S65 (__input, __end) (() :> (S30, __p, __stk))
-; S31 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S66 (__input, __end) (() :> (S31, __p, __stk))
-; S32 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S67 (__input, __end) (() :> (S32, __p, __stk))
-; S33 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S68 (__input, __end) (() :> (S33, __p, __stk))
-; S38 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S41 (__input, __end) (() :> (S38, __p, __stk))
-; S38 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S45 (__input, __end) (n :> (S38, __p, __stk))
-; S38 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S53 (__input, __end) (n :> (S38, __p, __stk))
-; S38 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S57 (__input, __end) (n :> (S38, __p, __stk))
-; S39 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S41 (__input, __end) (() :> (S39, __p, __stk))
-; S39 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S45 (__input, __end) (n :> (S39, __p, __stk))
-; S39 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S53 (__input, __end) (n :> (S39, __p, __stk))
-; S39 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S57 (__input, __end) (n :> (S39, __p, __stk))
-; S40 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S41 (__input, __end) (() :> (S40, __p, __stk))
-; S40 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S45 (__input, __end) (n :> (S40, __p, __stk))
-; S40 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S53 (__input, __end) (n :> (S40, __p, __stk))
-; S40 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S57 (__input, __end) (n :> (S40, __p, __stk))
-; S41 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S41 (__input, __end) (() :> (S41, __p, __stk))
-; S41 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S45 (__input, __end) (n :> (S41, __p, __stk))
-; S41 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S53 (__input, __end) (n :> (S41, __p, __stk))
-; S41 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S57 (__input, __end) (n :> (S41, __p, __stk))
-; S58 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S40 (__input, __end) (() :> (S58, __p, __stk))
-; S58 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S44 (__input, __end) (n :> (S58, __p, __stk))
-; S58 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S52 (__input, __end) (n :> (S58, __p, __stk))
-; S58 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S56 (__input, __end) (n :> (S58, __p, __stk))
-; S59 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S38 (__input, __end) (() :> (S59, __p, __stk))
-; S59 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S42 (__input, __end) (n :> (S59, __p, __stk))
-; S59 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S50 (__input, __end) (n :> (S59, __p, __stk))
-; S59 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S54 (__input, __end) (n :> (S59, __p, __stk))
-; S60 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S39 (__input, __end) (() :> (S60, __p, __stk))
-; S60 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S43 (__input, __end) (n :> (S60, __p, __stk))
-; S60 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S51 (__input, __end) (n :> (S60, __p, __stk))
-; S60 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S55 (__input, __end) (n :> (S60, __p, __stk))
-; S61 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S38 (__input, __end) (() :> (S61, __p, __stk))
-; S61 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S42 (__input, __end) (n :> (S61, __p, __stk))
-; S61 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S50 (__input, __end) (n :> (S61, __p, __stk))
-; S61 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S54 (__input, __end) (n :> (S61, __p, __stk))
-; S62 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S39 (__input, __end) (() :> (S62, __p, __stk))
-; S62 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S43 (__input, __end) (n :> (S62, __p, __stk))
-; S62 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S51 (__input, __end) (n :> (S62, __p, __stk))
-; S62 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S55 (__input, __end) (n :> (S62, __p, __stk))
-; S63 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S40 (__input, __end) (() :> (S63, __p, __stk))
-; S63 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S44 (__input, __end) (n :> (S63, __p, __stk))
-; S63 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S52 (__input, __end) (n :> (S63, __p, __stk))
-; S63 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S56 (__input, __end) (n :> (S63, __p, __stk))
-; S64 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S41 (__input, __end) (() :> (S64, __p, __stk))
-; S64 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S45 (__input, __end) (n :> (S64, __p, __stk))
-; S64 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S53 (__input, __end) (n :> (S64, __p, __stk))
-; S64 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S57 (__input, __end) (n :> (S64, __p, __stk))
-; S65 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S38 (__input, __end) (() :> (S65, __p, __stk))
-; S65 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S42 (__input, __end) (n :> (S65, __p, __stk))
-; S65 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S50 (__input, __end) (n :> (S65, __p, __stk))
-; S65 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S54 (__input, __end) (n :> (S65, __p, __stk))
-; S66 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S39 (__input, __end) (() :> (S66, __p, __stk))
-; S66 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S43 (__input, __end) (n :> (S66, __p, __stk))
-; S66 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S51 (__input, __end) (n :> (S66, __p, __stk))
-; S66 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S55 (__input, __end) (n :> (S66, __p, __stk))
-; S67 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S40 (__input, __end) (() :> (S67, __p, __stk))
-; S67 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S44 (__input, __end) (n :> (S67, __p, __stk))
-; S67 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S52 (__input, __end) (n :> (S67, __p, __stk))
-; S67 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S56 (__input, __end) (n :> (S67, __p, __stk))
-; S68 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S41 (__input, __end) (() :> (S68, __p, __stk))
-; S68 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S45 (__input, __end) (n :> (S68, __p, __stk))
-; S68 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S53 (__input, __end) (n :> (S68, __p, __stk))
-; S68 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S57 (__input, __end) (n :> (S68, __p, __stk))
-; S69 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S78 (__input, __end) (() :> (S69, __p, __stk))
-; S70 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S79 (__input, __end) (() :> (S70, __p, __stk))
-; S71 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S80 (__input, __end) (() :> (S71, __p, __stk))
-; S72 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S81 (__input, __end) (() :> (S72, __p, __stk))
-; S82 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S116 (__input, __end) (() :> (S82, __p, __stk))
-; S83 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S117 (__input, __end) (() :> (S83, __p, __stk))
-; S84 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S118 (__input, __end) (() :> (S84, __p, __stk))
-; S85 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S119 (__input, __end) (() :> (S85, __p, __stk))
-; S86 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S116 (__input, __end) (() :> (S86, __p, __stk))
-; S87 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S117 (__input, __end) (() :> (S87, __p, __stk))
-; S88 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S118 (__input, __end) (() :> (S88, __p, __stk))
-; S89 ((__p,  "*") : __input, __end) __stk ->
-    __runProgram S119 (__input, __end) (() :> (S89, __p, __stk))
-; S94 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S41 (__input, __end) (() :> (S94, __p, __stk))
-; S94 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S45 (__input, __end) (n :> (S94, __p, __stk))
-; S94 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S53 (__input, __end) (n :> (S94, __p, __stk))
-; S94 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S57 (__input, __end) (n :> (S94, __p, __stk))
-; S95 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S41 (__input, __end) (() :> (S95, __p, __stk))
-; S95 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S45 (__input, __end) (n :> (S95, __p, __stk))
-; S95 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S53 (__input, __end) (n :> (S95, __p, __stk))
-; S95 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S57 (__input, __end) (n :> (S95, __p, __stk))
-; S96 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S41 (__input, __end) (() :> (S96, __p, __stk))
-; S96 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S45 (__input, __end) (n :> (S96, __p, __stk))
-; S96 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S53 (__input, __end) (n :> (S96, __p, __stk))
-; S96 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S57 (__input, __end) (n :> (S96, __p, __stk))
-; S97 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S41 (__input, __end) (() :> (S97, __p, __stk))
-; S97 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S45 (__input, __end) (n :> (S97, __p, __stk))
-; S97 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S53 (__input, __end) (n :> (S97, __p, __stk))
-; S97 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S57 (__input, __end) (n :> (S97, __p, __stk))
-; S106 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S150 (__input, __end) (() :> (S106, __p, __stk))
-; S107 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S151 (__input, __end) (() :> (S107, __p, __stk))
-; S116 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S94 (__input, __end) (() :> (S116, __p, __stk))
-; S116 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S98 (__input, __end) (n :> (S116, __p, __stk))
-; S116 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S108 (__input, __end) (n :> (S116, __p, __stk))
-; S116 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S112 (__input, __end) (n :> (S116, __p, __stk))
-; S117 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S95 (__input, __end) (() :> (S117, __p, __stk))
-; S117 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S99 (__input, __end) (n :> (S117, __p, __stk))
-; S117 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S109 (__input, __end) (n :> (S117, __p, __stk))
-; S117 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S113 (__input, __end) (n :> (S117, __p, __stk))
-; S118 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S96 (__input, __end) (() :> (S118, __p, __stk))
-; S118 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S100 (__input, __end) (n :> (S118, __p, __stk))
-; S118 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S110 (__input, __end) (n :> (S118, __p, __stk))
-; S118 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S114 (__input, __end) (n :> (S118, __p, __stk))
-; S119 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S97 (__input, __end) (() :> (S119, __p, __stk))
-; S119 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S101 (__input, __end) (n :> (S119, __p, __stk))
-; S119 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S111 (__input, __end) (n :> (S119, __p, __stk))
-; S119 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S115 (__input, __end) (n :> (S119, __p, __stk))
-; S120 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S128 (__input, __end) (() :> (S120, __p, __stk))
-; S121 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S129 (__input, __end) (() :> (S121, __p, __stk))
-; S122 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S130 (__input, __end) (() :> (S122, __p, __stk))
-; S123 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S131 (__input, __end) (() :> (S123, __p, __stk))
-; S132 ((__p,  "+") : __input, __end) __stk ->
-    __runProgram S137 (__input, __end) (() :> (S132, __p, __stk))
-; S132 ((__p,  "=") : __input, __end) __stk ->
-    __runProgram S162 (__input, __end) (() :> (S132, __p, __stk))
-; S133 ((__p,  "+") : __input, __end) __stk ->
-    __runProgram S138 (__input, __end) (() :> (S133, __p, __stk))
-; S133 ((__p,  "=") : __input, __end) __stk ->
-    __runProgram S163 (__input, __end) (() :> (S133, __p, __stk))
-; S134 ((__p,  "+") : __input, __end) __stk ->
-    __runProgram S136 (__input, __end) (() :> (S134, __p, __stk))
-; S135 ((__p,  "+") : __input, __end) __stk ->
-    __runProgram S139 (__input, __end) (() :> (S135, __p, __stk))
-; S136 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S94 (__input, __end) (() :> (S136, __p, __stk))
-; S136 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S98 (__input, __end) (n :> (S136, __p, __stk))
-; S136 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S108 (__input, __end) (n :> (S136, __p, __stk))
-; S136 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S112 (__input, __end) (n :> (S136, __p, __stk))
-; S137 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S95 (__input, __end) (() :> (S137, __p, __stk))
-; S137 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S99 (__input, __end) (n :> (S137, __p, __stk))
-; S137 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S109 (__input, __end) (n :> (S137, __p, __stk))
-; S137 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S113 (__input, __end) (n :> (S137, __p, __stk))
-; S138 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S96 (__input, __end) (() :> (S138, __p, __stk))
-; S138 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S100 (__input, __end) (n :> (S138, __p, __stk))
-; S138 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S110 (__input, __end) (n :> (S138, __p, __stk))
-; S138 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S114 (__input, __end) (n :> (S138, __p, __stk))
-; S139 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S97 (__input, __end) (() :> (S139, __p, __stk))
-; S139 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S101 (__input, __end) (n :> (S139, __p, __stk))
-; S139 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S111 (__input, __end) (n :> (S139, __p, __stk))
-; S139 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S115 (__input, __end) (n :> (S139, __p, __stk))
-; S140 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S148 (__input, __end) (n :> (S140, __p, __stk))
-; S141 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S148 (__input, __end) (n :> (S141, __p, __stk))
-; S144 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S148 (__input, __end) (n :> (S144, __p, __stk))
-; S145 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S149 (__input, __end) (n :> (S145, __p, __stk))
-; S148 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S150 (__input, __end) (() :> (S148, __p, __stk))
-; S149 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S151 (__input, __end) (() :> (S149, __p, __stk))
-; S150 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S40 (__input, __end) (() :> (S150, __p, __stk))
-; S150 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S158 (__input, __end) (() :> (S150, __p, __stk))
-; S150 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S44 (__input, __end) (n :> (S150, __p, __stk))
-; S150 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S52 (__input, __end) (n :> (S150, __p, __stk))
-; S150 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S56 (__input, __end) (n :> (S150, __p, __stk))
-; S151 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S40 (__input, __end) (() :> (S151, __p, __stk))
-; S151 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S159 (__input, __end) (() :> (S151, __p, __stk))
-; S151 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S44 (__input, __end) (n :> (S151, __p, __stk))
-; S151 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S52 (__input, __end) (n :> (S151, __p, __stk))
-; S151 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S56 (__input, __end) (n :> (S151, __p, __stk))
-; S160 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S164 (__input, __end) (() :> (S160, __p, __stk))
-; S161 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S165 (__input, __end) (() :> (S161, __p, __stk))
-; S162 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S94 (__input, __end) (() :> (S162, __p, __stk))
-; S162 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S98 (__input, __end) (n :> (S162, __p, __stk))
-; S162 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S108 (__input, __end) (n :> (S162, __p, __stk))
-; S162 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S112 (__input, __end) (n :> (S162, __p, __stk))
-; S163 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S97 (__input, __end) (() :> (S163, __p, __stk))
-; S163 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S101 (__input, __end) (n :> (S163, __p, __stk))
-; S163 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S111 (__input, __end) (n :> (S163, __p, __stk))
-; S163 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S115 (__input, __end) (n :> (S163, __p, __stk))
-; S166 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S167 (__input, __end) (() :> (S166, __p, __stk))
-; S167 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S40 (__input, __end) (() :> (S167, __p, __stk))
-; S167 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S169 (__input, __end) (() :> (S167, __p, __stk))
-; S167 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S44 (__input, __end) (n :> (S167, __p, __stk))
-; S167 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S52 (__input, __end) (n :> (S167, __p, __stk))
-; S167 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S56 (__input, __end) (n :> (S167, __p, __stk))
-; S170 ((__p,  ")") : __input, __end) __stk ->
-    __runProgram S171 (__input, __end) (() :> (S170, __p, __stk))
-; S172 ((__p,  ",") : __input, __end) __stk ->
-    __runProgram S175 (__input, __end) (() :> (S172, __p, __stk))
-; S173 ((__p,  ",") : __input, __end) __stk ->
-    __runProgram S176 (__input, __end) (() :> (S173, __p, __stk))
-; S174 ((__p,  ",") : __input, __end) __stk ->
-    __runProgram S177 (__input, __end) (() :> (S174, __p, __stk))
-; S175 ((__p,  "+") : __input, __end) __stk ->
-    __runProgram S140 (__input, __end) (() :> (S175, __p, __stk))
-; S175 ((__p,  "-") : __input, __end) __stk ->
-    __runProgram S141 (__input, __end) (() :> (S175, __p, __stk))
-; S176 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S95 (__input, __end) (() :> (S176, __p, __stk))
-; S176 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S99 (__input, __end) (n :> (S176, __p, __stk))
-; S176 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S106 (__input, __end) (n :> (S176, __p, __stk))
-; S176 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S113 (__input, __end) (n :> (S176, __p, __stk))
-; S176 ((__p,  "~") : __input, __end) __stk ->
-    __runProgram S144 (__input, __end) (() :> (S176, __p, __stk))
-; S177 ((__p,  "(") : __input, __end) __stk ->
-    __runProgram S96 (__input, __end) (() :> (S177, __p, __stk))
-; S177 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runProgram S100 (__input, __end) (n :> (S177, __p, __stk))
-; S177 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runProgram S107 (__input, __end) (n :> (S177, __p, __stk))
-; S177 ((__p, NumberLiteral n) : __input, __end) __stk ->
-    __runProgram S114 (__input, __end) (n :> (S177, __p, __stk))
-; S177 ((__p,  "~") : __input, __end) __stk ->
-    __runProgram S145 (__input, __end) (() :> (S177, __p, __stk))
+; SProgram0 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram166 (__input, __end) (PushProgram n (SProgram0, __p, __stk))
+; SProgram3 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram166 (__input, __end) (PushProgram n (SProgram3, __p, __stk))
+; SProgram6 ((__p,  "->") : __input, __end) __stk ->
+    __runProgram SProgram9 (__input, __end) (PushProgram () (SProgram6, __p, __stk))
+; SProgram6 ((__p,  ".") : __input, __end) __stk ->
+    __runProgram SProgram10 (__input, __end) (PushProgram () (SProgram6, __p, __stk))
+; SProgram6 ((__p,  "<-") : __input, __end) __stk ->
+    __runProgram SProgram11 (__input, __end) (PushProgram () (SProgram6, __p, __stk))
+; SProgram6 ((__p,  "=>") : __input, __end) __stk ->
+    __runProgram SProgram8 (__input, __end) (PushProgram () (SProgram6, __p, __stk))
+; SProgram8 ((__p,  "+") : __input, __end) __stk ->
+    __runProgram SProgram140 (__input, __end) (PushProgram () (SProgram8, __p, __stk))
+; SProgram8 ((__p,  "-") : __input, __end) __stk ->
+    __runProgram SProgram141 (__input, __end) (PushProgram () (SProgram8, __p, __stk))
+; SProgram9 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram96 (__input, __end) (PushProgram () (SProgram9, __p, __stk))
+; SProgram9 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram100 (__input, __end) (PushProgram n (SProgram9, __p, __stk))
+; SProgram9 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram107 (__input, __end) (PushProgram n (SProgram9, __p, __stk))
+; SProgram9 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram114 (__input, __end) (PushProgram n (SProgram9, __p, __stk))
+; SProgram9 ((__p,  "~") : __input, __end) __stk ->
+    __runProgram SProgram145 (__input, __end) (PushProgram () (SProgram9, __p, __stk))
+; SProgram11 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram95 (__input, __end) (PushProgram () (SProgram11, __p, __stk))
+; SProgram11 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram99 (__input, __end) (PushProgram n (SProgram11, __p, __stk))
+; SProgram11 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram106 (__input, __end) (PushProgram n (SProgram11, __p, __stk))
+; SProgram11 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram113 (__input, __end) (PushProgram n (SProgram11, __p, __stk))
+; SProgram11 ((__p,  "~") : __input, __end) __stk ->
+    __runProgram SProgram144 (__input, __end) (PushProgram () (SProgram11, __p, __stk))
+; SProgram12 ((__p,  ".") : __input, __end) __stk ->
+    __runProgram SProgram15 (__input, __end) (PushProgram () (SProgram12, __p, __stk))
+; SProgram13 ((__p,  ".") : __input, __end) __stk ->
+    __runProgram SProgram17 (__input, __end) (PushProgram () (SProgram13, __p, __stk))
+; SProgram13 ((__p,  "=>") : __input, __end) __stk ->
+    __runProgram SProgram16 (__input, __end) (PushProgram () (SProgram13, __p, __stk))
+; SProgram14 ((__p,  ".") : __input, __end) __stk ->
+    __runProgram SProgram18 (__input, __end) (PushProgram () (SProgram14, __p, __stk))
+; SProgram16 ((__p,  "+") : __input, __end) __stk ->
+    __runProgram SProgram140 (__input, __end) (PushProgram () (SProgram16, __p, __stk))
+; SProgram16 ((__p,  "-") : __input, __end) __stk ->
+    __runProgram SProgram141 (__input, __end) (PushProgram () (SProgram16, __p, __stk))
+; SProgram19 ((__p,  ".") : __input, __end) __stk ->
+    __runProgram SProgram20 (__input, __end) (PushProgram () (SProgram19, __p, __stk))
+; SProgram21 ((__p,  ",") : __input, __end) __stk ->
+    __runProgram SProgram58 (__input, __end) (PushProgram () (SProgram21, __p, __stk))
+; SProgram22 ((__p,  "+") : __input, __end) __stk ->
+    __runProgram SProgram63 (__input, __end) (PushProgram () (SProgram22, __p, __stk))
+; SProgram22 ((__p,  "=") : __input, __end) __stk ->
+    __runProgram SProgram60 (__input, __end) (PushProgram () (SProgram22, __p, __stk))
+; SProgram23 ((__p,  "+") : __input, __end) __stk ->
+    __runProgram SProgram64 (__input, __end) (PushProgram () (SProgram23, __p, __stk))
+; SProgram23 ((__p,  "=") : __input, __end) __stk ->
+    __runProgram SProgram59 (__input, __end) (PushProgram () (SProgram23, __p, __stk))
+; SProgram24 ((__p,  "+") : __input, __end) __stk ->
+    __runProgram SProgram61 (__input, __end) (PushProgram () (SProgram24, __p, __stk))
+; SProgram25 ((__p,  "+") : __input, __end) __stk ->
+    __runProgram SProgram62 (__input, __end) (PushProgram () (SProgram25, __p, __stk))
+; SProgram26 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram65 (__input, __end) (PushProgram () (SProgram26, __p, __stk))
+; SProgram27 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram66 (__input, __end) (PushProgram () (SProgram27, __p, __stk))
+; SProgram28 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram67 (__input, __end) (PushProgram () (SProgram28, __p, __stk))
+; SProgram29 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram68 (__input, __end) (PushProgram () (SProgram29, __p, __stk))
+; SProgram30 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram65 (__input, __end) (PushProgram () (SProgram30, __p, __stk))
+; SProgram31 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram66 (__input, __end) (PushProgram () (SProgram31, __p, __stk))
+; SProgram32 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram67 (__input, __end) (PushProgram () (SProgram32, __p, __stk))
+; SProgram33 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram68 (__input, __end) (PushProgram () (SProgram33, __p, __stk))
+; SProgram38 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram41 (__input, __end) (PushProgram () (SProgram38, __p, __stk))
+; SProgram38 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram45 (__input, __end) (PushProgram n (SProgram38, __p, __stk))
+; SProgram38 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram53 (__input, __end) (PushProgram n (SProgram38, __p, __stk))
+; SProgram38 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram57 (__input, __end) (PushProgram n (SProgram38, __p, __stk))
+; SProgram39 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram41 (__input, __end) (PushProgram () (SProgram39, __p, __stk))
+; SProgram39 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram45 (__input, __end) (PushProgram n (SProgram39, __p, __stk))
+; SProgram39 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram53 (__input, __end) (PushProgram n (SProgram39, __p, __stk))
+; SProgram39 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram57 (__input, __end) (PushProgram n (SProgram39, __p, __stk))
+; SProgram40 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram41 (__input, __end) (PushProgram () (SProgram40, __p, __stk))
+; SProgram40 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram45 (__input, __end) (PushProgram n (SProgram40, __p, __stk))
+; SProgram40 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram53 (__input, __end) (PushProgram n (SProgram40, __p, __stk))
+; SProgram40 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram57 (__input, __end) (PushProgram n (SProgram40, __p, __stk))
+; SProgram41 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram41 (__input, __end) (PushProgram () (SProgram41, __p, __stk))
+; SProgram41 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram45 (__input, __end) (PushProgram n (SProgram41, __p, __stk))
+; SProgram41 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram53 (__input, __end) (PushProgram n (SProgram41, __p, __stk))
+; SProgram41 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram57 (__input, __end) (PushProgram n (SProgram41, __p, __stk))
+; SProgram58 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram40 (__input, __end) (PushProgram () (SProgram58, __p, __stk))
+; SProgram58 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram44 (__input, __end) (PushProgram n (SProgram58, __p, __stk))
+; SProgram58 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram52 (__input, __end) (PushProgram n (SProgram58, __p, __stk))
+; SProgram58 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram56 (__input, __end) (PushProgram n (SProgram58, __p, __stk))
+; SProgram59 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram38 (__input, __end) (PushProgram () (SProgram59, __p, __stk))
+; SProgram59 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram42 (__input, __end) (PushProgram n (SProgram59, __p, __stk))
+; SProgram59 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram50 (__input, __end) (PushProgram n (SProgram59, __p, __stk))
+; SProgram59 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram54 (__input, __end) (PushProgram n (SProgram59, __p, __stk))
+; SProgram60 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram39 (__input, __end) (PushProgram () (SProgram60, __p, __stk))
+; SProgram60 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram43 (__input, __end) (PushProgram n (SProgram60, __p, __stk))
+; SProgram60 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram51 (__input, __end) (PushProgram n (SProgram60, __p, __stk))
+; SProgram60 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram55 (__input, __end) (PushProgram n (SProgram60, __p, __stk))
+; SProgram61 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram38 (__input, __end) (PushProgram () (SProgram61, __p, __stk))
+; SProgram61 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram42 (__input, __end) (PushProgram n (SProgram61, __p, __stk))
+; SProgram61 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram50 (__input, __end) (PushProgram n (SProgram61, __p, __stk))
+; SProgram61 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram54 (__input, __end) (PushProgram n (SProgram61, __p, __stk))
+; SProgram62 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram39 (__input, __end) (PushProgram () (SProgram62, __p, __stk))
+; SProgram62 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram43 (__input, __end) (PushProgram n (SProgram62, __p, __stk))
+; SProgram62 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram51 (__input, __end) (PushProgram n (SProgram62, __p, __stk))
+; SProgram62 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram55 (__input, __end) (PushProgram n (SProgram62, __p, __stk))
+; SProgram63 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram40 (__input, __end) (PushProgram () (SProgram63, __p, __stk))
+; SProgram63 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram44 (__input, __end) (PushProgram n (SProgram63, __p, __stk))
+; SProgram63 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram52 (__input, __end) (PushProgram n (SProgram63, __p, __stk))
+; SProgram63 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram56 (__input, __end) (PushProgram n (SProgram63, __p, __stk))
+; SProgram64 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram41 (__input, __end) (PushProgram () (SProgram64, __p, __stk))
+; SProgram64 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram45 (__input, __end) (PushProgram n (SProgram64, __p, __stk))
+; SProgram64 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram53 (__input, __end) (PushProgram n (SProgram64, __p, __stk))
+; SProgram64 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram57 (__input, __end) (PushProgram n (SProgram64, __p, __stk))
+; SProgram65 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram38 (__input, __end) (PushProgram () (SProgram65, __p, __stk))
+; SProgram65 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram42 (__input, __end) (PushProgram n (SProgram65, __p, __stk))
+; SProgram65 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram50 (__input, __end) (PushProgram n (SProgram65, __p, __stk))
+; SProgram65 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram54 (__input, __end) (PushProgram n (SProgram65, __p, __stk))
+; SProgram66 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram39 (__input, __end) (PushProgram () (SProgram66, __p, __stk))
+; SProgram66 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram43 (__input, __end) (PushProgram n (SProgram66, __p, __stk))
+; SProgram66 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram51 (__input, __end) (PushProgram n (SProgram66, __p, __stk))
+; SProgram66 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram55 (__input, __end) (PushProgram n (SProgram66, __p, __stk))
+; SProgram67 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram40 (__input, __end) (PushProgram () (SProgram67, __p, __stk))
+; SProgram67 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram44 (__input, __end) (PushProgram n (SProgram67, __p, __stk))
+; SProgram67 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram52 (__input, __end) (PushProgram n (SProgram67, __p, __stk))
+; SProgram67 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram56 (__input, __end) (PushProgram n (SProgram67, __p, __stk))
+; SProgram68 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram41 (__input, __end) (PushProgram () (SProgram68, __p, __stk))
+; SProgram68 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram45 (__input, __end) (PushProgram n (SProgram68, __p, __stk))
+; SProgram68 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram53 (__input, __end) (PushProgram n (SProgram68, __p, __stk))
+; SProgram68 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram57 (__input, __end) (PushProgram n (SProgram68, __p, __stk))
+; SProgram69 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram78 (__input, __end) (PushProgram () (SProgram69, __p, __stk))
+; SProgram70 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram79 (__input, __end) (PushProgram () (SProgram70, __p, __stk))
+; SProgram71 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram80 (__input, __end) (PushProgram () (SProgram71, __p, __stk))
+; SProgram72 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram81 (__input, __end) (PushProgram () (SProgram72, __p, __stk))
+; SProgram82 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram116 (__input, __end) (PushProgram () (SProgram82, __p, __stk))
+; SProgram83 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram117 (__input, __end) (PushProgram () (SProgram83, __p, __stk))
+; SProgram84 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram118 (__input, __end) (PushProgram () (SProgram84, __p, __stk))
+; SProgram85 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram119 (__input, __end) (PushProgram () (SProgram85, __p, __stk))
+; SProgram86 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram116 (__input, __end) (PushProgram () (SProgram86, __p, __stk))
+; SProgram87 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram117 (__input, __end) (PushProgram () (SProgram87, __p, __stk))
+; SProgram88 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram118 (__input, __end) (PushProgram () (SProgram88, __p, __stk))
+; SProgram89 ((__p,  "*") : __input, __end) __stk ->
+    __runProgram SProgram119 (__input, __end) (PushProgram () (SProgram89, __p, __stk))
+; SProgram94 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram41 (__input, __end) (PushProgram () (SProgram94, __p, __stk))
+; SProgram94 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram45 (__input, __end) (PushProgram n (SProgram94, __p, __stk))
+; SProgram94 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram53 (__input, __end) (PushProgram n (SProgram94, __p, __stk))
+; SProgram94 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram57 (__input, __end) (PushProgram n (SProgram94, __p, __stk))
+; SProgram95 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram41 (__input, __end) (PushProgram () (SProgram95, __p, __stk))
+; SProgram95 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram45 (__input, __end) (PushProgram n (SProgram95, __p, __stk))
+; SProgram95 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram53 (__input, __end) (PushProgram n (SProgram95, __p, __stk))
+; SProgram95 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram57 (__input, __end) (PushProgram n (SProgram95, __p, __stk))
+; SProgram96 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram41 (__input, __end) (PushProgram () (SProgram96, __p, __stk))
+; SProgram96 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram45 (__input, __end) (PushProgram n (SProgram96, __p, __stk))
+; SProgram96 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram53 (__input, __end) (PushProgram n (SProgram96, __p, __stk))
+; SProgram96 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram57 (__input, __end) (PushProgram n (SProgram96, __p, __stk))
+; SProgram97 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram41 (__input, __end) (PushProgram () (SProgram97, __p, __stk))
+; SProgram97 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram45 (__input, __end) (PushProgram n (SProgram97, __p, __stk))
+; SProgram97 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram53 (__input, __end) (PushProgram n (SProgram97, __p, __stk))
+; SProgram97 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram57 (__input, __end) (PushProgram n (SProgram97, __p, __stk))
+; SProgram106 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram150 (__input, __end) (PushProgram () (SProgram106, __p, __stk))
+; SProgram107 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram151 (__input, __end) (PushProgram () (SProgram107, __p, __stk))
+; SProgram116 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram94 (__input, __end) (PushProgram () (SProgram116, __p, __stk))
+; SProgram116 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram98 (__input, __end) (PushProgram n (SProgram116, __p, __stk))
+; SProgram116 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram108 (__input, __end) (PushProgram n (SProgram116, __p, __stk))
+; SProgram116 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram112 (__input, __end) (PushProgram n (SProgram116, __p, __stk))
+; SProgram117 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram95 (__input, __end) (PushProgram () (SProgram117, __p, __stk))
+; SProgram117 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram99 (__input, __end) (PushProgram n (SProgram117, __p, __stk))
+; SProgram117 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram109 (__input, __end) (PushProgram n (SProgram117, __p, __stk))
+; SProgram117 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram113 (__input, __end) (PushProgram n (SProgram117, __p, __stk))
+; SProgram118 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram96 (__input, __end) (PushProgram () (SProgram118, __p, __stk))
+; SProgram118 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram100 (__input, __end) (PushProgram n (SProgram118, __p, __stk))
+; SProgram118 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram110 (__input, __end) (PushProgram n (SProgram118, __p, __stk))
+; SProgram118 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram114 (__input, __end) (PushProgram n (SProgram118, __p, __stk))
+; SProgram119 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram97 (__input, __end) (PushProgram () (SProgram119, __p, __stk))
+; SProgram119 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram101 (__input, __end) (PushProgram n (SProgram119, __p, __stk))
+; SProgram119 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram111 (__input, __end) (PushProgram n (SProgram119, __p, __stk))
+; SProgram119 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram115 (__input, __end) (PushProgram n (SProgram119, __p, __stk))
+; SProgram120 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram128 (__input, __end) (PushProgram () (SProgram120, __p, __stk))
+; SProgram121 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram129 (__input, __end) (PushProgram () (SProgram121, __p, __stk))
+; SProgram122 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram130 (__input, __end) (PushProgram () (SProgram122, __p, __stk))
+; SProgram123 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram131 (__input, __end) (PushProgram () (SProgram123, __p, __stk))
+; SProgram132 ((__p,  "+") : __input, __end) __stk ->
+    __runProgram SProgram137 (__input, __end) (PushProgram () (SProgram132, __p, __stk))
+; SProgram132 ((__p,  "=") : __input, __end) __stk ->
+    __runProgram SProgram162 (__input, __end) (PushProgram () (SProgram132, __p, __stk))
+; SProgram133 ((__p,  "+") : __input, __end) __stk ->
+    __runProgram SProgram138 (__input, __end) (PushProgram () (SProgram133, __p, __stk))
+; SProgram133 ((__p,  "=") : __input, __end) __stk ->
+    __runProgram SProgram163 (__input, __end) (PushProgram () (SProgram133, __p, __stk))
+; SProgram134 ((__p,  "+") : __input, __end) __stk ->
+    __runProgram SProgram136 (__input, __end) (PushProgram () (SProgram134, __p, __stk))
+; SProgram135 ((__p,  "+") : __input, __end) __stk ->
+    __runProgram SProgram139 (__input, __end) (PushProgram () (SProgram135, __p, __stk))
+; SProgram136 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram94 (__input, __end) (PushProgram () (SProgram136, __p, __stk))
+; SProgram136 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram98 (__input, __end) (PushProgram n (SProgram136, __p, __stk))
+; SProgram136 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram108 (__input, __end) (PushProgram n (SProgram136, __p, __stk))
+; SProgram136 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram112 (__input, __end) (PushProgram n (SProgram136, __p, __stk))
+; SProgram137 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram95 (__input, __end) (PushProgram () (SProgram137, __p, __stk))
+; SProgram137 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram99 (__input, __end) (PushProgram n (SProgram137, __p, __stk))
+; SProgram137 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram109 (__input, __end) (PushProgram n (SProgram137, __p, __stk))
+; SProgram137 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram113 (__input, __end) (PushProgram n (SProgram137, __p, __stk))
+; SProgram138 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram96 (__input, __end) (PushProgram () (SProgram138, __p, __stk))
+; SProgram138 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram100 (__input, __end) (PushProgram n (SProgram138, __p, __stk))
+; SProgram138 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram110 (__input, __end) (PushProgram n (SProgram138, __p, __stk))
+; SProgram138 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram114 (__input, __end) (PushProgram n (SProgram138, __p, __stk))
+; SProgram139 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram97 (__input, __end) (PushProgram () (SProgram139, __p, __stk))
+; SProgram139 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram101 (__input, __end) (PushProgram n (SProgram139, __p, __stk))
+; SProgram139 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram111 (__input, __end) (PushProgram n (SProgram139, __p, __stk))
+; SProgram139 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram115 (__input, __end) (PushProgram n (SProgram139, __p, __stk))
+; SProgram140 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram148 (__input, __end) (PushProgram n (SProgram140, __p, __stk))
+; SProgram141 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram148 (__input, __end) (PushProgram n (SProgram141, __p, __stk))
+; SProgram144 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram148 (__input, __end) (PushProgram n (SProgram144, __p, __stk))
+; SProgram145 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram149 (__input, __end) (PushProgram n (SProgram145, __p, __stk))
+; SProgram148 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram150 (__input, __end) (PushProgram () (SProgram148, __p, __stk))
+; SProgram149 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram151 (__input, __end) (PushProgram () (SProgram149, __p, __stk))
+; SProgram150 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram40 (__input, __end) (PushProgram () (SProgram150, __p, __stk))
+; SProgram150 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram158 (__input, __end) (PushProgram () (SProgram150, __p, __stk))
+; SProgram150 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram44 (__input, __end) (PushProgram n (SProgram150, __p, __stk))
+; SProgram150 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram52 (__input, __end) (PushProgram n (SProgram150, __p, __stk))
+; SProgram150 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram56 (__input, __end) (PushProgram n (SProgram150, __p, __stk))
+; SProgram151 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram40 (__input, __end) (PushProgram () (SProgram151, __p, __stk))
+; SProgram151 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram159 (__input, __end) (PushProgram () (SProgram151, __p, __stk))
+; SProgram151 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram44 (__input, __end) (PushProgram n (SProgram151, __p, __stk))
+; SProgram151 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram52 (__input, __end) (PushProgram n (SProgram151, __p, __stk))
+; SProgram151 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram56 (__input, __end) (PushProgram n (SProgram151, __p, __stk))
+; SProgram160 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram164 (__input, __end) (PushProgram () (SProgram160, __p, __stk))
+; SProgram161 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram165 (__input, __end) (PushProgram () (SProgram161, __p, __stk))
+; SProgram162 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram94 (__input, __end) (PushProgram () (SProgram162, __p, __stk))
+; SProgram162 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram98 (__input, __end) (PushProgram n (SProgram162, __p, __stk))
+; SProgram162 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram108 (__input, __end) (PushProgram n (SProgram162, __p, __stk))
+; SProgram162 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram112 (__input, __end) (PushProgram n (SProgram162, __p, __stk))
+; SProgram163 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram97 (__input, __end) (PushProgram () (SProgram163, __p, __stk))
+; SProgram163 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram101 (__input, __end) (PushProgram n (SProgram163, __p, __stk))
+; SProgram163 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram111 (__input, __end) (PushProgram n (SProgram163, __p, __stk))
+; SProgram163 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram115 (__input, __end) (PushProgram n (SProgram163, __p, __stk))
+; SProgram166 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram167 (__input, __end) (PushProgram () (SProgram166, __p, __stk))
+; SProgram167 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram40 (__input, __end) (PushProgram () (SProgram167, __p, __stk))
+; SProgram167 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram169 (__input, __end) (PushProgram () (SProgram167, __p, __stk))
+; SProgram167 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram44 (__input, __end) (PushProgram n (SProgram167, __p, __stk))
+; SProgram167 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram52 (__input, __end) (PushProgram n (SProgram167, __p, __stk))
+; SProgram167 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram56 (__input, __end) (PushProgram n (SProgram167, __p, __stk))
+; SProgram170 ((__p,  ")") : __input, __end) __stk ->
+    __runProgram SProgram171 (__input, __end) (PushProgram () (SProgram170, __p, __stk))
+; SProgram172 ((__p,  ",") : __input, __end) __stk ->
+    __runProgram SProgram175 (__input, __end) (PushProgram () (SProgram172, __p, __stk))
+; SProgram173 ((__p,  ",") : __input, __end) __stk ->
+    __runProgram SProgram176 (__input, __end) (PushProgram () (SProgram173, __p, __stk))
+; SProgram174 ((__p,  ",") : __input, __end) __stk ->
+    __runProgram SProgram177 (__input, __end) (PushProgram () (SProgram174, __p, __stk))
+; SProgram175 ((__p,  "+") : __input, __end) __stk ->
+    __runProgram SProgram140 (__input, __end) (PushProgram () (SProgram175, __p, __stk))
+; SProgram175 ((__p,  "-") : __input, __end) __stk ->
+    __runProgram SProgram141 (__input, __end) (PushProgram () (SProgram175, __p, __stk))
+; SProgram176 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram95 (__input, __end) (PushProgram () (SProgram176, __p, __stk))
+; SProgram176 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram99 (__input, __end) (PushProgram n (SProgram176, __p, __stk))
+; SProgram176 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram106 (__input, __end) (PushProgram n (SProgram176, __p, __stk))
+; SProgram176 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram113 (__input, __end) (PushProgram n (SProgram176, __p, __stk))
+; SProgram176 ((__p,  "~") : __input, __end) __stk ->
+    __runProgram SProgram144 (__input, __end) (PushProgram () (SProgram176, __p, __stk))
+; SProgram177 ((__p,  "(") : __input, __end) __stk ->
+    __runProgram SProgram96 (__input, __end) (PushProgram () (SProgram177, __p, __stk))
+; SProgram177 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram100 (__input, __end) (PushProgram n (SProgram177, __p, __stk))
+; SProgram177 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runProgram SProgram107 (__input, __end) (PushProgram n (SProgram177, __p, __stk))
+; SProgram177 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runProgram SProgram114 (__input, __end) (PushProgram n (SProgram177, __p, __stk))
+; SProgram177 ((__p,  "~") : __input, __end) __stk ->
+    __runProgram SProgram145 (__input, __end) (PushProgram () (SProgram177, __p, __stk))
 -- lookahead Nothing, entity Program
-; S1 ([], __end) (res :> __stk@(_, __pos, _)) -> pure res
+; SProgram1 ([], __end) ((PushProgram res __stk@(_, __pos, _))) ->
+    pure res
 -- lookahead Nothing, entity Program
-; S2 ([], __end) (stmts :> __stk@(_, __pos, _)) ->
-    __gotoProgram ([], __end) (action10 __pos stmts) __stk
+; SProgram2 ([], __end) ((PushProgram stmts __stk@(_, __pos, _))) ->
+    __gotoProgramForProgram ([], __end) (action10 __pos stmts) __stk
 -- lookahead Nothing, entity Stmts
-; S3 ([], __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoStmts ([], __end) (action14 __pos c) __stk
+; SProgram3 ([], __end) ((PushProgram c __stk@(_, __pos, _))) ->
+    __gotoStmtsForProgram ([], __end) (action14 __pos c) __stk
 -- lookahead Nothing, entity Stmt
-; S4 ([], __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoStmt ([], __end) (action17 __pos c) __stk
+; SProgram4 ([], __end) ((PushProgram c __stk@(_, __pos, _))) ->
+    __gotoStmtForProgram ([], __end) (action17 __pos c) __stk
 -- lookahead Just <name>, entity Stmt
-; S4 ((__p, LowercaseName tok) : __input, __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoStmt ((__p, LowercaseName tok) : __input, __end) (action17 __pos c) __stk
+; SProgram4 ((__p, LowercaseName tok) : __input, __end) ((PushProgram c __stk@(_, __pos, _))) ->
+    __gotoStmtForProgram ((__p, LowercaseName tok) : __input, __end) (action17 __pos c) __stk
 -- lookahead Nothing, entity Stmt
-; S5 ([], __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoStmt ([], __end) (action18 __pos e) __stk
+; SProgram5 ([], __end) ((PushProgram e __stk@(_, __pos, _))) ->
+    __gotoStmtForProgram ([], __end) (action18 __pos e) __stk
 -- lookahead Just <name>, entity Stmt
-; S5 ((__p, LowercaseName tok) : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoStmt ((__p, LowercaseName tok) : __input, __end) (action18 __pos e) __stk
+; SProgram5 ((__p, LowercaseName tok) : __input, __end) ((PushProgram e __stk@(_, __pos, _))) ->
+    __gotoStmtForProgram ((__p, LowercaseName tok) : __input, __end) (action18 __pos e) __stk
 -- lookahead Nothing, entity Stmts
-; S7 ([], __end) (cs :> c :? __stk@(_, __pos, _)) ->
-    __gotoStmts ([], __end) (action13 __pos c cs) __stk
+; SProgram7 ([], __end) ((PushProgram cs (PushProgram' c __stk@(_, __pos, _)))) ->
+    __gotoStmtsForProgram ([], __end) (action13 __pos c cs) __stk
 -- lookahead Nothing, entity Clause
-; S10 ([], __end) (_ :> c :? __stk@(_, __pos, _)) ->
-    __gotoClause ([], __end) (action26 __pos c) __stk
+; SProgram10 ([], __end) ((PushProgram _ (PushProgram' c __stk@(_, __pos, _)))) ->
+    __gotoClauseForProgram ([], __end) (action26 __pos c) __stk
 -- lookahead Just <name>, entity Clause
-; S10 ((__p, LowercaseName tok) : __input, __end) (_ :> c :? __stk@(_, __pos, _)) ->
-    __gotoClause ((__p, LowercaseName tok) : __input, __end) (action26 __pos c) __stk
+; SProgram10 ((__p, LowercaseName tok) : __input, __end) ((PushProgram _ (PushProgram' c __stk@(_, __pos, _)))) ->
+    __gotoClauseForProgram ((__p, LowercaseName tok) : __input, __end) (action26 __pos c) __stk
 -- lookahead Nothing, entity Effect
-; S15 ([], __end) (_ :> ds :? _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoEffect ([], __end) (action21 __pos c ds) __stk
+; SProgram15 ([], __end) ((PushProgram _ (PushProgram' ds (PushProgram' _ (PushProgram' c __stk@(_, __pos, _)))))) ->
+    __gotoEffectForProgram ([], __end) (action21 __pos c ds) __stk
 -- lookahead Just <name>, entity Effect
-; S15 ((__p, LowercaseName tok) : __input, __end) (_ :> ds :? _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoEffect ((__p, LowercaseName tok) : __input, __end) (action21 __pos c
-                                                                             ds) __stk
+; SProgram15 ((__p, LowercaseName tok) : __input, __end) ((PushProgram _ (PushProgram' ds (PushProgram' _ (PushProgram' c __stk@(_, __pos, _)))))) ->
+    __gotoEffectForProgram ((__p, LowercaseName tok) : __input, __end) (action21 __pos c
+                                                                                       ds) __stk
 -- lookahead Nothing, entity Effect
-; S17 ([], __end) (_ :> cs :? _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoEffect ([], __end) (action23 __pos c cs) __stk
+; SProgram17 ([], __end) ((PushProgram _ (PushProgram' cs (PushProgram' _ (PushProgram' c __stk@(_, __pos, _)))))) ->
+    __gotoEffectForProgram ([], __end) (action23 __pos c cs) __stk
 -- lookahead Just <name>, entity Effect
-; S17 ((__p, LowercaseName tok) : __input, __end) (_ :> cs :? _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoEffect ((__p, LowercaseName tok) : __input, __end) (action23 __pos c
-                                                                             cs) __stk
+; SProgram17 ((__p, LowercaseName tok) : __input, __end) ((PushProgram _ (PushProgram' cs (PushProgram' _ (PushProgram' c __stk@(_, __pos, _)))))) ->
+    __gotoEffectForProgram ((__p, LowercaseName tok) : __input, __end) (action23 __pos c
+                                                                                       cs) __stk
 -- lookahead Nothing, entity Clause
-; S18 ([], __end) (_ :> cs :? _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoClause ([], __end) (action27 __pos c cs) __stk
+; SProgram18 ([], __end) ((PushProgram _ (PushProgram' cs (PushProgram' _ (PushProgram' c __stk@(_, __pos, _)))))) ->
+    __gotoClauseForProgram ([], __end) (action27 __pos c cs) __stk
 -- lookahead Just <name>, entity Clause
-; S18 ((__p, LowercaseName tok) : __input, __end) (_ :> cs :? _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoClause ((__p, LowercaseName tok) : __input, __end) (action27 __pos c
-                                                                             cs) __stk
+; SProgram18 ((__p, LowercaseName tok) : __input, __end) ((PushProgram _ (PushProgram' cs (PushProgram' _ (PushProgram' c __stk@(_, __pos, _)))))) ->
+    __gotoClauseForProgram ((__p, LowercaseName tok) : __input, __end) (action27 __pos c
+                                                                                       cs) __stk
 -- lookahead Nothing, entity Effect
-; S20 ([], __end) (_ :> ds :? _ :? cs :? _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoEffect ([], __end) (action22 __pos c cs ds) __stk
+; SProgram20 ([], __end) ((PushProgram _ (PushProgram' ds (PushProgram' _ (PushProgram' cs (PushProgram' _ (PushProgram' c __stk@(_, __pos, _)))))))) ->
+    __gotoEffectForProgram ([], __end) (action22 __pos c cs ds) __stk
 -- lookahead Just <name>, entity Effect
-; S20 ((__p, LowercaseName tok) : __input, __end) (_ :> ds :? _ :? cs :? _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoEffect ((__p, LowercaseName tok) : __input, __end) (action22 __pos c
-                                                                             cs ds) __stk
+; SProgram20 ((__p, LowercaseName tok) : __input, __end) ((PushProgram _ (PushProgram' ds (PushProgram' _ (PushProgram' cs (PushProgram' _ (PushProgram' c __stk@(_, __pos, _)))))))) ->
+    __gotoEffectForProgram ((__p, LowercaseName tok) : __input, __end) (action22 __pos c
+                                                                                       cs ds) __stk
 -- lookahead Just ), entity Exprs1
-; S21 ((__p,  ")") : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoExprs1 ((__p,  ")") : __input, __end) (action55 __pos e) __stk
+; SProgram21 ((__p,  ")") : __input, __end) ((PushProgram e __stk@(_, __pos, _))) ->
+    __gotoExprs1ForProgram ((__p,  ")") : __input, __end) (action55 __pos e) __stk
 -- lookahead Just ), entity Expr
-; S22 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ")") : __input, __end) (action59 __pos a) __stk
+; SProgram22 ((__p,  ")") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoExprForProgram ((__p,  ")") : __input, __end) (action59 __pos a) __stk
 -- lookahead Just ,, entity Expr
-; S22 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ",") : __input, __end) (action59 __pos a) __stk
+; SProgram22 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoExprForProgram ((__p,  ",") : __input, __end) (action59 __pos a) __stk
 -- lookahead Just ), entity Expr
-; S23 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ")") : __input, __end) (action59 __pos a) __stk
+; SProgram23 ((__p,  ")") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoExprForProgram ((__p,  ")") : __input, __end) (action59 __pos a) __stk
 -- lookahead Just ), entity Expr
-; S24 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ")") : __input, __end) (action58 __pos a
-                                                              b) __stk
+; SProgram24 ((__p,  ")") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoExprForProgram ((__p,  ")") : __input, __end) (action58 __pos a
+                                                                        b) __stk
 -- lookahead Just ), entity Expr
-; S25 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ")") : __input, __end) (action58 __pos a
-                                                              b) __stk
+; SProgram25 ((__p,  ")") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoExprForProgram ((__p,  ")") : __input, __end) (action58 __pos a
+                                                                        b) __stk
 -- lookahead Just ,, entity Expr
-; S25 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ",") : __input, __end) (action58 __pos a
-                                                              b) __stk
+; SProgram25 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoExprForProgram ((__p,  ",") : __input, __end) (action58 __pos a
+                                                                        b) __stk
 -- lookahead Just ), entity Add
-; S26 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ")") : __input, __end) (action63 __pos a) __stk
+; SProgram26 ((__p,  ")") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ")") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just +, entity Add
-; S26 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+; SProgram26 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ), entity Add
-; S27 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ")") : __input, __end) (action63 __pos a) __stk
+; SProgram27 ((__p,  ")") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ")") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just +, entity Add
-; S27 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+; SProgram27 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ,, entity Add
-; S27 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+; SProgram27 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ",") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ), entity Add
-; S28 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ")") : __input, __end) (action63 __pos a) __stk
+; SProgram28 ((__p,  ")") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ")") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just +, entity Add
-; S28 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+; SProgram28 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ,, entity Add
-; S28 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+; SProgram28 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ",") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just =, entity Add
-; S28 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "=") : __input, __end) (action63 __pos a) __stk
+; SProgram28 ((__p,  "=") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "=") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ), entity Add
-; S29 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ")") : __input, __end) (action63 __pos a) __stk
+; SProgram29 ((__p,  ")") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ")") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just +, entity Add
-; S29 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+; SProgram29 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just =, entity Add
-; S29 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "=") : __input, __end) (action63 __pos a) __stk
+; SProgram29 ((__p,  "=") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "=") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ), entity Add
-; S30 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ")") : __input, __end) (action62 __pos a b) __stk
+; SProgram30 ((__p,  ")") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ")") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just +, entity Add
-; S30 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+; SProgram30 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ), entity Add
-; S31 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ")") : __input, __end) (action62 __pos a b) __stk
+; SProgram31 ((__p,  ")") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ")") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just +, entity Add
-; S31 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+; SProgram31 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ,, entity Add
-; S31 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ",") : __input, __end) (action62 __pos a b) __stk
+; SProgram31 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ",") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ), entity Add
-; S32 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ")") : __input, __end) (action62 __pos a b) __stk
+; SProgram32 ((__p,  ")") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ")") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just +, entity Add
-; S32 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+; SProgram32 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ,, entity Add
-; S32 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ",") : __input, __end) (action62 __pos a b) __stk
+; SProgram32 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ",") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just =, entity Add
-; S32 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "=") : __input, __end) (action62 __pos a b) __stk
+; SProgram32 ((__p,  "=") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "=") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ), entity Add
-; S33 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ")") : __input, __end) (action62 __pos a b) __stk
+; SProgram33 ((__p,  ")") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ")") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just +, entity Add
-; S33 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+; SProgram33 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just =, entity Add
-; S33 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "=") : __input, __end) (action62 __pos a b) __stk
+; SProgram33 ((__p,  "=") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "=") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ), entity Mult
-; S34 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ")") : __input, __end) (action67 __pos a) __stk
+; SProgram34 ((__p,  ")") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ")") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just *, entity Mult
-; S34 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+; SProgram34 ((__p,  "*") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just +, entity Mult
-; S34 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+; SProgram34 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ), entity Mult
-; S35 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ")") : __input, __end) (action67 __pos a) __stk
+; SProgram35 ((__p,  ")") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ")") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just *, entity Mult
-; S35 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+; SProgram35 ((__p,  "*") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just +, entity Mult
-; S35 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+; SProgram35 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ,, entity Mult
-; S35 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+; SProgram35 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ",") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ), entity Mult
-; S36 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ")") : __input, __end) (action67 __pos a) __stk
+; SProgram36 ((__p,  ")") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ")") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just *, entity Mult
-; S36 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+; SProgram36 ((__p,  "*") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just +, entity Mult
-; S36 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+; SProgram36 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ,, entity Mult
-; S36 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+; SProgram36 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ",") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just =, entity Mult
-; S36 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "=") : __input, __end) (action67 __pos a) __stk
+; SProgram36 ((__p,  "=") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "=") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ), entity Mult
-; S37 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ")") : __input, __end) (action67 __pos a) __stk
+; SProgram37 ((__p,  ")") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ")") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just *, entity Mult
-; S37 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+; SProgram37 ((__p,  "*") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just +, entity Mult
-; S37 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+; SProgram37 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just =, entity Mult
-; S37 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "=") : __input, __end) (action67 __pos a) __stk
+; SProgram37 ((__p,  "=") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "=") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ), entity Term
-; S42 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ")") : __input, __end) (action71 __pos n) __stk
+; SProgram42 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ")") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just *, entity Term
-; S42 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+; SProgram42 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just +, entity Term
-; S42 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+; SProgram42 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ), entity Term
-; S43 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ")") : __input, __end) (action71 __pos n) __stk
+; SProgram43 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ")") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just *, entity Term
-; S43 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+; SProgram43 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just +, entity Term
-; S43 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+; SProgram43 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ,, entity Term
-; S43 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+; SProgram43 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ), entity Term
-; S44 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ")") : __input, __end) (action71 __pos n) __stk
+; SProgram44 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ")") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just *, entity Term
-; S44 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+; SProgram44 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just +, entity Term
-; S44 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+; SProgram44 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ,, entity Term
-; S44 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+; SProgram44 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just =, entity Term
-; S44 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=") : __input, __end) (action71 __pos n) __stk
+; SProgram44 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "=") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ), entity Term
-; S45 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ")") : __input, __end) (action71 __pos n) __stk
+; SProgram45 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ")") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just *, entity Term
-; S45 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+; SProgram45 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just +, entity Term
-; S45 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+; SProgram45 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just =, entity Term
-; S45 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=") : __input, __end) (action71 __pos n) __stk
+; SProgram45 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "=") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ), entity Term
-; S46 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ")") : __input, __end) (action72 __pos n) __stk
+; SProgram46 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ")") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just *, entity Term
-; S46 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+; SProgram46 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just +, entity Term
-; S46 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+; SProgram46 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ), entity Term
-; S47 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ")") : __input, __end) (action72 __pos n) __stk
+; SProgram47 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ")") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just *, entity Term
-; S47 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+; SProgram47 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just +, entity Term
-; S47 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+; SProgram47 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ,, entity Term
-; S47 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+; SProgram47 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ), entity Term
-; S48 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ")") : __input, __end) (action72 __pos n) __stk
+; SProgram48 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ")") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just *, entity Term
-; S48 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+; SProgram48 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just +, entity Term
-; S48 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+; SProgram48 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ,, entity Term
-; S48 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+; SProgram48 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just =, entity Term
-; S48 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=") : __input, __end) (action72 __pos n) __stk
+; SProgram48 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "=") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ), entity Term
-; S49 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ")") : __input, __end) (action72 __pos n) __stk
+; SProgram49 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ")") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just *, entity Term
-; S49 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+; SProgram49 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just +, entity Term
-; S49 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+; SProgram49 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just =, entity Term
-; S49 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=") : __input, __end) (action72 __pos n) __stk
+; SProgram49 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "=") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ), entity Const
-; S50 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ")") : __input, __end) (action75 __pos n) __stk
+; SProgram50 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ")") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just *, entity Const
-; S50 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+; SProgram50 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just +, entity Const
-; S50 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+; SProgram50 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ), entity Const
-; S51 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ")") : __input, __end) (action75 __pos n) __stk
+; SProgram51 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ")") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just *, entity Const
-; S51 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+; SProgram51 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just +, entity Const
-; S51 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+; SProgram51 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S51 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+; SProgram51 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ), entity Const
-; S52 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ")") : __input, __end) (action75 __pos n) __stk
+; SProgram52 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ")") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just *, entity Const
-; S52 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+; SProgram52 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just +, entity Const
-; S52 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+; SProgram52 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S52 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+; SProgram52 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just =, entity Const
-; S52 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+; SProgram52 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ), entity Const
-; S53 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ")") : __input, __end) (action75 __pos n) __stk
+; SProgram53 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ")") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just *, entity Const
-; S53 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+; SProgram53 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just +, entity Const
-; S53 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+; SProgram53 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just =, entity Const
-; S53 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+; SProgram53 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ), entity Const
-; S54 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ")") : __input, __end) (action76 __pos n) __stk
+; SProgram54 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ")") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just *, entity Const
-; S54 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+; SProgram54 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just +, entity Const
-; S54 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+; SProgram54 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ), entity Const
-; S55 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ")") : __input, __end) (action76 __pos n) __stk
+; SProgram55 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ")") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just *, entity Const
-; S55 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+; SProgram55 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just +, entity Const
-; S55 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+; SProgram55 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S55 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+; SProgram55 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ), entity Const
-; S56 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ")") : __input, __end) (action76 __pos n) __stk
+; SProgram56 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ")") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just *, entity Const
-; S56 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+; SProgram56 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just +, entity Const
-; S56 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+; SProgram56 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S56 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+; SProgram56 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just =, entity Const
-; S56 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=") : __input, __end) (action76 __pos n) __stk
+; SProgram56 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ), entity Const
-; S57 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ")") : __input, __end) (action76 __pos n) __stk
+; SProgram57 ((__p,  ")") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ")") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just *, entity Const
-; S57 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+; SProgram57 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just +, entity Const
-; S57 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+; SProgram57 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just =, entity Const
-; S57 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=") : __input, __end) (action76 __pos n) __stk
+; SProgram57 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ), entity Exprs1
-; S73 ((__p,  ")") : __input, __end) (es :> _ :? e :? __stk@(_, __pos, _)) ->
-    __gotoExprs1 ((__p,  ")") : __input, __end) (action54 __pos e
-                                                                es) __stk
+; SProgram73 ((__p,  ")") : __input, __end) ((PushProgram es (PushProgram' _ (PushProgram' e __stk@(_, __pos, _))))) ->
+    __gotoExprs1ForProgram ((__p,  ")") : __input, __end) (action54 __pos e
+                                                                          es) __stk
 -- lookahead Just ), entity Mult
-; S74 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ")") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram74 ((__p,  ")") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ")") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just *, entity Mult
-; S74 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram74 ((__p,  "*") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just +, entity Mult
-; S74 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram74 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ), entity Mult
-; S75 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ")") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram75 ((__p,  ")") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ")") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just *, entity Mult
-; S75 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram75 ((__p,  "*") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just +, entity Mult
-; S75 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram75 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ,, entity Mult
-; S75 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ",") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram75 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ",") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ), entity Mult
-; S76 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ")") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram76 ((__p,  ")") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ")") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just *, entity Mult
-; S76 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram76 ((__p,  "*") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just +, entity Mult
-; S76 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram76 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ,, entity Mult
-; S76 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ",") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram76 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ",") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just =, entity Mult
-; S76 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "=") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram76 ((__p,  "=") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "=") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ), entity Mult
-; S77 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ")") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram77 ((__p,  ")") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ")") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just *, entity Mult
-; S77 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram77 ((__p,  "*") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just +, entity Mult
-; S77 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram77 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just =, entity Mult
-; S77 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "=") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram77 ((__p,  "=") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "=") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ), entity Term
-; S78 ((__p,  ")") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ")") : __input, __end) (action70 __pos e) __stk
+; SProgram78 ((__p,  ")") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ")") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just *, entity Term
-; S78 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+; SProgram78 ((__p,  "*") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just +, entity Term
-; S78 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+; SProgram78 ((__p,  "+") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ), entity Term
-; S79 ((__p,  ")") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ")") : __input, __end) (action70 __pos e) __stk
+; SProgram79 ((__p,  ")") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ")") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just *, entity Term
-; S79 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+; SProgram79 ((__p,  "*") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just +, entity Term
-; S79 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+; SProgram79 ((__p,  "+") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ,, entity Term
-; S79 ((__p,  ",") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+; SProgram79 ((__p,  ",") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ), entity Term
-; S80 ((__p,  ")") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ")") : __input, __end) (action70 __pos e) __stk
+; SProgram80 ((__p,  ")") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ")") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just *, entity Term
-; S80 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+; SProgram80 ((__p,  "*") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just +, entity Term
-; S80 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+; SProgram80 ((__p,  "+") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ,, entity Term
-; S80 ((__p,  ",") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+; SProgram80 ((__p,  ",") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just =, entity Term
-; S80 ((__p,  "=") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=") : __input, __end) (action70 __pos e) __stk
+; SProgram80 ((__p,  "=") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "=") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ), entity Term
-; S81 ((__p,  ")") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ")") : __input, __end) (action70 __pos e) __stk
+; SProgram81 ((__p,  ")") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ")") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just *, entity Term
-; S81 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+; SProgram81 ((__p,  "*") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just +, entity Term
-; S81 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+; SProgram81 ((__p,  "+") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just =, entity Term
-; S81 ((__p,  "=") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=") : __input, __end) (action70 __pos e) __stk
+; SProgram81 ((__p,  "=") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "=") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just +, entity Add
-; S82 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+; SProgram82 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ,, entity Add
-; S82 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+; SProgram82 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ",") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ., entity Add
-; S82 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ".") : __input, __end) (action63 __pos a) __stk
+; SProgram82 ((__p,  ".") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ".") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just +, entity Add
-; S83 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+; SProgram83 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ,, entity Add
-; S83 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+; SProgram83 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ",") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ., entity Add
-; S83 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ".") : __input, __end) (action63 __pos a) __stk
+; SProgram83 ((__p,  ".") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ".") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just =, entity Add
-; S83 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "=") : __input, __end) (action63 __pos a) __stk
+; SProgram83 ((__p,  "=") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "=") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just +, entity Add
-; S84 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+; SProgram84 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ,, entity Add
-; S84 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+; SProgram84 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ",") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ., entity Add
-; S84 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ".") : __input, __end) (action63 __pos a) __stk
+; SProgram84 ((__p,  ".") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ".") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just =, entity Add
-; S84 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "=") : __input, __end) (action63 __pos a) __stk
+; SProgram84 ((__p,  "=") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "=") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just =>, entity Add
-; S84 ((__p,  "=>") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "=>") : __input, __end) (action63 __pos a) __stk
+; SProgram84 ((__p,  "=>") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "=>") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just +, entity Add
-; S85 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+; SProgram85 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ,, entity Add
-; S85 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+; SProgram85 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ",") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just ., entity Add
-; S85 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ".") : __input, __end) (action63 __pos a) __stk
+; SProgram85 ((__p,  ".") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  ".") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just =>, entity Add
-; S85 ((__p,  "=>") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "=>") : __input, __end) (action63 __pos a) __stk
+; SProgram85 ((__p,  "=>") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoAddForProgram ((__p,  "=>") : __input, __end) (action63 __pos a) __stk
 -- lookahead Just +, entity Add
-; S86 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+; SProgram86 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ,, entity Add
-; S86 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ",") : __input, __end) (action62 __pos a b) __stk
+; SProgram86 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ",") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ., entity Add
-; S86 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ".") : __input, __end) (action62 __pos a b) __stk
+; SProgram86 ((__p,  ".") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ".") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just +, entity Add
-; S87 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+; SProgram87 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ,, entity Add
-; S87 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ",") : __input, __end) (action62 __pos a b) __stk
+; SProgram87 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ",") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ., entity Add
-; S87 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ".") : __input, __end) (action62 __pos a b) __stk
+; SProgram87 ((__p,  ".") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ".") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just =, entity Add
-; S87 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "=") : __input, __end) (action62 __pos a b) __stk
+; SProgram87 ((__p,  "=") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "=") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just +, entity Add
-; S88 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+; SProgram88 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ,, entity Add
-; S88 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ",") : __input, __end) (action62 __pos a b) __stk
+; SProgram88 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ",") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ., entity Add
-; S88 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ".") : __input, __end) (action62 __pos a b) __stk
+; SProgram88 ((__p,  ".") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ".") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just =, entity Add
-; S88 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "=") : __input, __end) (action62 __pos a b) __stk
+; SProgram88 ((__p,  "=") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "=") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just =>, entity Add
-; S88 ((__p,  "=>") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "=>") : __input, __end) (action62 __pos a
-                                                              b) __stk
+; SProgram88 ((__p,  "=>") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "=>") : __input, __end) (action62 __pos a
+                                                                        b) __stk
 -- lookahead Just +, entity Add
-; S89 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+; SProgram89 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ,, entity Add
-; S89 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ",") : __input, __end) (action62 __pos a b) __stk
+; SProgram89 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ",") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just ., entity Add
-; S89 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  ".") : __input, __end) (action62 __pos a b) __stk
+; SProgram89 ((__p,  ".") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  ".") : __input, __end) (action62 __pos a
+                                                                       b) __stk
 -- lookahead Just =>, entity Add
-; S89 ((__p,  "=>") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoAdd ((__p,  "=>") : __input, __end) (action62 __pos a
-                                                              b) __stk
+; SProgram89 ((__p,  "=>") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoAddForProgram ((__p,  "=>") : __input, __end) (action62 __pos a
+                                                                        b) __stk
 -- lookahead Just *, entity Mult
-; S90 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+; SProgram90 ((__p,  "*") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just +, entity Mult
-; S90 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+; SProgram90 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ,, entity Mult
-; S90 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+; SProgram90 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ",") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ., entity Mult
-; S90 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ".") : __input, __end) (action67 __pos a) __stk
+; SProgram90 ((__p,  ".") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ".") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just *, entity Mult
-; S91 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+; SProgram91 ((__p,  "*") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just +, entity Mult
-; S91 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+; SProgram91 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ,, entity Mult
-; S91 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+; SProgram91 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ",") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ., entity Mult
-; S91 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ".") : __input, __end) (action67 __pos a) __stk
+; SProgram91 ((__p,  ".") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ".") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just =, entity Mult
-; S91 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "=") : __input, __end) (action67 __pos a) __stk
+; SProgram91 ((__p,  "=") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "=") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just *, entity Mult
-; S92 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+; SProgram92 ((__p,  "*") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just +, entity Mult
-; S92 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+; SProgram92 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ,, entity Mult
-; S92 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+; SProgram92 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ",") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ., entity Mult
-; S92 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ".") : __input, __end) (action67 __pos a) __stk
+; SProgram92 ((__p,  ".") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ".") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just =, entity Mult
-; S92 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "=") : __input, __end) (action67 __pos a) __stk
+; SProgram92 ((__p,  "=") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "=") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just =>, entity Mult
-; S92 ((__p,  "=>") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "=>") : __input, __end) (action67 __pos a) __stk
+; SProgram92 ((__p,  "=>") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "=>") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just *, entity Mult
-; S93 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+; SProgram93 ((__p,  "*") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just +, entity Mult
-; S93 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+; SProgram93 ((__p,  "+") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ,, entity Mult
-; S93 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+; SProgram93 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ",") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just ., entity Mult
-; S93 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ".") : __input, __end) (action67 __pos a) __stk
+; SProgram93 ((__p,  ".") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  ".") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just =>, entity Mult
-; S93 ((__p,  "=>") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "=>") : __input, __end) (action67 __pos a) __stk
+; SProgram93 ((__p,  "=>") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoMultForProgram ((__p,  "=>") : __input, __end) (action67 __pos a) __stk
 -- lookahead Just *, entity Term
-; S98 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+; SProgram98 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just +, entity Term
-; S98 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+; SProgram98 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ,, entity Term
-; S98 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+; SProgram98 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ., entity Term
-; S98 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ".") : __input, __end) (action71 __pos n) __stk
+; SProgram98 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ".") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just *, entity Term
-; S99 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+; SProgram99 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just +, entity Term
-; S99 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+; SProgram99 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ,, entity Term
-; S99 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+; SProgram99 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ., entity Term
-; S99 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ".") : __input, __end) (action71 __pos n) __stk
+; SProgram99 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ".") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just =, entity Term
-; S99 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=") : __input, __end) (action71 __pos n) __stk
+; SProgram99 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "=") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just *, entity Term
-; S100 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+; SProgram100 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just +, entity Term
-; S100 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+; SProgram100 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ,, entity Term
-; S100 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+; SProgram100 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ., entity Term
-; S100 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ".") : __input, __end) (action71 __pos n) __stk
+; SProgram100 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ".") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just =, entity Term
-; S100 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=") : __input, __end) (action71 __pos n) __stk
+; SProgram100 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "=") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just =>, entity Term
-; S100 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=>") : __input, __end) (action71 __pos n) __stk
+; SProgram100 ((__p,  "=>") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "=>") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just *, entity Term
-; S101 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+; SProgram101 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just +, entity Term
-; S101 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+; SProgram101 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ,, entity Term
-; S101 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+; SProgram101 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just ., entity Term
-; S101 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ".") : __input, __end) (action71 __pos n) __stk
+; SProgram101 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ".") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just =>, entity Term
-; S101 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=>") : __input, __end) (action71 __pos n) __stk
+; SProgram101 ((__p,  "=>") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "=>") : __input, __end) (action71 __pos n) __stk
 -- lookahead Just *, entity Term
-; S102 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+; SProgram102 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just +, entity Term
-; S102 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+; SProgram102 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ,, entity Term
-; S102 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+; SProgram102 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ., entity Term
-; S102 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ".") : __input, __end) (action72 __pos n) __stk
+; SProgram102 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ".") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just *, entity Term
-; S103 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+; SProgram103 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just +, entity Term
-; S103 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+; SProgram103 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ,, entity Term
-; S103 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+; SProgram103 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ., entity Term
-; S103 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ".") : __input, __end) (action72 __pos n) __stk
+; SProgram103 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ".") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just =, entity Term
-; S103 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=") : __input, __end) (action72 __pos n) __stk
+; SProgram103 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "=") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just *, entity Term
-; S104 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+; SProgram104 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just +, entity Term
-; S104 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+; SProgram104 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ,, entity Term
-; S104 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+; SProgram104 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ., entity Term
-; S104 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ".") : __input, __end) (action72 __pos n) __stk
+; SProgram104 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ".") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just =, entity Term
-; S104 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=") : __input, __end) (action72 __pos n) __stk
+; SProgram104 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "=") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just =>, entity Term
-; S104 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=>") : __input, __end) (action72 __pos n) __stk
+; SProgram104 ((__p,  "=>") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "=>") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just *, entity Term
-; S105 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+; SProgram105 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just +, entity Term
-; S105 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+; SProgram105 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ,, entity Term
-; S105 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+; SProgram105 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just ., entity Term
-; S105 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ".") : __input, __end) (action72 __pos n) __stk
+; SProgram105 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  ".") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just =>, entity Term
-; S105 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=>") : __input, __end) (action72 __pos n) __stk
+; SProgram105 ((__p,  "=>") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoTermForProgram ((__p,  "=>") : __input, __end) (action72 __pos n) __stk
 -- lookahead Just *, entity Const
-; S106 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+; SProgram106 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just +, entity Const
-; S106 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+; SProgram106 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S106 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+; SProgram106 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ., entity Const
-; S106 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ".") : __input, __end) (action75 __pos n) __stk
+; SProgram106 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ".") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just =, entity Const
-; S106 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+; SProgram106 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just *, entity Const
-; S107 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+; SProgram107 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just +, entity Const
-; S107 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+; SProgram107 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S107 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+; SProgram107 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ., entity Const
-; S107 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ".") : __input, __end) (action75 __pos n) __stk
+; SProgram107 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ".") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just =, entity Const
-; S107 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+; SProgram107 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just =>, entity Const
-; S107 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=>") : __input, __end) (action75 __pos n) __stk
+; SProgram107 ((__p,  "=>") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=>") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just *, entity Const
-; S108 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+; SProgram108 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just +, entity Const
-; S108 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+; SProgram108 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S108 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+; SProgram108 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ., entity Const
-; S108 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ".") : __input, __end) (action75 __pos n) __stk
+; SProgram108 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ".") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just *, entity Const
-; S109 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+; SProgram109 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just +, entity Const
-; S109 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+; SProgram109 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S109 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+; SProgram109 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ., entity Const
-; S109 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ".") : __input, __end) (action75 __pos n) __stk
+; SProgram109 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ".") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just =, entity Const
-; S109 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+; SProgram109 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just *, entity Const
-; S110 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+; SProgram110 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just +, entity Const
-; S110 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+; SProgram110 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S110 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+; SProgram110 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ., entity Const
-; S110 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ".") : __input, __end) (action75 __pos n) __stk
+; SProgram110 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ".") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just =, entity Const
-; S110 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+; SProgram110 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just =>, entity Const
-; S110 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=>") : __input, __end) (action75 __pos n) __stk
+; SProgram110 ((__p,  "=>") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=>") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just *, entity Const
-; S111 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+; SProgram111 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just +, entity Const
-; S111 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+; SProgram111 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S111 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+; SProgram111 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just ., entity Const
-; S111 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ".") : __input, __end) (action75 __pos n) __stk
+; SProgram111 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ".") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just =>, entity Const
-; S111 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=>") : __input, __end) (action75 __pos n) __stk
+; SProgram111 ((__p,  "=>") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=>") : __input, __end) (action75 __pos n) __stk
 -- lookahead Just *, entity Const
-; S112 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+; SProgram112 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just +, entity Const
-; S112 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+; SProgram112 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S112 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+; SProgram112 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ., entity Const
-; S112 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ".") : __input, __end) (action76 __pos n) __stk
+; SProgram112 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ".") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just *, entity Const
-; S113 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+; SProgram113 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just +, entity Const
-; S113 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+; SProgram113 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S113 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+; SProgram113 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ., entity Const
-; S113 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ".") : __input, __end) (action76 __pos n) __stk
+; SProgram113 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ".") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just =, entity Const
-; S113 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=") : __input, __end) (action76 __pos n) __stk
+; SProgram113 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just *, entity Const
-; S114 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+; SProgram114 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just +, entity Const
-; S114 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+; SProgram114 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S114 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+; SProgram114 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ., entity Const
-; S114 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ".") : __input, __end) (action76 __pos n) __stk
+; SProgram114 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ".") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just =, entity Const
-; S114 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=") : __input, __end) (action76 __pos n) __stk
+; SProgram114 ((__p,  "=") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just =>, entity Const
-; S114 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=>") : __input, __end) (action76 __pos n) __stk
+; SProgram114 ((__p,  "=>") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=>") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just *, entity Const
-; S115 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+; SProgram115 ((__p,  "*") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "*") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just +, entity Const
-; S115 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+; SProgram115 ((__p,  "+") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "+") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ,, entity Const
-; S115 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+; SProgram115 ((__p,  ",") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ",") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just ., entity Const
-; S115 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  ".") : __input, __end) (action76 __pos n) __stk
+; SProgram115 ((__p,  ".") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  ".") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just =>, entity Const
-; S115 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
-    __gotoConst ((__p,  "=>") : __input, __end) (action76 __pos n) __stk
+; SProgram115 ((__p,  "=>") : __input, __end) ((PushProgram n __stk@(_, __pos, _))) ->
+    __gotoConstForProgram ((__p,  "=>") : __input, __end) (action76 __pos n) __stk
 -- lookahead Just *, entity Mult
-; S124 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram124 ((__p,  "*") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just +, entity Mult
-; S124 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram124 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ,, entity Mult
-; S124 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ",") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram124 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ",") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ., entity Mult
-; S124 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ".") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram124 ((__p,  ".") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ".") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just *, entity Mult
-; S125 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram125 ((__p,  "*") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just +, entity Mult
-; S125 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram125 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ,, entity Mult
-; S125 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ",") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram125 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ",") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ., entity Mult
-; S125 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ".") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram125 ((__p,  ".") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ".") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just =, entity Mult
-; S125 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "=") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram125 ((__p,  "=") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "=") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just *, entity Mult
-; S126 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram126 ((__p,  "*") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just +, entity Mult
-; S126 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram126 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ,, entity Mult
-; S126 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ",") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram126 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ",") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ., entity Mult
-; S126 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ".") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram126 ((__p,  ".") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ".") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just =, entity Mult
-; S126 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "=") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram126 ((__p,  "=") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "=") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just =>, entity Mult
-; S126 ((__p,  "=>") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "=>") : __input, __end) (action66 __pos a
-                                                               b) __stk
+; SProgram126 ((__p,  "=>") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "=>") : __input, __end) (action66 __pos a
+                                                                         b) __stk
 -- lookahead Just *, entity Mult
-; S127 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram127 ((__p,  "*") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just +, entity Mult
-; S127 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram127 ((__p,  "+") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ,, entity Mult
-; S127 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ",") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram127 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ",") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just ., entity Mult
-; S127 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  ".") : __input, __end) (action66 __pos a
-                                                              b) __stk
+; SProgram127 ((__p,  ".") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  ".") : __input, __end) (action66 __pos a
+                                                                        b) __stk
 -- lookahead Just =>, entity Mult
-; S127 ((__p,  "=>") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoMult ((__p,  "=>") : __input, __end) (action66 __pos a
-                                                               b) __stk
+; SProgram127 ((__p,  "=>") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoMultForProgram ((__p,  "=>") : __input, __end) (action66 __pos a
+                                                                         b) __stk
 -- lookahead Just *, entity Term
-; S128 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+; SProgram128 ((__p,  "*") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just +, entity Term
-; S128 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+; SProgram128 ((__p,  "+") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ,, entity Term
-; S128 ((__p,  ",") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+; SProgram128 ((__p,  ",") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ., entity Term
-; S128 ((__p,  ".") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ".") : __input, __end) (action70 __pos e) __stk
+; SProgram128 ((__p,  ".") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ".") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just *, entity Term
-; S129 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+; SProgram129 ((__p,  "*") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just +, entity Term
-; S129 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+; SProgram129 ((__p,  "+") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ,, entity Term
-; S129 ((__p,  ",") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+; SProgram129 ((__p,  ",") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ., entity Term
-; S129 ((__p,  ".") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ".") : __input, __end) (action70 __pos e) __stk
+; SProgram129 ((__p,  ".") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ".") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just =, entity Term
-; S129 ((__p,  "=") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=") : __input, __end) (action70 __pos e) __stk
+; SProgram129 ((__p,  "=") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "=") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just *, entity Term
-; S130 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+; SProgram130 ((__p,  "*") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just +, entity Term
-; S130 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+; SProgram130 ((__p,  "+") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ,, entity Term
-; S130 ((__p,  ",") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+; SProgram130 ((__p,  ",") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ., entity Term
-; S130 ((__p,  ".") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ".") : __input, __end) (action70 __pos e) __stk
+; SProgram130 ((__p,  ".") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ".") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just =, entity Term
-; S130 ((__p,  "=") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=") : __input, __end) (action70 __pos e) __stk
+; SProgram130 ((__p,  "=") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "=") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just =>, entity Term
-; S130 ((__p,  "=>") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=>") : __input, __end) (action70 __pos e) __stk
+; SProgram130 ((__p,  "=>") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "=>") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just *, entity Term
-; S131 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+; SProgram131 ((__p,  "*") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "*") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just +, entity Term
-; S131 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+; SProgram131 ((__p,  "+") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "+") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ,, entity Term
-; S131 ((__p,  ",") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+; SProgram131 ((__p,  ",") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ",") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ., entity Term
-; S131 ((__p,  ".") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  ".") : __input, __end) (action70 __pos e) __stk
+; SProgram131 ((__p,  ".") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  ".") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just =>, entity Term
-; S131 ((__p,  "=>") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTerm ((__p,  "=>") : __input, __end) (action70 __pos e) __stk
+; SProgram131 ((__p,  "=>") : __input, __end) ((PushProgram _ (PushProgram' e (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForProgram ((__p,  "=>") : __input, __end) (action70 __pos e) __stk
 -- lookahead Just ,, entity Expr
-; S132 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ",") : __input, __end) (action59 __pos a) __stk
+; SProgram132 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoExprForProgram ((__p,  ",") : __input, __end) (action59 __pos a) __stk
 -- lookahead Just ., entity Expr
-; S132 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ".") : __input, __end) (action59 __pos a) __stk
+; SProgram132 ((__p,  ".") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoExprForProgram ((__p,  ".") : __input, __end) (action59 __pos a) __stk
 -- lookahead Just ,, entity Expr
-; S133 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ",") : __input, __end) (action59 __pos a) __stk
+; SProgram133 ((__p,  ",") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoExprForProgram ((__p,  ",") : __input, __end) (action59 __pos a) __stk
 -- lookahead Just ., entity Expr
-; S133 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ".") : __input, __end) (action59 __pos a) __stk
+; SProgram133 ((__p,  ".") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoExprForProgram ((__p,  ".") : __input, __end) (action59 __pos a) __stk
 -- lookahead Just =>, entity Expr
-; S133 ((__p,  "=>") : __input, __end) (a :> __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  "=>") : __input, __end) (action59 __pos a) __stk
+; SProgram133 ((__p,  "=>") : __input, __end) ((PushProgram a __stk@(_, __pos, _))) ->
+    __gotoExprForProgram ((__p,  "=>") : __input, __end) (action59 __pos a) __stk
 -- lookahead Just ,, entity Expr
-; S134 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ",") : __input, __end) (action58 __pos a
-                                                              b) __stk
+; SProgram134 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoExprForProgram ((__p,  ",") : __input, __end) (action58 __pos a
+                                                                        b) __stk
 -- lookahead Just ., entity Expr
-; S134 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ".") : __input, __end) (action58 __pos a
-                                                              b) __stk
+; SProgram134 ((__p,  ".") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoExprForProgram ((__p,  ".") : __input, __end) (action58 __pos a
+                                                                        b) __stk
 -- lookahead Just ,, entity Expr
-; S135 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ",") : __input, __end) (action58 __pos a
-                                                              b) __stk
+; SProgram135 ((__p,  ",") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoExprForProgram ((__p,  ",") : __input, __end) (action58 __pos a
+                                                                        b) __stk
 -- lookahead Just ., entity Expr
-; S135 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  ".") : __input, __end) (action58 __pos a
-                                                              b) __stk
+; SProgram135 ((__p,  ".") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoExprForProgram ((__p,  ".") : __input, __end) (action58 __pos a
+                                                                        b) __stk
 -- lookahead Just =>, entity Expr
-; S135 ((__p,  "=>") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
-    __gotoExpr ((__p,  "=>") : __input, __end) (action58 __pos a
-                                                               b) __stk
+; SProgram135 ((__p,  "=>") : __input, __end) ((PushProgram b (PushProgram' _ (PushProgram' a __stk@(_, __pos, _))))) ->
+    __gotoExprForProgram ((__p,  "=>") : __input, __end) (action58 __pos a
+                                                                         b) __stk
 -- lookahead Just ,, entity Cond
-; S142 ((__p,  ",") : __input, __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  ",") : __input, __end) (action42 __pos c) __stk
+; SProgram142 ((__p,  ",") : __input, __end) ((PushProgram c __stk@(_, __pos, _))) ->
+    __gotoCondForProgram ((__p,  ",") : __input, __end) (action42 __pos c) __stk
 -- lookahead Just ., entity Cond
-; S142 ((__p,  ".") : __input, __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  ".") : __input, __end) (action42 __pos c) __stk
+; SProgram142 ((__p,  ".") : __input, __end) ((PushProgram c __stk@(_, __pos, _))) ->
+    __gotoCondForProgram ((__p,  ".") : __input, __end) (action42 __pos c) __stk
 -- lookahead Just ,, entity Cond
-; S143 ((__p,  ",") : __input, __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  ",") : __input, __end) (action42 __pos c) __stk
+; SProgram143 ((__p,  ",") : __input, __end) ((PushProgram c __stk@(_, __pos, _))) ->
+    __gotoCondForProgram ((__p,  ",") : __input, __end) (action42 __pos c) __stk
 -- lookahead Just ., entity Cond
-; S143 ((__p,  ".") : __input, __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  ".") : __input, __end) (action42 __pos c) __stk
+; SProgram143 ((__p,  ".") : __input, __end) ((PushProgram c __stk@(_, __pos, _))) ->
+    __gotoCondForProgram ((__p,  ".") : __input, __end) (action42 __pos c) __stk
 -- lookahead Just =>, entity Cond
-; S143 ((__p,  "=>") : __input, __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  "=>") : __input, __end) (action42 __pos c) __stk
+; SProgram143 ((__p,  "=>") : __input, __end) ((PushProgram c __stk@(_, __pos, _))) ->
+    __gotoCondForProgram ((__p,  "=>") : __input, __end) (action42 __pos c) __stk
 -- lookahead Just ,, entity Cond
-; S146 ((__p,  ",") : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  ",") : __input, __end) (action44 __pos e) __stk
+; SProgram146 ((__p,  ",") : __input, __end) ((PushProgram e __stk@(_, __pos, _))) ->
+    __gotoCondForProgram ((__p,  ",") : __input, __end) (action44 __pos e) __stk
 -- lookahead Just ., entity Cond
-; S146 ((__p,  ".") : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  ".") : __input, __end) (action44 __pos e) __stk
+; SProgram146 ((__p,  ".") : __input, __end) ((PushProgram e __stk@(_, __pos, _))) ->
+    __gotoCondForProgram ((__p,  ".") : __input, __end) (action44 __pos e) __stk
 -- lookahead Just ,, entity Cond
-; S147 ((__p,  ",") : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  ",") : __input, __end) (action44 __pos e) __stk
+; SProgram147 ((__p,  ",") : __input, __end) ((PushProgram e __stk@(_, __pos, _))) ->
+    __gotoCondForProgram ((__p,  ",") : __input, __end) (action44 __pos e) __stk
 -- lookahead Just ., entity Cond
-; S147 ((__p,  ".") : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  ".") : __input, __end) (action44 __pos e) __stk
+; SProgram147 ((__p,  ".") : __input, __end) ((PushProgram e __stk@(_, __pos, _))) ->
+    __gotoCondForProgram ((__p,  ".") : __input, __end) (action44 __pos e) __stk
 -- lookahead Just =>, entity Cond
-; S147 ((__p,  "=>") : __input, __end) (e :> __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  "=>") : __input, __end) (action44 __pos e) __stk
+; SProgram147 ((__p,  "=>") : __input, __end) ((PushProgram e __stk@(_, __pos, _))) ->
+    __gotoCondForProgram ((__p,  "=>") : __input, __end) (action44 __pos e) __stk
 -- lookahead Just ,, entity Change
-; S152 ((__p,  ",") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
-    __gotoChange ((__p,  ",") : __input, __end) (action34 __pos c) __stk
+; SProgram152 ((__p,  ",") : __input, __end) ((PushProgram c (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoChangeForProgram ((__p,  ",") : __input, __end) (action34 __pos c) __stk
 -- lookahead Just ., entity Change
-; S152 ((__p,  ".") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
-    __gotoChange ((__p,  ".") : __input, __end) (action34 __pos c) __stk
+; SProgram152 ((__p,  ".") : __input, __end) ((PushProgram c (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoChangeForProgram ((__p,  ".") : __input, __end) (action34 __pos c) __stk
 -- lookahead Just ,, entity Change
-; S153 ((__p,  ",") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
-    __gotoChange ((__p,  ",") : __input, __end) (action35 __pos c) __stk
+; SProgram153 ((__p,  ",") : __input, __end) ((PushProgram c (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoChangeForProgram ((__p,  ",") : __input, __end) (action35 __pos c) __stk
 -- lookahead Just ., entity Change
-; S153 ((__p,  ".") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
-    __gotoChange ((__p,  ".") : __input, __end) (action35 __pos c) __stk
+; SProgram153 ((__p,  ".") : __input, __end) ((PushProgram c (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoChangeForProgram ((__p,  ".") : __input, __end) (action35 __pos c) __stk
 -- lookahead Just ,, entity Cond
-; S154 ((__p,  ",") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  ",") : __input, __end) (action43 __pos c) __stk
+; SProgram154 ((__p,  ",") : __input, __end) ((PushProgram c (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoCondForProgram ((__p,  ",") : __input, __end) (action43 __pos c) __stk
 -- lookahead Just ., entity Cond
-; S154 ((__p,  ".") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  ".") : __input, __end) (action43 __pos c) __stk
+; SProgram154 ((__p,  ".") : __input, __end) ((PushProgram c (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoCondForProgram ((__p,  ".") : __input, __end) (action43 __pos c) __stk
 -- lookahead Just ,, entity Cond
-; S155 ((__p,  ",") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  ",") : __input, __end) (action43 __pos c) __stk
+; SProgram155 ((__p,  ",") : __input, __end) ((PushProgram c (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoCondForProgram ((__p,  ",") : __input, __end) (action43 __pos c) __stk
 -- lookahead Just ., entity Cond
-; S155 ((__p,  ".") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  ".") : __input, __end) (action43 __pos c) __stk
+; SProgram155 ((__p,  ".") : __input, __end) ((PushProgram c (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoCondForProgram ((__p,  ".") : __input, __end) (action43 __pos c) __stk
 -- lookahead Just =>, entity Cond
-; S155 ((__p,  "=>") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
-    __gotoCond ((__p,  "=>") : __input, __end) (action43 __pos c) __stk
+; SProgram155 ((__p,  "=>") : __input, __end) ((PushProgram c (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoCondForProgram ((__p,  "=>") : __input, __end) (action43 __pos c) __stk
 -- lookahead Just ,, entity Call
-; S156 ((__p,  ",") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
-    __gotoCall ((__p,  ",") : __input, __end) (action47 __pos pred
-                                                              t) __stk
+; SProgram156 ((__p,  ",") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  ",") : __input, __end) (action47 __pos pred
+                                                                        t) __stk
 -- lookahead Just ., entity Call
-; S156 ((__p,  ".") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
-    __gotoCall ((__p,  ".") : __input, __end) (action47 __pos pred
-                                                              t) __stk
+; SProgram156 ((__p,  ".") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  ".") : __input, __end) (action47 __pos pred
+                                                                        t) __stk
 -- lookahead Just ,, entity Call
-; S157 ((__p,  ",") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
-    __gotoCall ((__p,  ",") : __input, __end) (action47 __pos pred
-                                                              t) __stk
+; SProgram157 ((__p,  ",") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  ",") : __input, __end) (action47 __pos pred
+                                                                        t) __stk
 -- lookahead Just ., entity Call
-; S157 ((__p,  ".") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
-    __gotoCall ((__p,  ".") : __input, __end) (action47 __pos pred
-                                                              t) __stk
+; SProgram157 ((__p,  ".") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  ".") : __input, __end) (action47 __pos pred
+                                                                        t) __stk
 -- lookahead Just =>, entity Call
-; S157 ((__p,  "=>") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
-    __gotoCall ((__p,  "=>") : __input, __end) (action47 __pos pred
-                                                               t) __stk
+; SProgram157 ((__p,  "=>") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  "=>") : __input, __end) (action47 __pos pred
+                                                                         t) __stk
 -- lookahead Just ,, entity Tuple
-; S158 ((__p,  ",") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  ",") : __input, __end) (action50 __pos ) __stk
+; SProgram158 ((__p,  ",") : __input, __end) ((PushProgram _ (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForProgram ((__p,  ",") : __input, __end) (action50 __pos ) __stk
 -- lookahead Just ., entity Tuple
-; S158 ((__p,  ".") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  ".") : __input, __end) (action50 __pos ) __stk
+; SProgram158 ((__p,  ".") : __input, __end) ((PushProgram _ (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForProgram ((__p,  ".") : __input, __end) (action50 __pos ) __stk
 -- lookahead Just ,, entity Tuple
-; S159 ((__p,  ",") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  ",") : __input, __end) (action50 __pos ) __stk
+; SProgram159 ((__p,  ",") : __input, __end) ((PushProgram _ (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForProgram ((__p,  ",") : __input, __end) (action50 __pos ) __stk
 -- lookahead Just ., entity Tuple
-; S159 ((__p,  ".") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  ".") : __input, __end) (action50 __pos ) __stk
+; SProgram159 ((__p,  ".") : __input, __end) ((PushProgram _ (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForProgram ((__p,  ".") : __input, __end) (action50 __pos ) __stk
 -- lookahead Just =>, entity Tuple
-; S159 ((__p,  "=>") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  "=>") : __input, __end) (action50 __pos ) __stk
+; SProgram159 ((__p,  "=>") : __input, __end) ((PushProgram _ (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForProgram ((__p,  "=>") : __input, __end) (action50 __pos ) __stk
 -- lookahead Just ,, entity Tuple
-; S164 ((__p,  ",") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  ",") : __input, __end) (action51 __pos es) __stk
+; SProgram164 ((__p,  ",") : __input, __end) ((PushProgram _ (PushProgram' es (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForProgram ((__p,  ",") : __input, __end) (action51 __pos es) __stk
 -- lookahead Just ., entity Tuple
-; S164 ((__p,  ".") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  ".") : __input, __end) (action51 __pos es) __stk
+; SProgram164 ((__p,  ".") : __input, __end) ((PushProgram _ (PushProgram' es (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForProgram ((__p,  ".") : __input, __end) (action51 __pos es) __stk
 -- lookahead Just ,, entity Tuple
-; S165 ((__p,  ",") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  ",") : __input, __end) (action51 __pos es) __stk
+; SProgram165 ((__p,  ",") : __input, __end) ((PushProgram _ (PushProgram' es (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForProgram ((__p,  ",") : __input, __end) (action51 __pos es) __stk
 -- lookahead Just ., entity Tuple
-; S165 ((__p,  ".") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  ".") : __input, __end) (action51 __pos es) __stk
+; SProgram165 ((__p,  ".") : __input, __end) ((PushProgram _ (PushProgram' es (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForProgram ((__p,  ".") : __input, __end) (action51 __pos es) __stk
 -- lookahead Just =>, entity Tuple
-; S165 ((__p,  "=>") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  "=>") : __input, __end) (action51 __pos es) __stk
+; SProgram165 ((__p,  "=>") : __input, __end) ((PushProgram _ (PushProgram' es (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForProgram ((__p,  "=>") : __input, __end) (action51 __pos es) __stk
 -- lookahead Just ->, entity Call
-; S168 ((__p,  "->") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
-    __gotoCall ((__p,  "->") : __input, __end) (action47 __pos pred
-                                                               t) __stk
+; SProgram168 ((__p,  "->") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  "->") : __input, __end) (action47 __pos pred
+                                                                         t) __stk
 -- lookahead Just ., entity Call
-; S168 ((__p,  ".") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
-    __gotoCall ((__p,  ".") : __input, __end) (action47 __pos pred
-                                                              t) __stk
+; SProgram168 ((__p,  ".") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  ".") : __input, __end) (action47 __pos pred
+                                                                        t) __stk
 -- lookahead Just <-, entity Call
-; S168 ((__p,  "<-") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
-    __gotoCall ((__p,  "<-") : __input, __end) (action47 __pos pred
-                                                               t) __stk
+; SProgram168 ((__p,  "<-") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  "<-") : __input, __end) (action47 __pos pred
+                                                                         t) __stk
 -- lookahead Just =>, entity Call
-; S168 ((__p,  "=>") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
-    __gotoCall ((__p,  "=>") : __input, __end) (action47 __pos pred
-                                                               t) __stk
+; SProgram168 ((__p,  "=>") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  "=>") : __input, __end) (action47 __pos pred
+                                                                         t) __stk
 -- lookahead Just ->, entity Tuple
-; S169 ((__p,  "->") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  "->") : __input, __end) (action50 __pos ) __stk
+; SProgram169 ((__p,  "->") : __input, __end) ((PushProgram _ (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForProgram ((__p,  "->") : __input, __end) (action50 __pos ) __stk
 -- lookahead Just ., entity Tuple
-; S169 ((__p,  ".") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  ".") : __input, __end) (action50 __pos ) __stk
+; SProgram169 ((__p,  ".") : __input, __end) ((PushProgram _ (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForProgram ((__p,  ".") : __input, __end) (action50 __pos ) __stk
 -- lookahead Just <-, entity Tuple
-; S169 ((__p,  "<-") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  "<-") : __input, __end) (action50 __pos ) __stk
+; SProgram169 ((__p,  "<-") : __input, __end) ((PushProgram _ (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForProgram ((__p,  "<-") : __input, __end) (action50 __pos ) __stk
 -- lookahead Just =>, entity Tuple
-; S169 ((__p,  "=>") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  "=>") : __input, __end) (action50 __pos ) __stk
+; SProgram169 ((__p,  "=>") : __input, __end) ((PushProgram _ (PushProgram' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForProgram ((__p,  "=>") : __input, __end) (action50 __pos ) __stk
 -- lookahead Just ->, entity Tuple
-; S171 ((__p,  "->") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  "->") : __input, __end) (action51 __pos es) __stk
+; SProgram171 ((__p,  "->") : __input, __end) ((PushProgram _ (PushProgram' es (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForProgram ((__p,  "->") : __input, __end) (action51 __pos es) __stk
 -- lookahead Just ., entity Tuple
-; S171 ((__p,  ".") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  ".") : __input, __end) (action51 __pos es) __stk
+; SProgram171 ((__p,  ".") : __input, __end) ((PushProgram _ (PushProgram' es (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForProgram ((__p,  ".") : __input, __end) (action51 __pos es) __stk
 -- lookahead Just <-, entity Tuple
-; S171 ((__p,  "<-") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  "<-") : __input, __end) (action51 __pos es) __stk
+; SProgram171 ((__p,  "<-") : __input, __end) ((PushProgram _ (PushProgram' es (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForProgram ((__p,  "<-") : __input, __end) (action51 __pos es) __stk
 -- lookahead Just =>, entity Tuple
-; S171 ((__p,  "=>") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
-    __gotoTuple ((__p,  "=>") : __input, __end) (action51 __pos es) __stk
+; SProgram171 ((__p,  "=>") : __input, __end) ((PushProgram _ (PushProgram' es (PushProgram' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForProgram ((__p,  "=>") : __input, __end) (action51 __pos es) __stk
 -- lookahead Just ., entity Changes
-; S172 ((__p,  ".") : __input, __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoChanges ((__p,  ".") : __input, __end) (action31 __pos c) __stk
+; SProgram172 ((__p,  ".") : __input, __end) ((PushProgram c __stk@(_, __pos, _))) ->
+    __gotoChangesForProgram ((__p,  ".") : __input, __end) (action31 __pos c) __stk
 -- lookahead Just ., entity Conds
-; S173 ((__p,  ".") : __input, __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoConds ((__p,  ".") : __input, __end) (action39 __pos c) __stk
+; SProgram173 ((__p,  ".") : __input, __end) ((PushProgram c __stk@(_, __pos, _))) ->
+    __gotoCondsForProgram ((__p,  ".") : __input, __end) (action39 __pos c) __stk
 -- lookahead Just ., entity Conds
-; S174 ((__p,  ".") : __input, __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoConds ((__p,  ".") : __input, __end) (action39 __pos c) __stk
+; SProgram174 ((__p,  ".") : __input, __end) ((PushProgram c __stk@(_, __pos, _))) ->
+    __gotoCondsForProgram ((__p,  ".") : __input, __end) (action39 __pos c) __stk
 -- lookahead Just =>, entity Conds
-; S174 ((__p,  "=>") : __input, __end) (c :> __stk@(_, __pos, _)) ->
-    __gotoConds ((__p,  "=>") : __input, __end) (action39 __pos c) __stk
+; SProgram174 ((__p,  "=>") : __input, __end) ((PushProgram c __stk@(_, __pos, _))) ->
+    __gotoCondsForProgram ((__p,  "=>") : __input, __end) (action39 __pos c) __stk
 -- lookahead Just ., entity Changes
-; S178 ((__p,  ".") : __input, __end) (cs :> _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoChanges ((__p,  ".") : __input, __end) (action30 __pos c
-                                                                 cs) __stk
+; SProgram178 ((__p,  ".") : __input, __end) ((PushProgram cs (PushProgram' _ (PushProgram' c __stk@(_, __pos, _))))) ->
+    __gotoChangesForProgram ((__p,  ".") : __input, __end) (action30 __pos c
+                                                                           cs) __stk
 -- lookahead Just ., entity Conds
-; S179 ((__p,  ".") : __input, __end) (cs :> _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoConds ((__p,  ".") : __input, __end) (action38 __pos c
-                                                               cs) __stk
+; SProgram179 ((__p,  ".") : __input, __end) ((PushProgram cs (PushProgram' _ (PushProgram' c __stk@(_, __pos, _))))) ->
+    __gotoCondsForProgram ((__p,  ".") : __input, __end) (action38 __pos c
+                                                                         cs) __stk
 -- lookahead Just ., entity Conds
-; S180 ((__p,  ".") : __input, __end) (cs :> _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoConds ((__p,  ".") : __input, __end) (action38 __pos c
-                                                               cs) __stk
+; SProgram180 ((__p,  ".") : __input, __end) ((PushProgram cs (PushProgram' _ (PushProgram' c __stk@(_, __pos, _))))) ->
+    __gotoCondsForProgram ((__p,  ".") : __input, __end) (action38 __pos c
+                                                                         cs) __stk
 -- lookahead Just =>, entity Conds
-; S180 ((__p,  "=>") : __input, __end) (cs :> _ :? c :? __stk@(_, __pos, _)) ->
-    __gotoConds ((__p,  "=>") : __input, __end) (action38 __pos c
-                                                                cs) __stk
-; S0 __input _ -> Left  (currentPos __input, ["<name>"])
-; S1 __input _ -> Left  (currentPos __input, ["<eof>"])
-; S2 __input _ -> Left  (currentPos __input, ["<eof>"])
-; S3 __input _ -> Left  (currentPos __input, ["<eof>", "<name>"])
-; S4 __input _ -> Left  (currentPos __input, ["<eof>", "<name>"])
-; S5 __input _ -> Left  (currentPos __input, ["<eof>", "<name>"])
-; S6 __input _ ->
+; SProgram180 ((__p,  "=>") : __input, __end) ((PushProgram cs (PushProgram' _ (PushProgram' c __stk@(_, __pos, _))))) ->
+    __gotoCondsForProgram ((__p,  "=>") : __input, __end) (action38 __pos c
+                                                                          cs) __stk
+; SProgram0 __input _ -> Left  (currentPos __input, ["<name>"])
+; SProgram1 __input _ -> Left  (currentPos __input, ["<eof>"])
+; SProgram2 __input _ -> Left  (currentPos __input, ["<eof>"])
+; SProgram3 __input _ ->
+    Left  (currentPos __input, ["<eof>", "<name>"])
+; SProgram4 __input _ ->
+    Left  (currentPos __input, ["<eof>", "<name>"])
+; SProgram5 __input _ ->
+    Left  (currentPos __input, ["<eof>", "<name>"])
+; SProgram6 __input _ ->
     Left  (currentPos __input, ["->", ".", "<-", "=>"])
-; S7 __input _ -> Left  (currentPos __input, ["<eof>"])
-; S8 __input _ -> Left  (currentPos __input, ["+", "-"])
-; S9 __input _ ->
+; SProgram7 __input _ -> Left  (currentPos __input, ["<eof>"])
+; SProgram8 __input _ -> Left  (currentPos __input, ["+", "-"])
+; SProgram9 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>", "~"])
-; S10 __input _ -> Left  (currentPos __input, ["<eof>", "<name>"])
-; S11 __input _ ->
+; SProgram10 __input _ ->
+    Left  (currentPos __input, ["<eof>", "<name>"])
+; SProgram11 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>", "~"])
-; S12 __input _ -> Left  (currentPos __input, ["."])
-; S13 __input _ -> Left  (currentPos __input, [".", "=>"])
-; S14 __input _ -> Left  (currentPos __input, ["."])
-; S15 __input _ -> Left  (currentPos __input, ["<eof>", "<name>"])
-; S16 __input _ -> Left  (currentPos __input, ["+", "-"])
-; S17 __input _ -> Left  (currentPos __input, ["<eof>", "<name>"])
-; S18 __input _ -> Left  (currentPos __input, ["<eof>", "<name>"])
-; S19 __input _ -> Left  (currentPos __input, ["."])
-; S20 __input _ -> Left  (currentPos __input, ["<eof>", "<name>"])
-; S21 __input _ -> Left  (currentPos __input, [")", ","])
-; S22 __input _ -> Left  (currentPos __input, [")", "+", ",", "="])
-; S23 __input _ -> Left  (currentPos __input, [")", "+", "="])
-; S24 __input _ -> Left  (currentPos __input, [")", "+"])
-; S25 __input _ -> Left  (currentPos __input, [")", "+", ","])
-; S26 __input _ -> Left  (currentPos __input, [")", "*", "+"])
-; S27 __input _ -> Left  (currentPos __input, [")", "*", "+", ","])
-; S28 __input _ ->
+; SProgram12 __input _ -> Left  (currentPos __input, ["."])
+; SProgram13 __input _ -> Left  (currentPos __input, [".", "=>"])
+; SProgram14 __input _ -> Left  (currentPos __input, ["."])
+; SProgram15 __input _ ->
+    Left  (currentPos __input, ["<eof>", "<name>"])
+; SProgram16 __input _ -> Left  (currentPos __input, ["+", "-"])
+; SProgram17 __input _ ->
+    Left  (currentPos __input, ["<eof>", "<name>"])
+; SProgram18 __input _ ->
+    Left  (currentPos __input, ["<eof>", "<name>"])
+; SProgram19 __input _ -> Left  (currentPos __input, ["."])
+; SProgram20 __input _ ->
+    Left  (currentPos __input, ["<eof>", "<name>"])
+; SProgram21 __input _ -> Left  (currentPos __input, [")", ","])
+; SProgram22 __input _ ->
+    Left  (currentPos __input, [")", "+", ",", "="])
+; SProgram23 __input _ ->
+    Left  (currentPos __input, [")", "+", "="])
+; SProgram24 __input _ -> Left  (currentPos __input, [")", "+"])
+; SProgram25 __input _ ->
+    Left  (currentPos __input, [")", "+", ","])
+; SProgram26 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; SProgram27 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; SProgram28 __input _ ->
     Left  (currentPos __input, [")", "*", "+", ",", "="])
-; S29 __input _ -> Left  (currentPos __input, [")", "*", "+", "="])
-; S30 __input _ -> Left  (currentPos __input, [")", "*", "+"])
-; S31 __input _ -> Left  (currentPos __input, [")", "*", "+", ","])
-; S32 __input _ ->
+; SProgram29 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; SProgram30 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; SProgram31 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; SProgram32 __input _ ->
     Left  (currentPos __input, [")", "*", "+", ",", "="])
-; S33 __input _ -> Left  (currentPos __input, [")", "*", "+", "="])
-; S34 __input _ -> Left  (currentPos __input, [")", "*", "+"])
-; S35 __input _ -> Left  (currentPos __input, [")", "*", "+", ","])
-; S36 __input _ ->
+; SProgram33 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; SProgram34 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; SProgram35 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; SProgram36 __input _ ->
     Left  (currentPos __input, [")", "*", "+", ",", "="])
-; S37 __input _ -> Left  (currentPos __input, [")", "*", "+", "="])
-; S38 __input _ ->
+; SProgram37 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; SProgram38 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S39 __input _ ->
+; SProgram39 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S40 __input _ ->
+; SProgram40 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S41 __input _ ->
+; SProgram41 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S42 __input _ -> Left  (currentPos __input, [")", "*", "+"])
-; S43 __input _ -> Left  (currentPos __input, [")", "*", "+", ","])
-; S44 __input _ ->
+; SProgram42 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; SProgram43 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; SProgram44 __input _ ->
     Left  (currentPos __input, [")", "*", "+", ",", "="])
-; S45 __input _ -> Left  (currentPos __input, [")", "*", "+", "="])
-; S46 __input _ -> Left  (currentPos __input, [")", "*", "+"])
-; S47 __input _ -> Left  (currentPos __input, [")", "*", "+", ","])
-; S48 __input _ ->
+; SProgram45 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; SProgram46 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; SProgram47 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; SProgram48 __input _ ->
     Left  (currentPos __input, [")", "*", "+", ",", "="])
-; S49 __input _ -> Left  (currentPos __input, [")", "*", "+", "="])
-; S50 __input _ -> Left  (currentPos __input, [")", "*", "+"])
-; S51 __input _ -> Left  (currentPos __input, [")", "*", "+", ","])
-; S52 __input _ ->
+; SProgram49 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; SProgram50 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; SProgram51 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; SProgram52 __input _ ->
     Left  (currentPos __input, [")", "*", "+", ",", "="])
-; S53 __input _ -> Left  (currentPos __input, [")", "*", "+", "="])
-; S54 __input _ -> Left  (currentPos __input, [")", "*", "+"])
-; S55 __input _ -> Left  (currentPos __input, [")", "*", "+", ","])
-; S56 __input _ ->
+; SProgram53 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; SProgram54 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; SProgram55 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; SProgram56 __input _ ->
     Left  (currentPos __input, [")", "*", "+", ",", "="])
-; S57 __input _ -> Left  (currentPos __input, [")", "*", "+", "="])
-; S58 __input _ ->
+; SProgram57 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; SProgram58 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S59 __input _ ->
+; SProgram59 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S60 __input _ ->
+; SProgram60 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S61 __input _ ->
+; SProgram61 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S62 __input _ ->
+; SProgram62 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S63 __input _ ->
+; SProgram63 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S64 __input _ ->
+; SProgram64 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S65 __input _ ->
+; SProgram65 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S66 __input _ ->
+; SProgram66 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S67 __input _ ->
+; SProgram67 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S68 __input _ ->
+; SProgram68 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S69 __input _ -> Left  (currentPos __input, [")"])
-; S70 __input _ -> Left  (currentPos __input, [")"])
-; S71 __input _ -> Left  (currentPos __input, [")"])
-; S72 __input _ -> Left  (currentPos __input, [")"])
-; S73 __input _ -> Left  (currentPos __input, [")"])
-; S74 __input _ -> Left  (currentPos __input, [")", "*", "+"])
-; S75 __input _ -> Left  (currentPos __input, [")", "*", "+", ","])
-; S76 __input _ ->
+; SProgram69 __input _ -> Left  (currentPos __input, [")"])
+; SProgram70 __input _ -> Left  (currentPos __input, [")"])
+; SProgram71 __input _ -> Left  (currentPos __input, [")"])
+; SProgram72 __input _ -> Left  (currentPos __input, [")"])
+; SProgram73 __input _ -> Left  (currentPos __input, [")"])
+; SProgram74 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; SProgram75 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; SProgram76 __input _ ->
     Left  (currentPos __input, [")", "*", "+", ",", "="])
-; S77 __input _ -> Left  (currentPos __input, [")", "*", "+", "="])
-; S78 __input _ -> Left  (currentPos __input, [")", "*", "+"])
-; S79 __input _ -> Left  (currentPos __input, [")", "*", "+", ","])
-; S80 __input _ ->
+; SProgram77 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; SProgram78 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; SProgram79 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; SProgram80 __input _ ->
     Left  (currentPos __input, [")", "*", "+", ",", "="])
-; S81 __input _ -> Left  (currentPos __input, [")", "*", "+", "="])
-; S82 __input _ -> Left  (currentPos __input, ["*", "+", ",", "."])
-; S83 __input _ ->
-    Left  (currentPos __input, ["*", "+", ",", ".", "="])
-; S84 __input _ ->
-    Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
-; S85 __input _ ->
-    Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
-; S86 __input _ -> Left  (currentPos __input, ["*", "+", ",", "."])
-; S87 __input _ ->
-    Left  (currentPos __input, ["*", "+", ",", ".", "="])
-; S88 __input _ ->
-    Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
-; S89 __input _ ->
-    Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
-; S90 __input _ -> Left  (currentPos __input, ["*", "+", ",", "."])
-; S91 __input _ ->
-    Left  (currentPos __input, ["*", "+", ",", ".", "="])
-; S92 __input _ ->
-    Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
-; S93 __input _ ->
-    Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
-; S94 __input _ ->
-    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S95 __input _ ->
-    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S96 __input _ ->
-    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S97 __input _ ->
-    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S98 __input _ -> Left  (currentPos __input, ["*", "+", ",", "."])
-; S99 __input _ ->
-    Left  (currentPos __input, ["*", "+", ",", ".", "="])
-; S100 __input _ ->
-    Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
-; S101 __input _ ->
-    Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
-; S102 __input _ ->
+; SProgram81 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; SProgram82 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", "."])
-; S103 __input _ ->
+; SProgram83 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "="])
-; S104 __input _ ->
+; SProgram84 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
-; S105 __input _ ->
+; SProgram85 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
-; S106 __input _ ->
+; SProgram86 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", "."])
+; SProgram87 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", ".", "="])
+; SProgram88 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
+; SProgram89 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
+; SProgram90 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", "."])
+; SProgram91 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", ".", "="])
+; SProgram92 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
+; SProgram93 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
+; SProgram94 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; SProgram95 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; SProgram96 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; SProgram97 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; SProgram98 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", "."])
+; SProgram99 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", ".", "="])
+; SProgram100 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
+; SProgram101 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
+; SProgram102 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", "."])
+; SProgram103 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", ".", "="])
+; SProgram104 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
+; SProgram105 __input _ ->
+    Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
+; SProgram106 __input _ ->
     Left  (currentPos __input, ["(", "*", "+", ",", ".", "="])
-; S107 __input _ ->
+; SProgram107 __input _ ->
     Left  (currentPos __input, ["(", "*", "+", ",", ".", "=", "=>"])
-; S108 __input _ ->
+; SProgram108 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", "."])
-; S109 __input _ ->
+; SProgram109 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "="])
-; S110 __input _ ->
+; SProgram110 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
-; S111 __input _ ->
+; SProgram111 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
-; S112 __input _ ->
+; SProgram112 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", "."])
-; S113 __input _ ->
+; SProgram113 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "="])
-; S114 __input _ ->
+; SProgram114 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
-; S115 __input _ ->
+; SProgram115 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
-; S116 __input _ ->
+; SProgram116 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S117 __input _ ->
+; SProgram117 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S118 __input _ ->
+; SProgram118 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S119 __input _ ->
+; SProgram119 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S120 __input _ -> Left  (currentPos __input, [")"])
-; S121 __input _ -> Left  (currentPos __input, [")"])
-; S122 __input _ -> Left  (currentPos __input, [")"])
-; S123 __input _ -> Left  (currentPos __input, [")"])
-; S124 __input _ ->
+; SProgram120 __input _ -> Left  (currentPos __input, [")"])
+; SProgram121 __input _ -> Left  (currentPos __input, [")"])
+; SProgram122 __input _ -> Left  (currentPos __input, [")"])
+; SProgram123 __input _ -> Left  (currentPos __input, [")"])
+; SProgram124 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", "."])
-; S125 __input _ ->
+; SProgram125 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "="])
-; S126 __input _ ->
+; SProgram126 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
-; S127 __input _ ->
+; SProgram127 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
-; S128 __input _ ->
+; SProgram128 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", "."])
-; S129 __input _ ->
+; SProgram129 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "="])
-; S130 __input _ ->
+; SProgram130 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "=", "=>"])
-; S131 __input _ ->
+; SProgram131 __input _ ->
     Left  (currentPos __input, ["*", "+", ",", ".", "=>"])
-; S132 __input _ ->
+; SProgram132 __input _ ->
     Left  (currentPos __input, ["+", ",", ".", "="])
-; S133 __input _ ->
+; SProgram133 __input _ ->
     Left  (currentPos __input, ["+", ",", ".", "=", "=>"])
-; S134 __input _ -> Left  (currentPos __input, ["+", ",", "."])
-; S135 __input _ ->
+; SProgram134 __input _ ->
+    Left  (currentPos __input, ["+", ",", "."])
+; SProgram135 __input _ ->
     Left  (currentPos __input, ["+", ",", ".", "=>"])
-; S136 __input _ ->
+; SProgram136 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S137 __input _ ->
+; SProgram137 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S138 __input _ ->
+; SProgram138 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S139 __input _ ->
+; SProgram139 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S140 __input _ -> Left  (currentPos __input, ["<name>"])
-; S141 __input _ -> Left  (currentPos __input, ["<name>"])
-; S142 __input _ -> Left  (currentPos __input, [",", "."])
-; S143 __input _ -> Left  (currentPos __input, [",", ".", "=>"])
-; S144 __input _ -> Left  (currentPos __input, ["<name>"])
-; S145 __input _ -> Left  (currentPos __input, ["<name>"])
-; S146 __input _ -> Left  (currentPos __input, [",", "."])
-; S147 __input _ -> Left  (currentPos __input, [",", ".", "=>"])
-; S148 __input _ -> Left  (currentPos __input, ["("])
-; S149 __input _ -> Left  (currentPos __input, ["("])
-; S150 __input _ ->
+; SProgram140 __input _ -> Left  (currentPos __input, ["<name>"])
+; SProgram141 __input _ -> Left  (currentPos __input, ["<name>"])
+; SProgram142 __input _ -> Left  (currentPos __input, [",", "."])
+; SProgram143 __input _ ->
+    Left  (currentPos __input, [",", ".", "=>"])
+; SProgram144 __input _ -> Left  (currentPos __input, ["<name>"])
+; SProgram145 __input _ -> Left  (currentPos __input, ["<name>"])
+; SProgram146 __input _ -> Left  (currentPos __input, [",", "."])
+; SProgram147 __input _ ->
+    Left  (currentPos __input, [",", ".", "=>"])
+; SProgram148 __input _ -> Left  (currentPos __input, ["("])
+; SProgram149 __input _ -> Left  (currentPos __input, ["("])
+; SProgram150 __input _ ->
     Left  (currentPos __input, ["(", ")", "<Name>", "<name>", "<num>"])
-; S151 __input _ ->
+; SProgram151 __input _ ->
     Left  (currentPos __input, ["(", ")", "<Name>", "<name>", "<num>"])
-; S152 __input _ -> Left  (currentPos __input, [",", "."])
-; S153 __input _ -> Left  (currentPos __input, [",", "."])
-; S154 __input _ -> Left  (currentPos __input, [",", "."])
-; S155 __input _ -> Left  (currentPos __input, [",", ".", "=>"])
-; S156 __input _ -> Left  (currentPos __input, [",", "."])
-; S157 __input _ -> Left  (currentPos __input, [",", ".", "=>"])
-; S158 __input _ -> Left  (currentPos __input, [",", "."])
-; S159 __input _ -> Left  (currentPos __input, [",", ".", "=>"])
-; S160 __input _ -> Left  (currentPos __input, [")"])
-; S161 __input _ -> Left  (currentPos __input, [")"])
-; S162 __input _ ->
+; SProgram152 __input _ -> Left  (currentPos __input, [",", "."])
+; SProgram153 __input _ -> Left  (currentPos __input, [",", "."])
+; SProgram154 __input _ -> Left  (currentPos __input, [",", "."])
+; SProgram155 __input _ ->
+    Left  (currentPos __input, [",", ".", "=>"])
+; SProgram156 __input _ -> Left  (currentPos __input, [",", "."])
+; SProgram157 __input _ ->
+    Left  (currentPos __input, [",", ".", "=>"])
+; SProgram158 __input _ -> Left  (currentPos __input, [",", "."])
+; SProgram159 __input _ ->
+    Left  (currentPos __input, [",", ".", "=>"])
+; SProgram160 __input _ -> Left  (currentPos __input, [")"])
+; SProgram161 __input _ -> Left  (currentPos __input, [")"])
+; SProgram162 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S163 __input _ ->
+; SProgram163 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
-; S164 __input _ -> Left  (currentPos __input, [",", "."])
-; S165 __input _ -> Left  (currentPos __input, [",", ".", "=>"])
-; S166 __input _ -> Left  (currentPos __input, ["("])
-; S167 __input _ ->
+; SProgram164 __input _ -> Left  (currentPos __input, [",", "."])
+; SProgram165 __input _ ->
+    Left  (currentPos __input, [",", ".", "=>"])
+; SProgram166 __input _ -> Left  (currentPos __input, ["("])
+; SProgram167 __input _ ->
     Left  (currentPos __input, ["(", ")", "<Name>", "<name>", "<num>"])
-; S168 __input _ ->
+; SProgram168 __input _ ->
     Left  (currentPos __input, ["->", ".", "<-", "=>"])
-; S169 __input _ ->
+; SProgram169 __input _ ->
     Left  (currentPos __input, ["->", ".", "<-", "=>"])
-; S170 __input _ -> Left  (currentPos __input, [")"])
-; S171 __input _ ->
+; SProgram170 __input _ -> Left  (currentPos __input, [")"])
+; SProgram171 __input _ ->
     Left  (currentPos __input, ["->", ".", "<-", "=>"])
-; S172 __input _ -> Left  (currentPos __input, [",", "."])
-; S173 __input _ -> Left  (currentPos __input, [",", "."])
-; S174 __input _ -> Left  (currentPos __input, [",", ".", "=>"])
-; S175 __input _ -> Left  (currentPos __input, ["+", "-"])
-; S176 __input _ ->
+; SProgram172 __input _ -> Left  (currentPos __input, [",", "."])
+; SProgram173 __input _ -> Left  (currentPos __input, [",", "."])
+; SProgram174 __input _ ->
+    Left  (currentPos __input, [",", ".", "=>"])
+; SProgram175 __input _ -> Left  (currentPos __input, ["+", "-"])
+; SProgram176 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>", "~"])
-; S177 __input _ ->
+; SProgram177 __input _ ->
     Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>", "~"])
-; S178 __input _ -> Left  (currentPos __input, ["."])
-; S179 __input _ -> Left  (currentPos __input, ["."])
-; S180 __input _ -> Left  (currentPos __input, [".", "=>"])
+; SProgram178 __input _ -> Left  (currentPos __input, ["."])
+; SProgram179 __input _ -> Left  (currentPos __input, ["."])
+; SProgram180 __input _ -> Left  (currentPos __input, [".", "=>"])
 } where {
 ; action0 pos res =
 res
@@ -2525,14 +2614,1845 @@ res
     ConstNamed pos n
 ; action76 pos n =
     ConstInt   pos n
+; action79 pos c =
+    Expect pos c
+; action80 pos c =
+    Notify pos c
+; action81 pos e =
+    Guard  pos e
+; action84 pos tests =
+    TestSuite {tests}
+; action87 pos t =
+    [t]
+; action88 pos t ts =
+     t : ts
 }
 parseProgram :: FilePath -> IO (Either LexerError (Either (Pos, [String]) Program))
 parseProgram filepath = do
   text <- Text.readFile filepath
   case lexText filepath text ["(", ")", "*", "+", ",", "-", "->",
-                              ".", "<-", "=", "=>", "~"] of
+                              ".", "<-", "=", "=>", "expect", "guard", "notify", "test", "~"] of
     Left  err   -> pure (Left err)
-    Right input -> pure (Right (__runProgram  S0 input Nil))
+    Right input -> pure (Right (__runProgram SProgram0 input NilProgram))
+data StackTestSuite' xs where
+  NilTestSuite  ::      StackTestSuite' '[]
+  PushTestSuite :: x -> StackTestSuite xs -> StackTestSuite' (x : xs)
+  
+type StackTestSuite a = (StTestSuite a, Pos, StackTestSuite' a)
+  
+pattern PushTestSuite' :: a -> StackTestSuite xs -> StackTestSuite (a : xs)
+pattern PushTestSuite' a xs <- (_, _, PushTestSuite a xs)
+  
+data StTestSuite :: [Kind.Type] -> Kind.Type where
+  STestSuite0 :: StTestSuite (a)
+  STestSuite1 :: StTestSuite (TestSuite : a)
+  STestSuite2 :: StTestSuite (Text : a)
+  STestSuite3 :: StTestSuite (() : a)
+  STestSuite4 :: StTestSuite (Expr : a)
+  STestSuite5 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite6 :: StTestSuite (Expr : a)
+  STestSuite7 :: StTestSuite (Expr : a)
+  STestSuite8 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite9 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite10 :: StTestSuite (Expr : a)
+  STestSuite11 :: StTestSuite (Expr : a)
+  STestSuite12 :: StTestSuite (() : a)
+  STestSuite13 :: StTestSuite (() : a)
+  STestSuite14 :: StTestSuite (Text : a)
+  STestSuite15 :: StTestSuite (Text : a)
+  STestSuite16 :: StTestSuite (Const : a)
+  STestSuite17 :: StTestSuite (Const : a)
+  STestSuite18 :: StTestSuite (Text : a)
+  STestSuite19 :: StTestSuite (Text : a)
+  STestSuite20 :: StTestSuite (Integer : a)
+  STestSuite21 :: StTestSuite (Integer : a)
+  STestSuite22 :: StTestSuite (() : a)
+  STestSuite23 :: StTestSuite (() : a)
+  STestSuite24 :: StTestSuite (() : a)
+  STestSuite25 :: StTestSuite (() : a)
+  STestSuite26 :: StTestSuite (Test : a)
+  STestSuite27 :: StTestSuite ([Expr] : Text : a)
+  STestSuite28 :: StTestSuite (() : () : a)
+  STestSuite29 :: StTestSuite ([Expr] : () : a)
+  STestSuite30 :: StTestSuite (() : Expr : a)
+  STestSuite31 :: StTestSuite (() : Expr : a)
+  STestSuite32 :: StTestSuite (() : Expr : a)
+  STestSuite33 :: StTestSuite (() : Expr : a)
+  STestSuite34 :: StTestSuite (() : Expr : a)
+  STestSuite35 :: StTestSuite (Expr : () : a)
+  STestSuite36 :: StTestSuite (Expr : () : a)
+  STestSuite37 :: StTestSuite (Call : () : a)
+  STestSuite38 :: StTestSuite (Call : () : a)
+  STestSuite39 :: StTestSuite (Expr : () : a)
+  STestSuite40 :: StTestSuite ([Test] : () : a)
+  STestSuite41 :: StTestSuite ([Test] : Test : a)
+  STestSuite42 :: StTestSuite (() : [Expr] : () : a)
+  STestSuite43 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite44 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite45 :: StTestSuite (() : Expr : () : a)
+  STestSuite46 :: StTestSuite (() : Expr : () : a)
+  STestSuite47 :: StTestSuite (Expr : a)
+  STestSuite48 :: StTestSuite (Expr : a)
+  STestSuite49 :: StTestSuite (Expr : a)
+  STestSuite50 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite51 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite52 :: StTestSuite (Expr : a)
+  STestSuite53 :: StTestSuite (Expr : a)
+  STestSuite54 :: StTestSuite (Expr : a)
+  STestSuite55 :: StTestSuite (Expr : a)
+  STestSuite56 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite57 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite58 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite59 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite60 :: StTestSuite (Expr : a)
+  STestSuite61 :: StTestSuite (Expr : a)
+  STestSuite62 :: StTestSuite (Expr : a)
+  STestSuite63 :: StTestSuite (Expr : a)
+  STestSuite64 :: StTestSuite (() : a)
+  STestSuite65 :: StTestSuite (() : a)
+  STestSuite66 :: StTestSuite (() : a)
+  STestSuite67 :: StTestSuite (() : a)
+  STestSuite68 :: StTestSuite (Text : a)
+  STestSuite69 :: StTestSuite (Text : a)
+  STestSuite70 :: StTestSuite (Text : a)
+  STestSuite71 :: StTestSuite (Text : a)
+  STestSuite72 :: StTestSuite (Const : a)
+  STestSuite73 :: StTestSuite (Const : a)
+  STestSuite74 :: StTestSuite (Const : a)
+  STestSuite75 :: StTestSuite (Const : a)
+  STestSuite76 :: StTestSuite (Text : a)
+  STestSuite77 :: StTestSuite (Text : a)
+  STestSuite78 :: StTestSuite (Text : a)
+  STestSuite79 :: StTestSuite (Text : a)
+  STestSuite80 :: StTestSuite (Integer : a)
+  STestSuite81 :: StTestSuite (Integer : a)
+  STestSuite82 :: StTestSuite (Integer : a)
+  STestSuite83 :: StTestSuite (Integer : a)
+  STestSuite84 :: StTestSuite (() : Expr : a)
+  STestSuite85 :: StTestSuite (() : Expr : a)
+  STestSuite86 :: StTestSuite (() : Expr : a)
+  STestSuite87 :: StTestSuite (() : Expr : a)
+  STestSuite88 :: StTestSuite (() : Expr : a)
+  STestSuite89 :: StTestSuite (() : Expr : a)
+  STestSuite90 :: StTestSuite (() : Expr : a)
+  STestSuite91 :: StTestSuite (() : Expr : a)
+  STestSuite92 :: StTestSuite (() : Expr : a)
+  STestSuite93 :: StTestSuite (() : Expr : a)
+  STestSuite94 :: StTestSuite (() : Expr : a)
+  STestSuite95 :: StTestSuite (Expr : () : a)
+  STestSuite96 :: StTestSuite (Expr : () : a)
+  STestSuite97 :: StTestSuite (Expr : () : a)
+  STestSuite98 :: StTestSuite (Expr : () : a)
+  STestSuite99 :: StTestSuite ([Expr] : () : Expr : a)
+  STestSuite100 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite101 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite102 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite103 :: StTestSuite (Expr : () : Expr : a)
+  STestSuite104 :: StTestSuite (() : Expr : () : a)
+  STestSuite105 :: StTestSuite (() : Expr : () : a)
+  STestSuite106 :: StTestSuite (() : Expr : () : a)
+  STestSuite107 :: StTestSuite (() : Expr : () : a)
+  
+__gotoAddForTestSuite :: ([Lexeme], Pos) -> Expr -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoAddForTestSuite toks term stk@(state, _, _) = case state of
+  STestSuite3 -> __runTestSuite STestSuite48 toks (PushTestSuite term stk)
+  STestSuite12 -> __runTestSuite STestSuite49 toks (PushTestSuite term stk)
+  STestSuite13 -> __runTestSuite STestSuite49 toks (PushTestSuite term stk)
+  STestSuite24 -> __runTestSuite STestSuite4 toks (PushTestSuite term stk)
+  STestSuite30 -> __runTestSuite STestSuite5 toks (PushTestSuite term stk)
+  STestSuite64 -> __runTestSuite STestSuite49 toks (PushTestSuite term stk)
+  STestSuite65 -> __runTestSuite STestSuite49 toks (PushTestSuite term stk)
+  STestSuite66 -> __runTestSuite STestSuite49 toks (PushTestSuite term stk)
+  STestSuite67 -> __runTestSuite STestSuite49 toks (PushTestSuite term stk)
+  STestSuite84 -> __runTestSuite STestSuite48 toks (PushTestSuite term stk)
+  STestSuite85 -> __runTestSuite STestSuite50 toks (PushTestSuite term stk)
+  STestSuite86 -> __runTestSuite STestSuite51 toks (PushTestSuite term stk)
+  _ -> error ""
+
+__gotoCallForTestSuite :: ([Lexeme], Pos) -> Call -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoCallForTestSuite toks term stk@(state, _, _) = case state of
+  STestSuite22 -> __runTestSuite STestSuite37 toks (PushTestSuite term stk)
+  STestSuite23 -> __runTestSuite STestSuite38 toks (PushTestSuite term stk)
+  _ -> error ""
+
+__gotoChangeForTestSuite :: ([Lexeme], Pos) -> Change -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoChangeForTestSuite toks term stk@(state, _, _) = case state of
+  _ -> error ""
+
+__gotoChangesForTestSuite :: ([Lexeme], Pos) -> [Change] -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoChangesForTestSuite toks term stk@(state, _, _) = case state of
+  _ -> error ""
+
+__gotoClauseForTestSuite :: ([Lexeme], Pos) -> Clause -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoClauseForTestSuite toks term stk@(state, _, _) = case state of
+  _ -> error ""
+
+__gotoCondForTestSuite :: ([Lexeme], Pos) -> Cond -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoCondForTestSuite toks term stk@(state, _, _) = case state of
+  _ -> error ""
+
+__gotoCondsForTestSuite :: ([Lexeme], Pos) -> [Cond] -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoCondsForTestSuite toks term stk@(state, _, _) = case state of
+  _ -> error ""
+
+__gotoConstForTestSuite :: ([Lexeme], Pos) -> Const -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoConstForTestSuite toks term stk@(state, _, _) = case state of
+  STestSuite3 -> __runTestSuite STestSuite74 toks (PushTestSuite term stk)
+  STestSuite12 -> __runTestSuite STestSuite75 toks (PushTestSuite term stk)
+  STestSuite13 -> __runTestSuite STestSuite75 toks (PushTestSuite term stk)
+  STestSuite24 -> __runTestSuite STestSuite16 toks (PushTestSuite term stk)
+  STestSuite30 -> __runTestSuite STestSuite17 toks (PushTestSuite term stk)
+  STestSuite31 -> __runTestSuite STestSuite16 toks (PushTestSuite term stk)
+  STestSuite32 -> __runTestSuite STestSuite17 toks (PushTestSuite term stk)
+  STestSuite33 -> __runTestSuite STestSuite16 toks (PushTestSuite term stk)
+  STestSuite34 -> __runTestSuite STestSuite17 toks (PushTestSuite term stk)
+  STestSuite64 -> __runTestSuite STestSuite75 toks (PushTestSuite term stk)
+  STestSuite65 -> __runTestSuite STestSuite75 toks (PushTestSuite term stk)
+  STestSuite66 -> __runTestSuite STestSuite75 toks (PushTestSuite term stk)
+  STestSuite67 -> __runTestSuite STestSuite75 toks (PushTestSuite term stk)
+  STestSuite84 -> __runTestSuite STestSuite74 toks (PushTestSuite term stk)
+  STestSuite85 -> __runTestSuite STestSuite72 toks (PushTestSuite term stk)
+  STestSuite86 -> __runTestSuite STestSuite73 toks (PushTestSuite term stk)
+  STestSuite87 -> __runTestSuite STestSuite72 toks (PushTestSuite term stk)
+  STestSuite88 -> __runTestSuite STestSuite73 toks (PushTestSuite term stk)
+  STestSuite89 -> __runTestSuite STestSuite74 toks (PushTestSuite term stk)
+  STestSuite90 -> __runTestSuite STestSuite75 toks (PushTestSuite term stk)
+  STestSuite91 -> __runTestSuite STestSuite72 toks (PushTestSuite term stk)
+  STestSuite92 -> __runTestSuite STestSuite73 toks (PushTestSuite term stk)
+  STestSuite93 -> __runTestSuite STestSuite74 toks (PushTestSuite term stk)
+  STestSuite94 -> __runTestSuite STestSuite75 toks (PushTestSuite term stk)
+  _ -> error ""
+
+__gotoEffectForTestSuite :: ([Lexeme], Pos) -> Effect -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoEffectForTestSuite toks term stk@(state, _, _) = case state of
+  _ -> error ""
+
+__gotoExprForTestSuite :: ([Lexeme], Pos) -> Expr -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoExprForTestSuite toks term stk@(state, _, _) = case state of
+  STestSuite3 -> __runTestSuite STestSuite47 toks (PushTestSuite term stk)
+  STestSuite12 -> __runTestSuite STestSuite35 toks (PushTestSuite term stk)
+  STestSuite13 -> __runTestSuite STestSuite36 toks (PushTestSuite term stk)
+  STestSuite24 -> __runTestSuite STestSuite39 toks (PushTestSuite term stk)
+  STestSuite64 -> __runTestSuite STestSuite95 toks (PushTestSuite term stk)
+  STestSuite65 -> __runTestSuite STestSuite96 toks (PushTestSuite term stk)
+  STestSuite66 -> __runTestSuite STestSuite97 toks (PushTestSuite term stk)
+  STestSuite67 -> __runTestSuite STestSuite98 toks (PushTestSuite term stk)
+  STestSuite84 -> __runTestSuite STestSuite47 toks (PushTestSuite term stk)
+  _ -> error ""
+
+__gotoExprs1ForTestSuite :: ([Lexeme], Pos) -> [Expr] -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoExprs1ForTestSuite toks term stk@(state, _, _) = case state of
+  STestSuite3 -> __runTestSuite STestSuite29 toks (PushTestSuite term stk)
+  STestSuite84 -> __runTestSuite STestSuite99 toks (PushTestSuite term stk)
+  _ -> error ""
+
+__gotoMultForTestSuite :: ([Lexeme], Pos) -> Expr -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoMultForTestSuite toks term stk@(state, _, _) = case state of
+  STestSuite3 -> __runTestSuite STestSuite54 toks (PushTestSuite term stk)
+  STestSuite12 -> __runTestSuite STestSuite55 toks (PushTestSuite term stk)
+  STestSuite13 -> __runTestSuite STestSuite55 toks (PushTestSuite term stk)
+  STestSuite24 -> __runTestSuite STestSuite6 toks (PushTestSuite term stk)
+  STestSuite30 -> __runTestSuite STestSuite7 toks (PushTestSuite term stk)
+  STestSuite31 -> __runTestSuite STestSuite8 toks (PushTestSuite term stk)
+  STestSuite32 -> __runTestSuite STestSuite9 toks (PushTestSuite term stk)
+  STestSuite64 -> __runTestSuite STestSuite55 toks (PushTestSuite term stk)
+  STestSuite65 -> __runTestSuite STestSuite55 toks (PushTestSuite term stk)
+  STestSuite66 -> __runTestSuite STestSuite55 toks (PushTestSuite term stk)
+  STestSuite67 -> __runTestSuite STestSuite55 toks (PushTestSuite term stk)
+  STestSuite84 -> __runTestSuite STestSuite54 toks (PushTestSuite term stk)
+  STestSuite85 -> __runTestSuite STestSuite52 toks (PushTestSuite term stk)
+  STestSuite86 -> __runTestSuite STestSuite53 toks (PushTestSuite term stk)
+  STestSuite87 -> __runTestSuite STestSuite56 toks (PushTestSuite term stk)
+  STestSuite88 -> __runTestSuite STestSuite57 toks (PushTestSuite term stk)
+  STestSuite89 -> __runTestSuite STestSuite58 toks (PushTestSuite term stk)
+  STestSuite90 -> __runTestSuite STestSuite59 toks (PushTestSuite term stk)
+  _ -> error ""
+
+__gotoProgramForTestSuite :: ([Lexeme], Pos) -> Program -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoProgramForTestSuite toks term stk@(state, _, _) = case state of
+  _ -> error ""
+
+__gotoStmtForTestSuite :: ([Lexeme], Pos) -> Stmt -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoStmtForTestSuite toks term stk@(state, _, _) = case state of
+  _ -> error ""
+
+__gotoStmtsForTestSuite :: ([Lexeme], Pos) -> [Stmt] -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoStmtsForTestSuite toks term stk@(state, _, _) = case state of
+  _ -> error ""
+
+__gotoTermForTestSuite :: ([Lexeme], Pos) -> Expr -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoTermForTestSuite toks term stk@(state, _, _) = case state of
+  STestSuite3 -> __runTestSuite STestSuite62 toks (PushTestSuite term stk)
+  STestSuite12 -> __runTestSuite STestSuite63 toks (PushTestSuite term stk)
+  STestSuite13 -> __runTestSuite STestSuite63 toks (PushTestSuite term stk)
+  STestSuite24 -> __runTestSuite STestSuite10 toks (PushTestSuite term stk)
+  STestSuite30 -> __runTestSuite STestSuite11 toks (PushTestSuite term stk)
+  STestSuite31 -> __runTestSuite STestSuite10 toks (PushTestSuite term stk)
+  STestSuite32 -> __runTestSuite STestSuite11 toks (PushTestSuite term stk)
+  STestSuite33 -> __runTestSuite STestSuite43 toks (PushTestSuite term stk)
+  STestSuite34 -> __runTestSuite STestSuite44 toks (PushTestSuite term stk)
+  STestSuite64 -> __runTestSuite STestSuite63 toks (PushTestSuite term stk)
+  STestSuite65 -> __runTestSuite STestSuite63 toks (PushTestSuite term stk)
+  STestSuite66 -> __runTestSuite STestSuite63 toks (PushTestSuite term stk)
+  STestSuite67 -> __runTestSuite STestSuite63 toks (PushTestSuite term stk)
+  STestSuite84 -> __runTestSuite STestSuite62 toks (PushTestSuite term stk)
+  STestSuite85 -> __runTestSuite STestSuite60 toks (PushTestSuite term stk)
+  STestSuite86 -> __runTestSuite STestSuite61 toks (PushTestSuite term stk)
+  STestSuite87 -> __runTestSuite STestSuite60 toks (PushTestSuite term stk)
+  STestSuite88 -> __runTestSuite STestSuite61 toks (PushTestSuite term stk)
+  STestSuite89 -> __runTestSuite STestSuite62 toks (PushTestSuite term stk)
+  STestSuite90 -> __runTestSuite STestSuite63 toks (PushTestSuite term stk)
+  STestSuite91 -> __runTestSuite STestSuite100 toks (PushTestSuite term stk)
+  STestSuite92 -> __runTestSuite STestSuite101 toks (PushTestSuite term stk)
+  STestSuite93 -> __runTestSuite STestSuite102 toks (PushTestSuite term stk)
+  STestSuite94 -> __runTestSuite STestSuite103 toks (PushTestSuite term stk)
+  _ -> error ""
+
+__gotoTestForTestSuite :: ([Lexeme], Pos) -> Test -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoTestForTestSuite toks term stk@(state, _, _) = case state of
+  STestSuite25 -> __runTestSuite STestSuite26 toks (PushTestSuite term stk)
+  STestSuite26 -> __runTestSuite STestSuite26 toks (PushTestSuite term stk)
+  _ -> error ""
+
+__gotoTestSuiteForTestSuite :: ([Lexeme], Pos) -> TestSuite -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoTestSuiteForTestSuite toks term stk@(state, _, _) = case state of
+  STestSuite0 -> __runTestSuite STestSuite1 toks (PushTestSuite term stk)
+  _ -> error ""
+
+__gotoTestsForTestSuite :: ([Lexeme], Pos) -> [Test] -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoTestsForTestSuite toks term stk@(state, _, _) = case state of
+  STestSuite25 -> __runTestSuite STestSuite40 toks (PushTestSuite term stk)
+  STestSuite26 -> __runTestSuite STestSuite41 toks (PushTestSuite term stk)
+  _ -> error ""
+
+__gotoTupleForTestSuite :: ([Lexeme], Pos) -> [Expr] -> StackTestSuite a -> Either (Pos, [String]) TestSuite
+__gotoTupleForTestSuite toks term stk@(state, _, _) = case state of
+  STestSuite2 -> __runTestSuite STestSuite27 toks (PushTestSuite term stk)
+  _ -> error ""
+  
+__runTestSuite :: StTestSuite a -> ([Lexeme], Pos) -> StackTestSuite' a -> Either (Pos, [String]) TestSuite
+__runTestSuite = \cases {
+; STestSuite0 ((__p,  "test") : __input, __end) __stk ->
+    __runTestSuite STestSuite25 (__input, __end) (PushTestSuite () (STestSuite0, __p, __stk))
+; STestSuite2 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite3 (__input, __end) (PushTestSuite () (STestSuite2, __p, __stk))
+; STestSuite3 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite66 (__input, __end) (PushTestSuite () (STestSuite3, __p, __stk))
+; STestSuite3 ((__p,  ")") : __input, __end) __stk ->
+    __runTestSuite STestSuite28 (__input, __end) (PushTestSuite () (STestSuite3, __p, __stk))
+; STestSuite3 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite70 (__input, __end) (PushTestSuite n (STestSuite3, __p, __stk))
+; STestSuite3 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite78 (__input, __end) (PushTestSuite n (STestSuite3, __p, __stk))
+; STestSuite3 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite82 (__input, __end) (PushTestSuite n (STestSuite3, __p, __stk))
+; STestSuite4 ((__p,  "+") : __input, __end) __stk ->
+    __runTestSuite STestSuite31 (__input, __end) (PushTestSuite () (STestSuite4, __p, __stk))
+; STestSuite4 ((__p,  "=") : __input, __end) __stk ->
+    __runTestSuite STestSuite30 (__input, __end) (PushTestSuite () (STestSuite4, __p, __stk))
+; STestSuite5 ((__p,  "+") : __input, __end) __stk ->
+    __runTestSuite STestSuite32 (__input, __end) (PushTestSuite () (STestSuite5, __p, __stk))
+; STestSuite6 ((__p,  "*") : __input, __end) __stk ->
+    __runTestSuite STestSuite33 (__input, __end) (PushTestSuite () (STestSuite6, __p, __stk))
+; STestSuite7 ((__p,  "*") : __input, __end) __stk ->
+    __runTestSuite STestSuite34 (__input, __end) (PushTestSuite () (STestSuite7, __p, __stk))
+; STestSuite8 ((__p,  "*") : __input, __end) __stk ->
+    __runTestSuite STestSuite33 (__input, __end) (PushTestSuite () (STestSuite8, __p, __stk))
+; STestSuite9 ((__p,  "*") : __input, __end) __stk ->
+    __runTestSuite STestSuite34 (__input, __end) (PushTestSuite () (STestSuite9, __p, __stk))
+; STestSuite12 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite67 (__input, __end) (PushTestSuite () (STestSuite12, __p, __stk))
+; STestSuite12 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite71 (__input, __end) (PushTestSuite n (STestSuite12, __p, __stk))
+; STestSuite12 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite79 (__input, __end) (PushTestSuite n (STestSuite12, __p, __stk))
+; STestSuite12 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite83 (__input, __end) (PushTestSuite n (STestSuite12, __p, __stk))
+; STestSuite13 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite67 (__input, __end) (PushTestSuite () (STestSuite13, __p, __stk))
+; STestSuite13 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite71 (__input, __end) (PushTestSuite n (STestSuite13, __p, __stk))
+; STestSuite13 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite79 (__input, __end) (PushTestSuite n (STestSuite13, __p, __stk))
+; STestSuite13 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite83 (__input, __end) (PushTestSuite n (STestSuite13, __p, __stk))
+; STestSuite22 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite2 (__input, __end) (PushTestSuite n (STestSuite22, __p, __stk))
+; STestSuite23 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite2 (__input, __end) (PushTestSuite n (STestSuite23, __p, __stk))
+; STestSuite24 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite12 (__input, __end) (PushTestSuite () (STestSuite24, __p, __stk))
+; STestSuite24 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite14 (__input, __end) (PushTestSuite n (STestSuite24, __p, __stk))
+; STestSuite24 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite18 (__input, __end) (PushTestSuite n (STestSuite24, __p, __stk))
+; STestSuite24 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite20 (__input, __end) (PushTestSuite n (STestSuite24, __p, __stk))
+; STestSuite25 ((__p,  "expect") : __input, __end) __stk ->
+    __runTestSuite STestSuite22 (__input, __end) (PushTestSuite () (STestSuite25, __p, __stk))
+; STestSuite25 ((__p,  "guard") : __input, __end) __stk ->
+    __runTestSuite STestSuite24 (__input, __end) (PushTestSuite () (STestSuite25, __p, __stk))
+; STestSuite25 ((__p,  "notify") : __input, __end) __stk ->
+    __runTestSuite STestSuite23 (__input, __end) (PushTestSuite () (STestSuite25, __p, __stk))
+; STestSuite26 ((__p,  "expect") : __input, __end) __stk ->
+    __runTestSuite STestSuite22 (__input, __end) (PushTestSuite () (STestSuite26, __p, __stk))
+; STestSuite26 ((__p,  "guard") : __input, __end) __stk ->
+    __runTestSuite STestSuite24 (__input, __end) (PushTestSuite () (STestSuite26, __p, __stk))
+; STestSuite26 ((__p,  "notify") : __input, __end) __stk ->
+    __runTestSuite STestSuite23 (__input, __end) (PushTestSuite () (STestSuite26, __p, __stk))
+; STestSuite29 ((__p,  ")") : __input, __end) __stk ->
+    __runTestSuite STestSuite42 (__input, __end) (PushTestSuite () (STestSuite29, __p, __stk))
+; STestSuite30 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite13 (__input, __end) (PushTestSuite () (STestSuite30, __p, __stk))
+; STestSuite30 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite15 (__input, __end) (PushTestSuite n (STestSuite30, __p, __stk))
+; STestSuite30 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite19 (__input, __end) (PushTestSuite n (STestSuite30, __p, __stk))
+; STestSuite30 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite21 (__input, __end) (PushTestSuite n (STestSuite30, __p, __stk))
+; STestSuite31 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite12 (__input, __end) (PushTestSuite () (STestSuite31, __p, __stk))
+; STestSuite31 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite14 (__input, __end) (PushTestSuite n (STestSuite31, __p, __stk))
+; STestSuite31 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite18 (__input, __end) (PushTestSuite n (STestSuite31, __p, __stk))
+; STestSuite31 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite20 (__input, __end) (PushTestSuite n (STestSuite31, __p, __stk))
+; STestSuite32 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite13 (__input, __end) (PushTestSuite () (STestSuite32, __p, __stk))
+; STestSuite32 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite15 (__input, __end) (PushTestSuite n (STestSuite32, __p, __stk))
+; STestSuite32 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite19 (__input, __end) (PushTestSuite n (STestSuite32, __p, __stk))
+; STestSuite32 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite21 (__input, __end) (PushTestSuite n (STestSuite32, __p, __stk))
+; STestSuite33 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite12 (__input, __end) (PushTestSuite () (STestSuite33, __p, __stk))
+; STestSuite33 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite14 (__input, __end) (PushTestSuite n (STestSuite33, __p, __stk))
+; STestSuite33 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite18 (__input, __end) (PushTestSuite n (STestSuite33, __p, __stk))
+; STestSuite33 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite20 (__input, __end) (PushTestSuite n (STestSuite33, __p, __stk))
+; STestSuite34 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite13 (__input, __end) (PushTestSuite () (STestSuite34, __p, __stk))
+; STestSuite34 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite15 (__input, __end) (PushTestSuite n (STestSuite34, __p, __stk))
+; STestSuite34 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite19 (__input, __end) (PushTestSuite n (STestSuite34, __p, __stk))
+; STestSuite34 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite21 (__input, __end) (PushTestSuite n (STestSuite34, __p, __stk))
+; STestSuite35 ((__p,  ")") : __input, __end) __stk ->
+    __runTestSuite STestSuite45 (__input, __end) (PushTestSuite () (STestSuite35, __p, __stk))
+; STestSuite36 ((__p,  ")") : __input, __end) __stk ->
+    __runTestSuite STestSuite46 (__input, __end) (PushTestSuite () (STestSuite36, __p, __stk))
+; STestSuite47 ((__p,  ",") : __input, __end) __stk ->
+    __runTestSuite STestSuite84 (__input, __end) (PushTestSuite () (STestSuite47, __p, __stk))
+; STestSuite48 ((__p,  "+") : __input, __end) __stk ->
+    __runTestSuite STestSuite89 (__input, __end) (PushTestSuite () (STestSuite48, __p, __stk))
+; STestSuite48 ((__p,  "=") : __input, __end) __stk ->
+    __runTestSuite STestSuite86 (__input, __end) (PushTestSuite () (STestSuite48, __p, __stk))
+; STestSuite49 ((__p,  "+") : __input, __end) __stk ->
+    __runTestSuite STestSuite90 (__input, __end) (PushTestSuite () (STestSuite49, __p, __stk))
+; STestSuite49 ((__p,  "=") : __input, __end) __stk ->
+    __runTestSuite STestSuite85 (__input, __end) (PushTestSuite () (STestSuite49, __p, __stk))
+; STestSuite50 ((__p,  "+") : __input, __end) __stk ->
+    __runTestSuite STestSuite87 (__input, __end) (PushTestSuite () (STestSuite50, __p, __stk))
+; STestSuite51 ((__p,  "+") : __input, __end) __stk ->
+    __runTestSuite STestSuite88 (__input, __end) (PushTestSuite () (STestSuite51, __p, __stk))
+; STestSuite52 ((__p,  "*") : __input, __end) __stk ->
+    __runTestSuite STestSuite91 (__input, __end) (PushTestSuite () (STestSuite52, __p, __stk))
+; STestSuite53 ((__p,  "*") : __input, __end) __stk ->
+    __runTestSuite STestSuite92 (__input, __end) (PushTestSuite () (STestSuite53, __p, __stk))
+; STestSuite54 ((__p,  "*") : __input, __end) __stk ->
+    __runTestSuite STestSuite93 (__input, __end) (PushTestSuite () (STestSuite54, __p, __stk))
+; STestSuite55 ((__p,  "*") : __input, __end) __stk ->
+    __runTestSuite STestSuite94 (__input, __end) (PushTestSuite () (STestSuite55, __p, __stk))
+; STestSuite56 ((__p,  "*") : __input, __end) __stk ->
+    __runTestSuite STestSuite91 (__input, __end) (PushTestSuite () (STestSuite56, __p, __stk))
+; STestSuite57 ((__p,  "*") : __input, __end) __stk ->
+    __runTestSuite STestSuite92 (__input, __end) (PushTestSuite () (STestSuite57, __p, __stk))
+; STestSuite58 ((__p,  "*") : __input, __end) __stk ->
+    __runTestSuite STestSuite93 (__input, __end) (PushTestSuite () (STestSuite58, __p, __stk))
+; STestSuite59 ((__p,  "*") : __input, __end) __stk ->
+    __runTestSuite STestSuite94 (__input, __end) (PushTestSuite () (STestSuite59, __p, __stk))
+; STestSuite64 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite67 (__input, __end) (PushTestSuite () (STestSuite64, __p, __stk))
+; STestSuite64 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite71 (__input, __end) (PushTestSuite n (STestSuite64, __p, __stk))
+; STestSuite64 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite79 (__input, __end) (PushTestSuite n (STestSuite64, __p, __stk))
+; STestSuite64 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite83 (__input, __end) (PushTestSuite n (STestSuite64, __p, __stk))
+; STestSuite65 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite67 (__input, __end) (PushTestSuite () (STestSuite65, __p, __stk))
+; STestSuite65 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite71 (__input, __end) (PushTestSuite n (STestSuite65, __p, __stk))
+; STestSuite65 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite79 (__input, __end) (PushTestSuite n (STestSuite65, __p, __stk))
+; STestSuite65 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite83 (__input, __end) (PushTestSuite n (STestSuite65, __p, __stk))
+; STestSuite66 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite67 (__input, __end) (PushTestSuite () (STestSuite66, __p, __stk))
+; STestSuite66 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite71 (__input, __end) (PushTestSuite n (STestSuite66, __p, __stk))
+; STestSuite66 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite79 (__input, __end) (PushTestSuite n (STestSuite66, __p, __stk))
+; STestSuite66 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite83 (__input, __end) (PushTestSuite n (STestSuite66, __p, __stk))
+; STestSuite67 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite67 (__input, __end) (PushTestSuite () (STestSuite67, __p, __stk))
+; STestSuite67 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite71 (__input, __end) (PushTestSuite n (STestSuite67, __p, __stk))
+; STestSuite67 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite79 (__input, __end) (PushTestSuite n (STestSuite67, __p, __stk))
+; STestSuite67 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite83 (__input, __end) (PushTestSuite n (STestSuite67, __p, __stk))
+; STestSuite84 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite66 (__input, __end) (PushTestSuite () (STestSuite84, __p, __stk))
+; STestSuite84 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite70 (__input, __end) (PushTestSuite n (STestSuite84, __p, __stk))
+; STestSuite84 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite78 (__input, __end) (PushTestSuite n (STestSuite84, __p, __stk))
+; STestSuite84 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite82 (__input, __end) (PushTestSuite n (STestSuite84, __p, __stk))
+; STestSuite85 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite64 (__input, __end) (PushTestSuite () (STestSuite85, __p, __stk))
+; STestSuite85 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite68 (__input, __end) (PushTestSuite n (STestSuite85, __p, __stk))
+; STestSuite85 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite76 (__input, __end) (PushTestSuite n (STestSuite85, __p, __stk))
+; STestSuite85 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite80 (__input, __end) (PushTestSuite n (STestSuite85, __p, __stk))
+; STestSuite86 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite65 (__input, __end) (PushTestSuite () (STestSuite86, __p, __stk))
+; STestSuite86 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite69 (__input, __end) (PushTestSuite n (STestSuite86, __p, __stk))
+; STestSuite86 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite77 (__input, __end) (PushTestSuite n (STestSuite86, __p, __stk))
+; STestSuite86 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite81 (__input, __end) (PushTestSuite n (STestSuite86, __p, __stk))
+; STestSuite87 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite64 (__input, __end) (PushTestSuite () (STestSuite87, __p, __stk))
+; STestSuite87 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite68 (__input, __end) (PushTestSuite n (STestSuite87, __p, __stk))
+; STestSuite87 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite76 (__input, __end) (PushTestSuite n (STestSuite87, __p, __stk))
+; STestSuite87 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite80 (__input, __end) (PushTestSuite n (STestSuite87, __p, __stk))
+; STestSuite88 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite65 (__input, __end) (PushTestSuite () (STestSuite88, __p, __stk))
+; STestSuite88 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite69 (__input, __end) (PushTestSuite n (STestSuite88, __p, __stk))
+; STestSuite88 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite77 (__input, __end) (PushTestSuite n (STestSuite88, __p, __stk))
+; STestSuite88 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite81 (__input, __end) (PushTestSuite n (STestSuite88, __p, __stk))
+; STestSuite89 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite66 (__input, __end) (PushTestSuite () (STestSuite89, __p, __stk))
+; STestSuite89 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite70 (__input, __end) (PushTestSuite n (STestSuite89, __p, __stk))
+; STestSuite89 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite78 (__input, __end) (PushTestSuite n (STestSuite89, __p, __stk))
+; STestSuite89 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite82 (__input, __end) (PushTestSuite n (STestSuite89, __p, __stk))
+; STestSuite90 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite67 (__input, __end) (PushTestSuite () (STestSuite90, __p, __stk))
+; STestSuite90 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite71 (__input, __end) (PushTestSuite n (STestSuite90, __p, __stk))
+; STestSuite90 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite79 (__input, __end) (PushTestSuite n (STestSuite90, __p, __stk))
+; STestSuite90 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite83 (__input, __end) (PushTestSuite n (STestSuite90, __p, __stk))
+; STestSuite91 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite64 (__input, __end) (PushTestSuite () (STestSuite91, __p, __stk))
+; STestSuite91 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite68 (__input, __end) (PushTestSuite n (STestSuite91, __p, __stk))
+; STestSuite91 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite76 (__input, __end) (PushTestSuite n (STestSuite91, __p, __stk))
+; STestSuite91 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite80 (__input, __end) (PushTestSuite n (STestSuite91, __p, __stk))
+; STestSuite92 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite65 (__input, __end) (PushTestSuite () (STestSuite92, __p, __stk))
+; STestSuite92 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite69 (__input, __end) (PushTestSuite n (STestSuite92, __p, __stk))
+; STestSuite92 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite77 (__input, __end) (PushTestSuite n (STestSuite92, __p, __stk))
+; STestSuite92 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite81 (__input, __end) (PushTestSuite n (STestSuite92, __p, __stk))
+; STestSuite93 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite66 (__input, __end) (PushTestSuite () (STestSuite93, __p, __stk))
+; STestSuite93 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite70 (__input, __end) (PushTestSuite n (STestSuite93, __p, __stk))
+; STestSuite93 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite78 (__input, __end) (PushTestSuite n (STestSuite93, __p, __stk))
+; STestSuite93 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite82 (__input, __end) (PushTestSuite n (STestSuite93, __p, __stk))
+; STestSuite94 ((__p,  "(") : __input, __end) __stk ->
+    __runTestSuite STestSuite67 (__input, __end) (PushTestSuite () (STestSuite94, __p, __stk))
+; STestSuite94 ((__p, UppercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite71 (__input, __end) (PushTestSuite n (STestSuite94, __p, __stk))
+; STestSuite94 ((__p, LowercaseName n) : __input, __end) __stk ->
+    __runTestSuite STestSuite79 (__input, __end) (PushTestSuite n (STestSuite94, __p, __stk))
+; STestSuite94 ((__p, NumberLiteral n) : __input, __end) __stk ->
+    __runTestSuite STestSuite83 (__input, __end) (PushTestSuite n (STestSuite94, __p, __stk))
+; STestSuite95 ((__p,  ")") : __input, __end) __stk ->
+    __runTestSuite STestSuite104 (__input, __end) (PushTestSuite () (STestSuite95, __p, __stk))
+; STestSuite96 ((__p,  ")") : __input, __end) __stk ->
+    __runTestSuite STestSuite105 (__input, __end) (PushTestSuite () (STestSuite96, __p, __stk))
+; STestSuite97 ((__p,  ")") : __input, __end) __stk ->
+    __runTestSuite STestSuite106 (__input, __end) (PushTestSuite () (STestSuite97, __p, __stk))
+; STestSuite98 ((__p,  ")") : __input, __end) __stk ->
+    __runTestSuite STestSuite107 (__input, __end) (PushTestSuite () (STestSuite98, __p, __stk))
+-- lookahead Nothing, entity TestSuite
+; STestSuite1 ([], __end) ((PushTestSuite res __stk@(_, __pos, _))) ->
+    pure res
+-- lookahead Nothing, entity Expr
+; STestSuite4 ([], __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoExprForTestSuite ([], __end) (action59 __pos a) __stk
+-- lookahead Just expect, entity Expr
+; STestSuite4 ((__p,  "expect") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoExprForTestSuite ((__p,  "expect") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just guard, entity Expr
+; STestSuite4 ((__p,  "guard") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoExprForTestSuite ((__p,  "guard") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just notify, entity Expr
+; STestSuite4 ((__p,  "notify") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoExprForTestSuite ((__p,  "notify") : __input, __end) (action59 __pos a) __stk
+-- lookahead Nothing, entity Expr
+; STestSuite5 ([], __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoExprForTestSuite ([], __end) (action58 __pos a b) __stk
+-- lookahead Just expect, entity Expr
+; STestSuite5 ((__p,  "expect") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoExprForTestSuite ((__p,  "expect") : __input, __end) (action58 __pos a
+                                                                               b) __stk
+-- lookahead Just guard, entity Expr
+; STestSuite5 ((__p,  "guard") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoExprForTestSuite ((__p,  "guard") : __input, __end) (action58 __pos a
+                                                                              b) __stk
+-- lookahead Just notify, entity Expr
+; STestSuite5 ((__p,  "notify") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoExprForTestSuite ((__p,  "notify") : __input, __end) (action58 __pos a
+                                                                               b) __stk
+-- lookahead Nothing, entity Add
+; STestSuite6 ([], __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ([], __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
+; STestSuite6 ((__p,  "+") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just =, entity Add
+; STestSuite6 ((__p,  "=") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "=") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just expect, entity Add
+; STestSuite6 ((__p,  "expect") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "expect") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just guard, entity Add
+; STestSuite6 ((__p,  "guard") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "guard") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just notify, entity Add
+; STestSuite6 ((__p,  "notify") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "notify") : __input, __end) (action63 __pos a) __stk
+-- lookahead Nothing, entity Add
+; STestSuite7 ([], __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ([], __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
+; STestSuite7 ((__p,  "+") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just expect, entity Add
+; STestSuite7 ((__p,  "expect") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "expect") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just guard, entity Add
+; STestSuite7 ((__p,  "guard") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "guard") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just notify, entity Add
+; STestSuite7 ((__p,  "notify") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "notify") : __input, __end) (action63 __pos a) __stk
+-- lookahead Nothing, entity Add
+; STestSuite8 ([], __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ([], __end) (action62 __pos a b) __stk
+-- lookahead Just +, entity Add
+; STestSuite8 ((__p,  "+") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just =, entity Add
+; STestSuite8 ((__p,  "=") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "=") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just expect, entity Add
+; STestSuite8 ((__p,  "expect") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "expect") : __input, __end) (action62 __pos a
+                                                                              b) __stk
+-- lookahead Just guard, entity Add
+; STestSuite8 ((__p,  "guard") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "guard") : __input, __end) (action62 __pos a
+                                                                             b) __stk
+-- lookahead Just notify, entity Add
+; STestSuite8 ((__p,  "notify") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "notify") : __input, __end) (action62 __pos a
+                                                                              b) __stk
+-- lookahead Nothing, entity Add
+; STestSuite9 ([], __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ([], __end) (action62 __pos a b) __stk
+-- lookahead Just +, entity Add
+; STestSuite9 ((__p,  "+") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just expect, entity Add
+; STestSuite9 ((__p,  "expect") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "expect") : __input, __end) (action62 __pos a
+                                                                              b) __stk
+-- lookahead Just guard, entity Add
+; STestSuite9 ((__p,  "guard") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "guard") : __input, __end) (action62 __pos a
+                                                                             b) __stk
+-- lookahead Just notify, entity Add
+; STestSuite9 ((__p,  "notify") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "notify") : __input, __end) (action62 __pos a
+                                                                              b) __stk
+-- lookahead Nothing, entity Mult
+; STestSuite10 ([], __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ([], __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
+; STestSuite10 ((__p,  "*") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
+; STestSuite10 ((__p,  "+") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just =, entity Mult
+; STestSuite10 ((__p,  "=") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "=") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just expect, entity Mult
+; STestSuite10 ((__p,  "expect") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "expect") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just guard, entity Mult
+; STestSuite10 ((__p,  "guard") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "guard") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just notify, entity Mult
+; STestSuite10 ((__p,  "notify") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "notify") : __input, __end) (action67 __pos a) __stk
+-- lookahead Nothing, entity Mult
+; STestSuite11 ([], __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ([], __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
+; STestSuite11 ((__p,  "*") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
+; STestSuite11 ((__p,  "+") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just expect, entity Mult
+; STestSuite11 ((__p,  "expect") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "expect") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just guard, entity Mult
+; STestSuite11 ((__p,  "guard") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "guard") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just notify, entity Mult
+; STestSuite11 ((__p,  "notify") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "notify") : __input, __end) (action67 __pos a) __stk
+-- lookahead Nothing, entity Term
+; STestSuite14 ([], __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ([], __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
+; STestSuite14 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
+; STestSuite14 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just =, entity Term
+; STestSuite14 ((__p,  "=") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "=") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just expect, entity Term
+; STestSuite14 ((__p,  "expect") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "expect") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just guard, entity Term
+; STestSuite14 ((__p,  "guard") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "guard") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just notify, entity Term
+; STestSuite14 ((__p,  "notify") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "notify") : __input, __end) (action71 __pos n) __stk
+-- lookahead Nothing, entity Term
+; STestSuite15 ([], __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ([], __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
+; STestSuite15 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
+; STestSuite15 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just expect, entity Term
+; STestSuite15 ((__p,  "expect") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "expect") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just guard, entity Term
+; STestSuite15 ((__p,  "guard") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "guard") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just notify, entity Term
+; STestSuite15 ((__p,  "notify") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "notify") : __input, __end) (action71 __pos n) __stk
+-- lookahead Nothing, entity Term
+; STestSuite16 ([], __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ([], __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
+; STestSuite16 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
+; STestSuite16 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just =, entity Term
+; STestSuite16 ((__p,  "=") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "=") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just expect, entity Term
+; STestSuite16 ((__p,  "expect") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "expect") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just guard, entity Term
+; STestSuite16 ((__p,  "guard") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "guard") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just notify, entity Term
+; STestSuite16 ((__p,  "notify") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "notify") : __input, __end) (action72 __pos n) __stk
+-- lookahead Nothing, entity Term
+; STestSuite17 ([], __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ([], __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
+; STestSuite17 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
+; STestSuite17 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just expect, entity Term
+; STestSuite17 ((__p,  "expect") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "expect") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just guard, entity Term
+; STestSuite17 ((__p,  "guard") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "guard") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just notify, entity Term
+; STestSuite17 ((__p,  "notify") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "notify") : __input, __end) (action72 __pos n) __stk
+-- lookahead Nothing, entity Const
+; STestSuite18 ([], __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ([], __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
+; STestSuite18 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
+; STestSuite18 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just =, entity Const
+; STestSuite18 ((__p,  "=") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just expect, entity Const
+; STestSuite18 ((__p,  "expect") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "expect") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just guard, entity Const
+; STestSuite18 ((__p,  "guard") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "guard") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just notify, entity Const
+; STestSuite18 ((__p,  "notify") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "notify") : __input, __end) (action75 __pos n) __stk
+-- lookahead Nothing, entity Const
+; STestSuite19 ([], __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ([], __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
+; STestSuite19 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
+; STestSuite19 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just expect, entity Const
+; STestSuite19 ((__p,  "expect") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "expect") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just guard, entity Const
+; STestSuite19 ((__p,  "guard") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "guard") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just notify, entity Const
+; STestSuite19 ((__p,  "notify") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "notify") : __input, __end) (action75 __pos n) __stk
+-- lookahead Nothing, entity Const
+; STestSuite20 ([], __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ([], __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
+; STestSuite20 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
+; STestSuite20 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just =, entity Const
+; STestSuite20 ((__p,  "=") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "=") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just expect, entity Const
+; STestSuite20 ((__p,  "expect") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "expect") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just guard, entity Const
+; STestSuite20 ((__p,  "guard") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "guard") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just notify, entity Const
+; STestSuite20 ((__p,  "notify") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "notify") : __input, __end) (action76 __pos n) __stk
+-- lookahead Nothing, entity Const
+; STestSuite21 ([], __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ([], __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
+; STestSuite21 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
+; STestSuite21 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just expect, entity Const
+; STestSuite21 ((__p,  "expect") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "expect") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just guard, entity Const
+; STestSuite21 ((__p,  "guard") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "guard") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just notify, entity Const
+; STestSuite21 ((__p,  "notify") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "notify") : __input, __end) (action76 __pos n) __stk
+-- lookahead Nothing, entity Tests
+; STestSuite26 ([], __end) ((PushTestSuite t __stk@(_, __pos, _))) ->
+    __gotoTestsForTestSuite ([], __end) (action87 __pos t) __stk
+-- lookahead Nothing, entity Call
+; STestSuite27 ([], __end) ((PushTestSuite t (PushTestSuite' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForTestSuite ([], __end) (action47 __pos pred t) __stk
+-- lookahead Just expect, entity Call
+; STestSuite27 ((__p,  "expect") : __input, __end) ((PushTestSuite t (PushTestSuite' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForTestSuite ((__p,  "expect") : __input, __end) (action47 __pos pred
+                                                                               t) __stk
+-- lookahead Just guard, entity Call
+; STestSuite27 ((__p,  "guard") : __input, __end) ((PushTestSuite t (PushTestSuite' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForTestSuite ((__p,  "guard") : __input, __end) (action47 __pos pred
+                                                                              t) __stk
+-- lookahead Just notify, entity Call
+; STestSuite27 ((__p,  "notify") : __input, __end) ((PushTestSuite t (PushTestSuite' pred __stk@(_, __pos, _)))) ->
+    __gotoCallForTestSuite ((__p,  "notify") : __input, __end) (action47 __pos pred
+                                                                               t) __stk
+-- lookahead Nothing, entity Tuple
+; STestSuite28 ([], __end) ((PushTestSuite _ (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForTestSuite ([], __end) (action50 __pos ) __stk
+-- lookahead Just expect, entity Tuple
+; STestSuite28 ((__p,  "expect") : __input, __end) ((PushTestSuite _ (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForTestSuite ((__p,  "expect") : __input, __end) (action50 __pos ) __stk
+-- lookahead Just guard, entity Tuple
+; STestSuite28 ((__p,  "guard") : __input, __end) ((PushTestSuite _ (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForTestSuite ((__p,  "guard") : __input, __end) (action50 __pos ) __stk
+-- lookahead Just notify, entity Tuple
+; STestSuite28 ((__p,  "notify") : __input, __end) ((PushTestSuite _ (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTupleForTestSuite ((__p,  "notify") : __input, __end) (action50 __pos ) __stk
+-- lookahead Nothing, entity Test
+; STestSuite37 ([], __end) ((PushTestSuite c (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestForTestSuite ([], __end) (action79 __pos c) __stk
+-- lookahead Just expect, entity Test
+; STestSuite37 ((__p,  "expect") : __input, __end) ((PushTestSuite c (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestForTestSuite ((__p,  "expect") : __input, __end) (action79 __pos c) __stk
+-- lookahead Just guard, entity Test
+; STestSuite37 ((__p,  "guard") : __input, __end) ((PushTestSuite c (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestForTestSuite ((__p,  "guard") : __input, __end) (action79 __pos c) __stk
+-- lookahead Just notify, entity Test
+; STestSuite37 ((__p,  "notify") : __input, __end) ((PushTestSuite c (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestForTestSuite ((__p,  "notify") : __input, __end) (action79 __pos c) __stk
+-- lookahead Nothing, entity Test
+; STestSuite38 ([], __end) ((PushTestSuite c (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestForTestSuite ([], __end) (action80 __pos c) __stk
+-- lookahead Just expect, entity Test
+; STestSuite38 ((__p,  "expect") : __input, __end) ((PushTestSuite c (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestForTestSuite ((__p,  "expect") : __input, __end) (action80 __pos c) __stk
+-- lookahead Just guard, entity Test
+; STestSuite38 ((__p,  "guard") : __input, __end) ((PushTestSuite c (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestForTestSuite ((__p,  "guard") : __input, __end) (action80 __pos c) __stk
+-- lookahead Just notify, entity Test
+; STestSuite38 ((__p,  "notify") : __input, __end) ((PushTestSuite c (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestForTestSuite ((__p,  "notify") : __input, __end) (action80 __pos c) __stk
+-- lookahead Nothing, entity Test
+; STestSuite39 ([], __end) ((PushTestSuite e (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestForTestSuite ([], __end) (action81 __pos e) __stk
+-- lookahead Just expect, entity Test
+; STestSuite39 ((__p,  "expect") : __input, __end) ((PushTestSuite e (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestForTestSuite ((__p,  "expect") : __input, __end) (action81 __pos e) __stk
+-- lookahead Just guard, entity Test
+; STestSuite39 ((__p,  "guard") : __input, __end) ((PushTestSuite e (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestForTestSuite ((__p,  "guard") : __input, __end) (action81 __pos e) __stk
+-- lookahead Just notify, entity Test
+; STestSuite39 ((__p,  "notify") : __input, __end) ((PushTestSuite e (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestForTestSuite ((__p,  "notify") : __input, __end) (action81 __pos e) __stk
+-- lookahead Nothing, entity TestSuite
+; STestSuite40 ([], __end) ((PushTestSuite tests (PushTestSuite' _ __stk@(_, __pos, _)))) ->
+    __gotoTestSuiteForTestSuite ([], __end) (action84 __pos tests) __stk
+-- lookahead Nothing, entity Tests
+; STestSuite41 ([], __end) ((PushTestSuite ts (PushTestSuite' t __stk@(_, __pos, _)))) ->
+    __gotoTestsForTestSuite ([], __end) (action88 __pos t ts) __stk
+-- lookahead Nothing, entity Tuple
+; STestSuite42 ([], __end) ((PushTestSuite _ (PushTestSuite' es (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForTestSuite ([], __end) (action51 __pos es) __stk
+-- lookahead Just expect, entity Tuple
+; STestSuite42 ((__p,  "expect") : __input, __end) ((PushTestSuite _ (PushTestSuite' es (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForTestSuite ((__p,  "expect") : __input, __end) (action51 __pos es) __stk
+-- lookahead Just guard, entity Tuple
+; STestSuite42 ((__p,  "guard") : __input, __end) ((PushTestSuite _ (PushTestSuite' es (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForTestSuite ((__p,  "guard") : __input, __end) (action51 __pos es) __stk
+-- lookahead Just notify, entity Tuple
+; STestSuite42 ((__p,  "notify") : __input, __end) ((PushTestSuite _ (PushTestSuite' es (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTupleForTestSuite ((__p,  "notify") : __input, __end) (action51 __pos es) __stk
+-- lookahead Nothing, entity Mult
+; STestSuite43 ([], __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ([], __end) (action66 __pos a b) __stk
+-- lookahead Just *, entity Mult
+; STestSuite43 ((__p,  "*") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just +, entity Mult
+; STestSuite43 ((__p,  "+") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just =, entity Mult
+; STestSuite43 ((__p,  "=") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "=") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just expect, entity Mult
+; STestSuite43 ((__p,  "expect") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "expect") : __input, __end) (action66 __pos a
+                                                                               b) __stk
+-- lookahead Just guard, entity Mult
+; STestSuite43 ((__p,  "guard") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "guard") : __input, __end) (action66 __pos a
+                                                                              b) __stk
+-- lookahead Just notify, entity Mult
+; STestSuite43 ((__p,  "notify") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "notify") : __input, __end) (action66 __pos a
+                                                                               b) __stk
+-- lookahead Nothing, entity Mult
+; STestSuite44 ([], __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ([], __end) (action66 __pos a b) __stk
+-- lookahead Just *, entity Mult
+; STestSuite44 ((__p,  "*") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just +, entity Mult
+; STestSuite44 ((__p,  "+") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just expect, entity Mult
+; STestSuite44 ((__p,  "expect") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "expect") : __input, __end) (action66 __pos a
+                                                                               b) __stk
+-- lookahead Just guard, entity Mult
+; STestSuite44 ((__p,  "guard") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "guard") : __input, __end) (action66 __pos a
+                                                                              b) __stk
+-- lookahead Just notify, entity Mult
+; STestSuite44 ((__p,  "notify") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "notify") : __input, __end) (action66 __pos a
+                                                                               b) __stk
+-- lookahead Nothing, entity Term
+; STestSuite45 ([], __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ([], __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
+; STestSuite45 ((__p,  "*") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
+; STestSuite45 ((__p,  "+") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just =, entity Term
+; STestSuite45 ((__p,  "=") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "=") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just expect, entity Term
+; STestSuite45 ((__p,  "expect") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "expect") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just guard, entity Term
+; STestSuite45 ((__p,  "guard") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "guard") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just notify, entity Term
+; STestSuite45 ((__p,  "notify") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "notify") : __input, __end) (action70 __pos e) __stk
+-- lookahead Nothing, entity Term
+; STestSuite46 ([], __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ([], __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
+; STestSuite46 ((__p,  "*") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
+; STestSuite46 ((__p,  "+") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just expect, entity Term
+; STestSuite46 ((__p,  "expect") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "expect") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just guard, entity Term
+; STestSuite46 ((__p,  "guard") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "guard") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just notify, entity Term
+; STestSuite46 ((__p,  "notify") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "notify") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ), entity Exprs1
+; STestSuite47 ((__p,  ")") : __input, __end) ((PushTestSuite e __stk@(_, __pos, _))) ->
+    __gotoExprs1ForTestSuite ((__p,  ")") : __input, __end) (action55 __pos e) __stk
+-- lookahead Just ), entity Expr
+; STestSuite48 ((__p,  ")") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoExprForTestSuite ((__p,  ")") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just ,, entity Expr
+; STestSuite48 ((__p,  ",") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoExprForTestSuite ((__p,  ",") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just ), entity Expr
+; STestSuite49 ((__p,  ")") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoExprForTestSuite ((__p,  ")") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just ), entity Expr
+; STestSuite50 ((__p,  ")") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoExprForTestSuite ((__p,  ")") : __input, __end) (action58 __pos a
+                                                                          b) __stk
+-- lookahead Just ), entity Expr
+; STestSuite51 ((__p,  ")") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoExprForTestSuite ((__p,  ")") : __input, __end) (action58 __pos a
+                                                                          b) __stk
+-- lookahead Just ,, entity Expr
+; STestSuite51 ((__p,  ",") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoExprForTestSuite ((__p,  ",") : __input, __end) (action58 __pos a
+                                                                          b) __stk
+-- lookahead Just ), entity Add
+; STestSuite52 ((__p,  ")") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  ")") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
+; STestSuite52 ((__p,  "+") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ), entity Add
+; STestSuite53 ((__p,  ")") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  ")") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
+; STestSuite53 ((__p,  "+") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ,, entity Add
+; STestSuite53 ((__p,  ",") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ), entity Add
+; STestSuite54 ((__p,  ")") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  ")") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
+; STestSuite54 ((__p,  "+") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ,, entity Add
+; STestSuite54 ((__p,  ",") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just =, entity Add
+; STestSuite54 ((__p,  "=") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "=") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ), entity Add
+; STestSuite55 ((__p,  ")") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  ")") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
+; STestSuite55 ((__p,  "+") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just =, entity Add
+; STestSuite55 ((__p,  "=") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoAddForTestSuite ((__p,  "=") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ), entity Add
+; STestSuite56 ((__p,  ")") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  ")") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just +, entity Add
+; STestSuite56 ((__p,  "+") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just ), entity Add
+; STestSuite57 ((__p,  ")") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  ")") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just +, entity Add
+; STestSuite57 ((__p,  "+") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just ,, entity Add
+; STestSuite57 ((__p,  ",") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  ",") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just ), entity Add
+; STestSuite58 ((__p,  ")") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  ")") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just +, entity Add
+; STestSuite58 ((__p,  "+") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just ,, entity Add
+; STestSuite58 ((__p,  ",") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  ",") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just =, entity Add
+; STestSuite58 ((__p,  "=") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "=") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just ), entity Add
+; STestSuite59 ((__p,  ")") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  ")") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just +, entity Add
+; STestSuite59 ((__p,  "+") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "+") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just =, entity Add
+; STestSuite59 ((__p,  "=") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoAddForTestSuite ((__p,  "=") : __input, __end) (action62 __pos a
+                                                                         b) __stk
+-- lookahead Just ), entity Mult
+; STestSuite60 ((__p,  ")") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  ")") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
+; STestSuite60 ((__p,  "*") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
+; STestSuite60 ((__p,  "+") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ), entity Mult
+; STestSuite61 ((__p,  ")") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  ")") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
+; STestSuite61 ((__p,  "*") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
+; STestSuite61 ((__p,  "+") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ,, entity Mult
+; STestSuite61 ((__p,  ",") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ), entity Mult
+; STestSuite62 ((__p,  ")") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  ")") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
+; STestSuite62 ((__p,  "*") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
+; STestSuite62 ((__p,  "+") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ,, entity Mult
+; STestSuite62 ((__p,  ",") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just =, entity Mult
+; STestSuite62 ((__p,  "=") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "=") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ), entity Mult
+; STestSuite63 ((__p,  ")") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  ")") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
+; STestSuite63 ((__p,  "*") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
+; STestSuite63 ((__p,  "+") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just =, entity Mult
+; STestSuite63 ((__p,  "=") : __input, __end) ((PushTestSuite a __stk@(_, __pos, _))) ->
+    __gotoMultForTestSuite ((__p,  "=") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ), entity Term
+; STestSuite68 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  ")") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
+; STestSuite68 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
+; STestSuite68 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ), entity Term
+; STestSuite69 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  ")") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
+; STestSuite69 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
+; STestSuite69 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ,, entity Term
+; STestSuite69 ((__p,  ",") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ), entity Term
+; STestSuite70 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  ")") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
+; STestSuite70 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
+; STestSuite70 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ,, entity Term
+; STestSuite70 ((__p,  ",") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just =, entity Term
+; STestSuite70 ((__p,  "=") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "=") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ), entity Term
+; STestSuite71 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  ")") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
+; STestSuite71 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
+; STestSuite71 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just =, entity Term
+; STestSuite71 ((__p,  "=") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "=") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ), entity Term
+; STestSuite72 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  ")") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
+; STestSuite72 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
+; STestSuite72 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ), entity Term
+; STestSuite73 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  ")") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
+; STestSuite73 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
+; STestSuite73 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ,, entity Term
+; STestSuite73 ((__p,  ",") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ), entity Term
+; STestSuite74 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  ")") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
+; STestSuite74 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
+; STestSuite74 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ,, entity Term
+; STestSuite74 ((__p,  ",") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just =, entity Term
+; STestSuite74 ((__p,  "=") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "=") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ), entity Term
+; STestSuite75 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  ")") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
+; STestSuite75 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
+; STestSuite75 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just =, entity Term
+; STestSuite75 ((__p,  "=") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoTermForTestSuite ((__p,  "=") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ), entity Const
+; STestSuite76 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  ")") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
+; STestSuite76 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
+; STestSuite76 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ), entity Const
+; STestSuite77 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  ")") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
+; STestSuite77 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
+; STestSuite77 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ,, entity Const
+; STestSuite77 ((__p,  ",") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ), entity Const
+; STestSuite78 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  ")") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
+; STestSuite78 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
+; STestSuite78 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ,, entity Const
+; STestSuite78 ((__p,  ",") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just =, entity Const
+; STestSuite78 ((__p,  "=") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ), entity Const
+; STestSuite79 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  ")") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
+; STestSuite79 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
+; STestSuite79 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just =, entity Const
+; STestSuite79 ((__p,  "=") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ), entity Const
+; STestSuite80 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  ")") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
+; STestSuite80 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
+; STestSuite80 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ), entity Const
+; STestSuite81 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  ")") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
+; STestSuite81 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
+; STestSuite81 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ,, entity Const
+; STestSuite81 ((__p,  ",") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ), entity Const
+; STestSuite82 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  ")") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
+; STestSuite82 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
+; STestSuite82 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ,, entity Const
+; STestSuite82 ((__p,  ",") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just =, entity Const
+; STestSuite82 ((__p,  "=") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "=") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ), entity Const
+; STestSuite83 ((__p,  ")") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  ")") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
+; STestSuite83 ((__p,  "*") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
+; STestSuite83 ((__p,  "+") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just =, entity Const
+; STestSuite83 ((__p,  "=") : __input, __end) ((PushTestSuite n __stk@(_, __pos, _))) ->
+    __gotoConstForTestSuite ((__p,  "=") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ), entity Exprs1
+; STestSuite99 ((__p,  ")") : __input, __end) ((PushTestSuite es (PushTestSuite' _ (PushTestSuite' e __stk@(_, __pos, _))))) ->
+    __gotoExprs1ForTestSuite ((__p,  ")") : __input, __end) (action54 __pos e
+                                                                            es) __stk
+-- lookahead Just ), entity Mult
+; STestSuite100 ((__p,  ")") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  ")") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just *, entity Mult
+; STestSuite100 ((__p,  "*") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just +, entity Mult
+; STestSuite100 ((__p,  "+") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just ), entity Mult
+; STestSuite101 ((__p,  ")") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  ")") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just *, entity Mult
+; STestSuite101 ((__p,  "*") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just +, entity Mult
+; STestSuite101 ((__p,  "+") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just ,, entity Mult
+; STestSuite101 ((__p,  ",") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  ",") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just ), entity Mult
+; STestSuite102 ((__p,  ")") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  ")") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just *, entity Mult
+; STestSuite102 ((__p,  "*") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just +, entity Mult
+; STestSuite102 ((__p,  "+") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just ,, entity Mult
+; STestSuite102 ((__p,  ",") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  ",") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just =, entity Mult
+; STestSuite102 ((__p,  "=") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "=") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just ), entity Mult
+; STestSuite103 ((__p,  ")") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  ")") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just *, entity Mult
+; STestSuite103 ((__p,  "*") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "*") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just +, entity Mult
+; STestSuite103 ((__p,  "+") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "+") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just =, entity Mult
+; STestSuite103 ((__p,  "=") : __input, __end) ((PushTestSuite b (PushTestSuite' _ (PushTestSuite' a __stk@(_, __pos, _))))) ->
+    __gotoMultForTestSuite ((__p,  "=") : __input, __end) (action66 __pos a
+                                                                          b) __stk
+-- lookahead Just ), entity Term
+; STestSuite104 ((__p,  ")") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  ")") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
+; STestSuite104 ((__p,  "*") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
+; STestSuite104 ((__p,  "+") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ), entity Term
+; STestSuite105 ((__p,  ")") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  ")") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
+; STestSuite105 ((__p,  "*") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
+; STestSuite105 ((__p,  "+") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ,, entity Term
+; STestSuite105 ((__p,  ",") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ), entity Term
+; STestSuite106 ((__p,  ")") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  ")") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
+; STestSuite106 ((__p,  "*") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
+; STestSuite106 ((__p,  "+") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ,, entity Term
+; STestSuite106 ((__p,  ",") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just =, entity Term
+; STestSuite106 ((__p,  "=") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "=") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ), entity Term
+; STestSuite107 ((__p,  ")") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  ")") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
+; STestSuite107 ((__p,  "*") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
+; STestSuite107 ((__p,  "+") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just =, entity Term
+; STestSuite107 ((__p,  "=") : __input, __end) ((PushTestSuite _ (PushTestSuite' e (PushTestSuite' _ __stk@(_, __pos, _))))) ->
+    __gotoTermForTestSuite ((__p,  "=") : __input, __end) (action70 __pos e) __stk
+; STestSuite0 __input _ -> Left  (currentPos __input, ["test"])
+; STestSuite1 __input _ -> Left  (currentPos __input, ["<eof>"])
+; STestSuite2 __input _ -> Left  (currentPos __input, ["("])
+; STestSuite3 __input _ ->
+    Left  (currentPos __input, ["(", ")", "<Name>", "<name>", "<num>"])
+; STestSuite4 __input _ ->
+    Left  (currentPos __input, ["<eof>", "+", "=", "expect", "guard",
+                                "notify"])
+; STestSuite5 __input _ ->
+    Left  (currentPos __input, ["<eof>", "+", "expect", "guard",
+                                "notify"])
+; STestSuite6 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "=", "expect",
+                                "guard", "notify"])
+; STestSuite7 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "expect", "guard",
+                                "notify"])
+; STestSuite8 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "=", "expect",
+                                "guard", "notify"])
+; STestSuite9 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "expect", "guard",
+                                "notify"])
+; STestSuite10 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "=", "expect",
+                                "guard", "notify"])
+; STestSuite11 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "expect", "guard",
+                                "notify"])
+; STestSuite12 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite13 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite14 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "=", "expect",
+                                "guard", "notify"])
+; STestSuite15 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "expect", "guard",
+                                "notify"])
+; STestSuite16 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "=", "expect",
+                                "guard", "notify"])
+; STestSuite17 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "expect", "guard",
+                                "notify"])
+; STestSuite18 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "=", "expect",
+                                "guard", "notify"])
+; STestSuite19 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "expect", "guard",
+                                "notify"])
+; STestSuite20 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "=", "expect",
+                                "guard", "notify"])
+; STestSuite21 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "expect", "guard",
+                                "notify"])
+; STestSuite22 __input _ -> Left  (currentPos __input, ["<name>"])
+; STestSuite23 __input _ -> Left  (currentPos __input, ["<name>"])
+; STestSuite24 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite25 __input _ ->
+    Left  (currentPos __input, ["expect", "guard", "notify"])
+; STestSuite26 __input _ ->
+    Left  (currentPos __input, ["<eof>", "expect", "guard", "notify"])
+; STestSuite27 __input _ ->
+    Left  (currentPos __input, ["<eof>", "expect", "guard", "notify"])
+; STestSuite28 __input _ ->
+    Left  (currentPos __input, ["<eof>", "expect", "guard", "notify"])
+; STestSuite29 __input _ -> Left  (currentPos __input, [")"])
+; STestSuite30 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite31 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite32 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite33 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite34 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite35 __input _ -> Left  (currentPos __input, [")"])
+; STestSuite36 __input _ -> Left  (currentPos __input, [")"])
+; STestSuite37 __input _ ->
+    Left  (currentPos __input, ["<eof>", "expect", "guard", "notify"])
+; STestSuite38 __input _ ->
+    Left  (currentPos __input, ["<eof>", "expect", "guard", "notify"])
+; STestSuite39 __input _ ->
+    Left  (currentPos __input, ["<eof>", "expect", "guard", "notify"])
+; STestSuite40 __input _ -> Left  (currentPos __input, ["<eof>"])
+; STestSuite41 __input _ -> Left  (currentPos __input, ["<eof>"])
+; STestSuite42 __input _ ->
+    Left  (currentPos __input, ["<eof>", "expect", "guard", "notify"])
+; STestSuite43 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "=", "expect",
+                                "guard", "notify"])
+; STestSuite44 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "expect", "guard",
+                                "notify"])
+; STestSuite45 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "=", "expect",
+                                "guard", "notify"])
+; STestSuite46 __input _ ->
+    Left  (currentPos __input, ["<eof>", "*", "+", "expect", "guard",
+                                "notify"])
+; STestSuite47 __input _ -> Left  (currentPos __input, [")", ","])
+; STestSuite48 __input _ ->
+    Left  (currentPos __input, [")", "+", ",", "="])
+; STestSuite49 __input _ ->
+    Left  (currentPos __input, [")", "+", "="])
+; STestSuite50 __input _ -> Left  (currentPos __input, [")", "+"])
+; STestSuite51 __input _ ->
+    Left  (currentPos __input, [")", "+", ","])
+; STestSuite52 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; STestSuite53 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; STestSuite54 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ",", "="])
+; STestSuite55 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; STestSuite56 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; STestSuite57 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; STestSuite58 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ",", "="])
+; STestSuite59 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; STestSuite60 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; STestSuite61 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; STestSuite62 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ",", "="])
+; STestSuite63 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; STestSuite64 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite65 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite66 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite67 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite68 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; STestSuite69 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; STestSuite70 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ",", "="])
+; STestSuite71 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; STestSuite72 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; STestSuite73 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; STestSuite74 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ",", "="])
+; STestSuite75 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; STestSuite76 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; STestSuite77 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; STestSuite78 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ",", "="])
+; STestSuite79 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; STestSuite80 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; STestSuite81 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; STestSuite82 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ",", "="])
+; STestSuite83 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; STestSuite84 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite85 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite86 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite87 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite88 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite89 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite90 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite91 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite92 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite93 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite94 __input _ ->
+    Left  (currentPos __input, ["(", "<Name>", "<name>", "<num>"])
+; STestSuite95 __input _ -> Left  (currentPos __input, [")"])
+; STestSuite96 __input _ -> Left  (currentPos __input, [")"])
+; STestSuite97 __input _ -> Left  (currentPos __input, [")"])
+; STestSuite98 __input _ -> Left  (currentPos __input, [")"])
+; STestSuite99 __input _ -> Left  (currentPos __input, [")"])
+; STestSuite100 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; STestSuite101 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; STestSuite102 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ",", "="])
+; STestSuite103 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+; STestSuite104 __input _ ->
+    Left  (currentPos __input, [")", "*", "+"])
+; STestSuite105 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ","])
+; STestSuite106 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", ",", "="])
+; STestSuite107 __input _ ->
+    Left  (currentPos __input, [")", "*", "+", "="])
+} where {
+; action0 pos res =
+res
+; action10 pos stmts =
+          Program {stmts}
+; action13 pos c cs =
+    c : cs
+; action14 pos c =
+    [c]
+; action17 pos c =
+    StmtClause pos c
+; action18 pos e =
+    StmtEffect pos e
+; action21 pos c ds =
+    Effect pos c [] ds
+; action22 pos c cs ds =
+    Effect pos c cs ds
+; action23 pos c cs =
+    Effect pos c cs []
+; action26 pos c =
+    Clause pos c []
+; action27 pos c cs =
+    Clause pos c cs
+; action30 pos c cs =
+    c : cs
+; action31 pos c =
+    [c]
+; action34 pos c =
+    Assert pos c
+; action35 pos c =
+    Refute pos c
+; action38 pos c cs =
+    c : cs
+; action39 pos c =
+    [c]
+; action42 pos c =
+        CondAssert pos c
+; action43 pos c =
+    CondRefute pos c
+; action44 pos e =
+        CondGuard  pos e
+; action47 pos pred t =
+    Call pos pred t
+; action50 pos =
+    []
+; action51 pos es =
+    es
+; action54 pos e es =
+    e : es
+; action55 pos e =
+    [e]
+; action58 pos a b =
+    ExprBinary pos a Equals b
+; action59 pos a =
+    a
+; action62 pos a b =
+    ExprBinary pos a Add b
+; action63 pos a =
+    a
+; action66 pos a b =
+    ExprBinary pos a Mult b
+; action67 pos a =
+    a
+; action70 pos e =
+    e
+; action71 pos n =
+    ExprVar   pos n
+; action72 pos n =
+    ExprConst pos n
+; action75 pos n =
+    ConstNamed pos n
+; action76 pos n =
+    ConstInt   pos n
+; action79 pos c =
+    Expect pos c
+; action80 pos c =
+    Notify pos c
+; action81 pos e =
+    Guard  pos e
+; action84 pos tests =
+    TestSuite {tests}
+; action87 pos t =
+    [t]
+; action88 pos t ts =
+     t : ts
+}
+parseTestSuite :: FilePath -> IO (Either LexerError (Either (Pos, [String]) TestSuite))
+parseTestSuite filepath = do
+  text <- Text.readFile filepath
+  case lexText filepath text ["(", ")", "*", "+", ",", "-", "->",
+                              ".", "<-", "=", "=>", "expect", "guard", "notify", "test", "~"] of
+    Left  err   -> pure (Left err)
+    Right input -> pure (Right (__runTestSuite STestSuite0 input NilTestSuite))
   
 currentPos :: ([Lexeme], Pos) -> Pos
 currentPos = \case

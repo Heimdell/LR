@@ -5,7 +5,7 @@ add
   "import AST"
   "import Data.Text (Text)"
 
-start Program
+start Program, TestSuite
 
 Program = stmts:Stmts => "Program {stmts}"
 
@@ -74,3 +74,15 @@ Term : "Expr"
 Const
   = n:"<name>"                => "ConstNamed pos n"
   | n:"<num>"                 => "ConstInt   pos n"
+
+Test
+  = "expect" c:Call => "Expect pos c"
+  | "notify" c:Call => "Notify pos c"
+  | "guard"  e:Expr => "Guard  pos e"
+
+TestSuite
+  = "test" tests:Tests => "TestSuite {tests}"
+
+Tests : "[Test]"
+  = t:Test          => "[t]"
+  | t:Test ts:Tests => " t : ts"

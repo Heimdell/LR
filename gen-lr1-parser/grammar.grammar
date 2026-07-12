@@ -6,6 +6,9 @@ add
   "import Data.Text (Text)"
   "import Data.Lexeme"
   "import Data.Array"
+  "import Data.Set qualified as Set"
+  "import Data.Set (Set)"
+
   "listToArray :: [a] -> Array Int a"
   "listToArray as = Data.Array.listArray (0, length as - 1) as"
 
@@ -18,7 +21,6 @@ Point
   = n:"<name>" ":" t:Term   => "T (Just n) t"
   | n:"<name>" ":" e:Entity => "E (Just n) e"
   |                t:Term   => "T  Nothing t"
-  |                e:Entity => "E  Nothing e"
 
 Points : "[Point]"
   = p:Point           => "[p]"
@@ -48,8 +50,13 @@ Lines : "[Text]"
   = t:"<str>"          => "[t]"
   | t:"<str>" ts:Lines => " t : ts"
 
-Starter : "Entity"
-  = "start" e:Entity => "e"
+Starters : "[Entity]"
+  = "start" es:Entities => "es"
 
-Grammar : "([Text], Entity, [Rule])"
-  = a:Additions s:Starter r:Rules => "(a, s, r)"
+Entities : "[Entity]"
+  = e:Entity                 => "[e]"
+  | e:Entity "," es:Entities => " e : es"
+
+
+Grammar : "([Text], Set Entity, [Rule])"
+  = a:Additions s:Starters r:Rules => "(a, Set.fromList s, r)"

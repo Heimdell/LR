@@ -1,0 +1,4 @@
+test
+  expect edge(2, 3)
+  notify unlink(1, 4)
+  guard  1 = 2 + 1
