@@ -41,4 +41,4 @@ parser = info (config <**> helper)
 main :: IO ()
 main = do
   Config {pathToSrc, moduleName, grammarFile} <- execParser parser
-  run grammarFile pathToSrc moduleName
+  createParserFile grammarFile pathToSrc moduleName

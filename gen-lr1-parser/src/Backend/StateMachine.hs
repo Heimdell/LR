@@ -111,8 +111,8 @@ dematerialise table =
     stateNumbers :: Map State Int
     stateNumbers = enumerateStates table
 
-run :: FilePath -> FilePath -> [String] -> IO ()
-run grammarFile srcPath moduleName = do
+createParserFile :: FilePath -> FilePath -> [String] -> IO ()
+createParserFile grammarFile srcPath moduleName = do
   (addendum, starts, rules) <- parseGrammar grammarFile >>= dieOnLexerError >>= dieOnParserError
   let grammar = Raw.Grammar starts rules
   case Grammar.Check.check starts grammar of
@@ -394,6 +394,7 @@ shift starter from term to = do
           ("Push" <> pPrint starter) <+>
           (if termIsBinding term then "n" else "()") <+> parens (st starter from <> ", __p, __stk")
         ))
+
 
 st :: Entity -> Int -> Doc
 st target n = "S" <> pPrint target <> int n
