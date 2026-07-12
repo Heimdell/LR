@@ -25,10 +25,10 @@ doReduce = (Set.singleton .) . Reduce
 doAccept :: Set (Decision state)
 doAccept = Set.singleton Accept
 
-reducingDecision :: Position -> Term ==> Set (Decision state)
+reducingDecision :: Position -> Maybe Term ==> Set (Decision state)
 reducingDecision pos
-  | pos.entity == "S" = "<eof>"           ==> doAccept
-  | otherwise         = pos.lookahead ==> doReduce pos.entity pos.clause
+  | pos.entity == "Start" = Nothing       ==> doAccept
+  | otherwise             = pos.lookahead ==> doReduce pos.entity pos.clause
 
 onlyShift :: (Decision State) -> [State]
 onlyShift = \case

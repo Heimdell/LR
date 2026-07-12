@@ -14,7 +14,7 @@ import Data.Map.Monoidal (type (==>), (!), (==>))
 import Fixpoint          ((>>-))
 import Grammar           (Grammar(first, Grammar))
 import Rule
-import Term              (Point(..), Entity, Term(Term))
+import Term              (Point(..), Entity, Term)
 import Data.Foldable
 import Data.Text (Text)
 
@@ -22,7 +22,7 @@ import Data.Text (Text)
   Position in a rule during parsing process.
 -}
 data Position = Position
-  { lookahead :: Term     -- ^ term expected right after rule is parsed
+  { lookahead :: Maybe Term     -- ^ term expected right after rule is parsed
   , offset    :: Int      -- ^ mark of the rule
   , clause    :: Clause   -- ^ reference to the rule
   , type_     :: Maybe Text
@@ -67,7 +67,7 @@ instance HasField "parsed" Position [Point] where
 {- |
   Start parsing a rule, expecting given `lookahead` term.
 -}
-start :: Entity -> Maybe Text -> Clause -> Term -> Position
+start :: Entity -> Maybe Text -> Clause -> Maybe Term -> Position
 start entity type_ clause lookahead = Position
   { offset = 0
   , lookahead
@@ -89,11 +89,11 @@ start entity type_ clause lookahead = Position
   >         ^
   > lacp = {)}
 -}
-lookaheadAfterCurrentPoint :: Grammar -> Position -> Set Term
+lookaheadAfterCurrentPoint :: Grammar -> Position -> Set (Maybe Term)
 lookaheadAfterCurrentPoint Grammar {first} pos = case pos.next >>= (.locus) of
   Nothing           -> Set.singleton pos.lookahead
-  Just (T _ term)   -> Set.singleton term
-  Just (E _ entity) -> first ! entity
+  Just (T _ term)   -> Set.singleton (Just term)
+  Just (E _ entity) -> Set.map Just (first ! entity)
 
 {- |
   Group a set of position by current point to be parsed.
@@ -105,8 +105,8 @@ groupPositionsByCurrentPoints positions =
     point ==> Set.singleton pos
 
 data SortedPositions = SortedPositions
-  { expectsEntity   :: Entity ==> Set Position
-  , expectsTerminal :: Term   ==> Set Position
+  { expectsEntity   ::       Entity ==> Set Position
+  , expectsTerminal :: Maybe Term   ==> Set Position
   , needsReduction  ::            Set Position
   }
   deriving stock (Generic)
@@ -115,9 +115,9 @@ data SortedPositions = SortedPositions
 splitPositionsByCategory :: Set Position -> SortedPositions
 splitPositionsByCategory = foldMap \pos -> do
   case pos.locus of
-    Nothing           -> mempty { needsReduction  =            Set.singleton pos }
-    Just (T _ term)   -> mempty { expectsTerminal = term   ==> Set.singleton pos }
-    Just (E _ entity) -> mempty { expectsEntity   = entity ==> Set.singleton pos } :: SortedPositions
+    Nothing           -> mempty { needsReduction  =                 Set.singleton pos }
+    Just (T _ term)   -> mempty { expectsTerminal = Just term   ==> Set.singleton pos }
+    Just (E _ entity) -> mempty { expectsEntity   =      entity ==> Set.singleton pos } :: SortedPositions
 
 -- examplePosSet :: Set Position
 -- examplePosSet = Set.fromList

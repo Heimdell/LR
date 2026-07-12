@@ -40,7 +40,7 @@ import Debug.Trace
 -}
 data Action state = Action
   { goto   :: Entity ==> state         -- ^ move after non-terminal is parsed
-  , action :: Term   ==> Set (Decision state)  -- ^ action after terminal is parsed
+  , action :: Maybe Term   ==> Set (Decision state)  -- ^ action after terminal is parsed
   }
   deriving stock (Eq, Ord, Generic)
   deriving       (Semigroup, Monoid) via Generically (Action state)
@@ -120,7 +120,7 @@ makeTables grammar firstState =
 
 data Conflict = Conflict
   { leading   :: [Point]
-  , term      :: Term
+  , term      :: Maybe Term
   , positions :: Set Position
   }
   deriving stock (Eq, Ord)
@@ -200,27 +200,32 @@ tableToConflicts start Table{actions = Monoidal actions} = go start
         for_ (Monoidal.assocs action) \(term, actions) -> do
           for_ actions \case
             Shift st' -> do
-              local (++ [T Nothing term]) do
-                go st'
-            _ -> pure ()
+              case term of
+                Just term -> do
+                  local (++ [T Nothing term]) do
+                    go st'
+                Nothing -> do
+                  pure ()
+            _ -> do
+              pure ()
 
           case toList actions of
             [_] -> pure ()
             _   -> reportConflict st term
 
-    reportConflict :: State -> Term -> ConflictM ()
+    reportConflict :: State -> Maybe Term -> ConflictM ()
     reportConflict st term = do
       let
         positions = st.positions & Set.filter \pos ->
           case pos.locus of
-            Just (T _ term') -> term == term'
+            Just (T _ term') -> term == Just term'
             Nothing          -> pos.lookahead == term
             _                -> False
 
         cutPositions = positions & Set.map \pos ->
           case pos.locus of
             Nothing -> pos
-            Just _  -> (pos :: Position) {lookahead = "?"}
+            Just _  -> (pos :: Position) {lookahead = Just "?"}
 
         -- additional
       reported <- gets (Monoidal.member cutPositions . (.foundConflicts))

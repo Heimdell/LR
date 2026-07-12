@@ -2,6 +2,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 module Backend.StateMachine where
 
+-- import qualified Data.Text as Text
+import Control.Monad
 import Data.Foldable
 import Data.Function ((&))
 import Data.List (intercalate)
@@ -9,28 +11,26 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Map.Monoidal ((!), (==>))
 import Data.Map.Monoidal qualified as Monoidal
-import Data.Maybe (maybeToList)
+import Data.Maybe (maybeToList, fromMaybe)
 import Data.Ord (comparing)
 import Data.Set ((\\))
 import Data.Text (Text)
+import Data.Text.Position
 import Decision
 import Frontend.Parser (parseGrammar)
 import Grammar
 import Position
 import qualified Data.Set as Set
--- import qualified Data.Text as Text
+import qualified Grammar.Check
+import qualified RawGrammar as Raw
+import Rule
 import State
+import System.Exit (exitFailure)
 import System.FilePath
 import Tables
 import Term
-import Text.PrettyPrint.HughesPJClass hiding ((<>))
-import Rule
-import Data.Text.Position
-import qualified Grammar.Check
-import System.Exit (exitFailure)
-import Control.Monad
 import Text.Lexer.Default (dieOnLexerError, dieOnParserError)
-import qualified RawGrammar as Raw
+import Text.PrettyPrint.HughesPJClass hiding ((<>))
 
 enumerateStates :: Table State -> Map State Int
 enumerateStates Table {actions} =
@@ -295,8 +295,8 @@ reduce state pos = vcat
   where
     input :: Doc
     input = case pos.lookahead of
-      "<eof>" -> "([], __end)"
-      tok -> parens (pointToBinder "__p" "tok" tok <+> ":" <+> ("__input" <> ",") <+> "__end")
+      Nothing  -> "([], __end)"
+      Just tok -> parens (pointToBinder "__p" "tok" tok <+> ":" <+> ("__input" <> ",") <+> "__end")
 
     params = foldMap (maybeToList . fmap pPrint . (.name)) pos.clause.points
 
@@ -316,9 +316,9 @@ stateErrors number state =
           (fsep $ punctuate "," $ map (doubleQuotes . text . show) stateTerminals))
   where
     stateTerminals :: [Term]
-    stateTerminals = Set.toList $ state.positions & foldMap \pos ->
+    stateTerminals = map (fromMaybe "<eof>") $ Set.toList $ state.positions & foldMap \pos ->
       case pos.locus of
-        Just (T _ t) -> Set.singleton t
+        Just (T _ t) -> Set.singleton (Just t)
         Nothing      -> Set.singleton pos.lookahead
         _            -> Set.empty
 
@@ -345,5 +345,7 @@ stateShifts :: Entity -> Int -> Action Int -> Doc
 stateShifts starter from Action {action} =
   vcat $ action & Monoidal.assocs & foldMap \(term, decisions) -> do
     decisions & foldMap \case
-      Shift to -> [shift starter from term to]
-      _        -> []
+      Shift to -> case term of
+        Just term -> [shift starter from term to]
+        Nothing   -> []
+      _ -> []

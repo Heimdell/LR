@@ -27,7 +27,7 @@ data PrettyPosition = PrettyPosition
   { clause    :: Clause
   , offset    :: Int
   , entity    :: Entity
-  , lookahead :: Set Term
+  , lookahead :: Set (Maybe Term)
   }
   deriving stock (Eq, Ord)
 
