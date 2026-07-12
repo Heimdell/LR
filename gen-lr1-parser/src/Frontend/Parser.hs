@@ -5,7 +5,7 @@
 module Frontend.Parser (
     parseGrammar
 ) where
-  
+
 import Data.Text.IO.Utf8 qualified as Text
 import Data.Kind qualified as Kind
 import Rule
@@ -19,13 +19,13 @@ import Data.Set qualified as Set
 import Data.Set (Set)
 listToArray :: [a] -> Array Int a
 listToArray as = Data.Array.listArray (0, length as - 1) as
-  
+
 type Stack  st xs = (st xs, Pos, Stack' st xs)
 data Stack' st xs where
   Nil  ::                     Stack' st '[]
   (:>) :: x -> Stack st xs -> Stack' st (x : xs)
-  
-  
+
+
 data StGrammar :: [Kind.Type] -> Kind.Type where
   SGrammar0 :: StGrammar (a)
   SGrammar1 :: StGrammar (([Text], Set Entity, [Rule]) : a)
@@ -67,7 +67,7 @@ data StGrammar :: [Kind.Type] -> Kind.Type where
   SGrammar37 :: StGrammar (Text : a)
   SGrammar38 :: StGrammar ([Text] : () : a)
   SGrammar39 :: StGrammar ([Text] : Text : a)
-  
+
 __gotoAdditionsForGrammar :: ([Lexeme], Pos) -> [Text] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
 __gotoAdditionsForGrammar toks term stk@(state, _, _) = case state of
   SGrammar0 -> __runGrammar SGrammar6 toks (term :> stk)
@@ -154,7 +154,7 @@ __gotoTermForGrammar toks term stk@(state, _, _) = case state of
   SGrammar31 -> __runGrammar SGrammar32 toks (term :> stk)
   SGrammar34 -> __runGrammar SGrammar30 toks (term :> stk)
   _ -> error ""
-  
+
 __runGrammar :: StGrammar a -> ([Lexeme], Pos) -> Stack' StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
 __runGrammar = \cases {
 ; SGrammar0 ((__p,  "add") : __input, __end) __stk ->
@@ -463,7 +463,7 @@ __runGrammar = \cases {
 ; action62 pos a s r =
     (a, Set.fromList s, r)
 }
-  
+
 parseGrammar :: FilePath -> IO (Either LexerError (Either (Pos, [String]) ([Text], Set Entity, [Rule])))
 parseGrammar filepath = do
   text <- Text.readFile filepath
@@ -471,9 +471,8 @@ parseGrammar filepath = do
                               "|"] of
     Left  err   -> pure (Left err)
     Right input -> pure (Right (__runGrammar SGrammar0 input Nil))
-  
+
 currentPos :: ([Lexeme], Pos) -> Pos
 currentPos = \case
   ([],           end) -> end
   ((pos, _) : _, _)   -> pos
-  

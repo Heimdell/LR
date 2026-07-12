@@ -155,21 +155,21 @@ generateParserModule request@Request{addendum, starts, grammar} pathToSrc module
               map (nest 2 . parse) do
                 toList starts
       , ") where"
-      , "  "
+      , ""
       , "import Data.Text.IO.Utf8 qualified as Text"
       , "import Data.Kind qualified as Kind"
       , vcat do
           map pPrint addendum
-      , "  "
+      , ""
       , parserStackType
-      , "  "
+      , ""
       , vcat $ toList parser
-      , "  "
+      , ""
       , "currentPos :: ([Lexeme], Pos) -> Pos"
       , "currentPos = \\case"
       , "  ([],           end) -> end"
       , "  ((pos, _) : _, _)   -> pos"
-      , "  "
+      , ""
       ]
   writeFile fullPath (show moduleBody)
 
@@ -187,7 +187,7 @@ makeParser target toolbox@Toolbox {grammar, start, table, states, inverse} = vca
     -- TODO: stack have the same shape, parametrise with state type
     --
     genStateType target grammar states
-  , "  "
+  , ""
     -- generate GOTO table in form of set of functions, one per entity column in table
     --
   , vcat do
@@ -202,11 +202,11 @@ makeParser target toolbox@Toolbox {grammar, start, table, states, inverse} = vca
                 (typeOf grammar entity)
                 entity
                 table
-  , "  "
+  , ""
     -- Generate ACTION table
     --
   , makeActionTable target toolbox
-  , "  "
+  , ""
   , parse target <+> ":: FilePath -> IO (Either LexerError (Either (Pos, [String])" <+> pPrint (grammar.types ! target) <.> "))"
   , parse target <+> "filepath = do"
   , "  text <- Text.readFile filepath"
@@ -281,7 +281,7 @@ parserStackType = vcat
   , "data Stack' st xs where"
   , "  Nil  ::                     Stack' st '[]"
   , "  (:>) :: x -> Stack st xs -> Stack' st (x : xs)"
-  , "  "
+  , ""
   ]
 
 {- |

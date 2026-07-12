@@ -6,7 +6,7 @@ module Parser (
     parseProgram,
     parseTestSuite
 ) where
-  
+
 import Data.Text.IO.Utf8 qualified as Text
 import Data.Kind qualified as Kind
 import Text.Lexer.Default
@@ -14,13 +14,13 @@ import Data.Text.Position (Pos)
 import Data.Lexeme
 import AST
 import Data.Text (Text)
-  
+
 type Stack  st xs = (st xs, Pos, Stack' st xs)
 data Stack' st xs where
   Nil  ::                     Stack' st '[]
   (:>) :: x -> Stack st xs -> Stack' st (x : xs)
-  
-  
+
+
 data StProgram :: [Kind.Type] -> Kind.Type where
   SProgram0 :: StProgram (a)
   SProgram1 :: StProgram (Program : a)
@@ -204,7 +204,7 @@ data StProgram :: [Kind.Type] -> Kind.Type where
   SProgram178 :: StProgram ([Change] : () : Change : a)
   SProgram179 :: StProgram ([Cond] : () : Cond : a)
   SProgram180 :: StProgram ([Cond] : () : Cond : a)
-  
+
 __gotoAddForProgram :: ([Lexeme], Pos) -> Expr -> Stack StProgram a -> Either (Pos, [String]) Program
 __gotoAddForProgram toks term stk@(state, _, _) = case state of
   SProgram9 -> __runProgram SProgram133 toks (term :> stk)
@@ -462,7 +462,7 @@ __gotoTupleForProgram toks term stk@(state, _, _) = case state of
   SProgram149 -> __runProgram SProgram157 toks (term :> stk)
   SProgram166 -> __runProgram SProgram168 toks (term :> stk)
   _ -> error ""
-  
+
 __runProgram :: StProgram a -> ([Lexeme], Pos) -> Stack' StProgram a -> Either (Pos, [String]) Program
 __runProgram = \cases {
 ; SProgram0 ((__p, LowercaseName n) : __input, __end) __stk ->
@@ -2622,7 +2622,7 @@ __runProgram = \cases {
 ; action88 pos t ts =
      t : ts
 }
-  
+
 parseProgram :: FilePath -> IO (Either LexerError (Either (Pos, [String]) Program))
 parseProgram filepath = do
   text <- Text.readFile filepath
@@ -2739,7 +2739,7 @@ data StTestSuite :: [Kind.Type] -> Kind.Type where
   STestSuite105 :: StTestSuite (() : Expr : () : a)
   STestSuite106 :: StTestSuite (() : Expr : () : a)
   STestSuite107 :: StTestSuite (() : Expr : () : a)
-  
+
 __gotoAddForTestSuite :: ([Lexeme], Pos) -> Expr -> Stack StTestSuite a -> Either (Pos, [String]) TestSuite
 __gotoAddForTestSuite toks term stk@(state, _, _) = case state of
   STestSuite3 -> __runTestSuite STestSuite48 toks (term :> stk)
@@ -2916,7 +2916,7 @@ __gotoTupleForTestSuite :: ([Lexeme], Pos) -> [Expr] -> Stack StTestSuite a -> E
 __gotoTupleForTestSuite toks term stk@(state, _, _) = case state of
   STestSuite2 -> __runTestSuite STestSuite27 toks (term :> stk)
   _ -> error ""
-  
+
 __runTestSuite :: StTestSuite a -> ([Lexeme], Pos) -> Stack' StTestSuite a -> Either (Pos, [String]) TestSuite
 __runTestSuite = \cases {
 ; STestSuite0 ((__p,  "test") : __input, __end) __stk ->
@@ -4431,7 +4431,7 @@ __runTestSuite = \cases {
 ; action88 pos t ts =
      t : ts
 }
-  
+
 parseTestSuite :: FilePath -> IO (Either LexerError (Either (Pos, [String]) TestSuite))
 parseTestSuite filepath = do
   text <- Text.readFile filepath
@@ -4439,9 +4439,8 @@ parseTestSuite filepath = do
                               ".", "<-", "=", "=>", "expect", "guard", "notify", "test", "~"] of
     Left  err   -> pure (Left err)
     Right input -> pure (Right (__runTestSuite STestSuite0 input Nil))
-  
+
 currentPos :: ([Lexeme], Pos) -> Pos
 currentPos = \case
   ([],           end) -> end
   ((pos, _) : _, _)   -> pos
-  
