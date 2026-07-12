@@ -52,8 +52,7 @@ define entity = do
   modify \scope -> scope {defined = Set.insert entity scope.defined}
 
 checkGrammar :: Raw.Grammar -> M ()
-checkGrammar Raw.Grammar {starter, ruleOrder} = do
-  assertExists starter
+checkGrammar Raw.Grammar {ruleOrder} = do
   for_ ruleOrder checkRule
 
 checkRule :: Rule -> M ()
@@ -67,9 +66,13 @@ checkPoint = \case
   T {}       -> pure ()
   E _ entity -> assertExists entity
 
-check :: Raw.Grammar -> Either (Set Error) Scoped.Grammar
-check grammar = do
-  let (_, errors) = evalState (runWriterT (checkGrammar grammar)) mempty { declared = declaredEntities grammar }
+check :: Set Entity -> Raw.Grammar -> Either (Set Error) Scoped.Grammar
+check starters grammar = do
+  let (_, errors) = evalState (runWriterT checker) mempty { declared = declaredEntities grammar }
   if null errors
-  then pure (Scoped.makeGrammar grammar.starter grammar.ruleOrder)
+  then pure (Scoped.makeGrammar grammar.ruleOrder)
   else throwError errors
+  where
+    checker = do
+      checkGrammar grammar
+      for_ starters assertExists

@@ -55,7 +55,7 @@ Exprs1 : "[Expr]"
   | e:Expr                    => "[e]"
 
 Expr
-  = a:Add  "=" b:Add  => "ExprBinary pos a Equals b"
+  = a:Add "=" b:Add  => "ExprBinary pos a Equals b"
   | a:Add             => "a"
 
 Add: "Expr"

@@ -26,32 +26,23 @@ data Grammar = Grammar
   , terminals :: Set Term
   , entities  :: Set Entity
   , first     :: Entity ==> Set Term
-  , starter   :: Entity
+  -- , starter   :: Entity
   , types     :: Entity ==> Set Text
   }
 
-makeGrammar :: Entity -> [Rule] -> Grammar
-makeGrammar starter ruleOrder = Grammar
+makeGrammar :: [Rule] -> Grammar
+makeGrammar ruleOrder = Grammar
   { ruleOrder
   , rules
   , terminals = foldMap ruleTerminals ruleOrder
   , entities  = foldMap ruleEntities  ruleOrder
   , first
-  , starter
+  -- , starter
   , types = foldMap ruleTypes ruleOrder
   }
   where
     rules =
-      Map.fromList (map singleRule (evalState (assignNumberToRulesClauses ruleOrder) 0)) <> do
-        "Start" ==> Set.singleton do
-          Rule "Start" Nothing
-            [ Clause
-              { reducer = "res"
-              , points  = listArray (0, 0) [E (Just "res") starter]
-              , mark    = -1
-              , pos     = Pos 0 0 "<nowhere>"
-              }
-            ]
+      Map.fromList (map singleRule (evalState (assignNumberToRulesClauses ruleOrder) 0))
 
     assignNumberToRulesClauses :: [Rule] -> State Int [Rule]
     assignNumberToRulesClauses rules = do

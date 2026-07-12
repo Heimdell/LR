@@ -13,7 +13,7 @@ import Data.Map.Monoidal ((!), (==>))
 import Data.Map.Monoidal qualified as Monoidal
 import Data.Maybe (maybeToList, fromMaybe)
 import Data.Ord (comparing)
-import Data.Set ((\\))
+import Data.Set ((\\), Set)
 import Data.Text (Text)
 import Data.Text.Position
 import Decision
@@ -31,6 +31,61 @@ import Tables
 import Term
 import Text.Lexer.Default (dieOnLexerError, dieOnParserError)
 import Text.PrettyPrint.HughesPJClass hiding ((<>))
+import qualified RawGrammar as Raw
+import Data.Array (listArray)
+
+data Request = Request
+  { addendum :: [Text]
+  , starts   :: Set Entity
+  , grammar  :: Grammar
+  }
+
+data Toolbox = Toolbox
+  { grammar  :: Grammar
+  , start    :: State
+  , inverse  :: Map State Int
+  , states   :: Map Int State
+  , rawTable :: Table State
+  , table    :: Table Int
+  , addendum :: [Text]
+  }
+
+prepareToolboxes :: Request -> Map Entity Toolbox
+prepareToolboxes Request {addendum, starts, grammar} =
+  starts & foldMap \starter ->
+    Map.singleton starter do
+      let
+        starterClause = Clause
+          { reducer = "res"
+          , points  = listArray (0, 0) [E (Just "res") starter]
+          , mark    = -1
+          , pos     = Pos 0 0 "<nowhere>"
+          }
+
+        starterRule = Rule "Start" Nothing [starterClause]
+        startingPosition = Position.start
+          starter
+          (Just (typeOf grammar starter))
+          starterClause
+          Nothing
+
+        grammar' = grammar
+          { rules = grammar.rules <> do
+              "Start" ==> Set.singleton starterRule
+          }
+
+        start = closure grammar' do Set.singleton startingPosition
+      let rawTable = makeTables grammar start
+      let (table, inverse, states) = dematerialise rawTable
+      Toolbox
+        { grammar = grammar'
+        , start
+        , inverse
+        , states
+        , rawTable
+        , table
+        , addendum
+        }
 
 enumerateStates :: Table State -> Map State Int
 enumerateStates Table {actions} =
@@ -40,9 +95,6 @@ enumerateStates Table {actions} =
 invert :: (Ord a, Ord b) => Map a b -> Map b a
 invert = Map.foldMapWithKey (flip Map.singleton)
 
-func :: (Ord a) => Map a b -> a -> b
-func = (Map.!)
-
 instance Semigroup Int where
   (<>) = error "Semigroup Int"
 
@@ -51,7 +103,7 @@ instance Monoid Int where
 
 dematerialise :: Table State -> (Table Int, Map State Int, Map Int State)
 dematerialise table =
-  ( mapTableState (func stateNumbers) table
+  ( mapTableState (stateNumbers Map.!) table
   , stateNumbers
   , invert stateNumbers
   )
@@ -61,21 +113,21 @@ dematerialise table =
 
 run :: FilePath -> FilePath -> [String] -> IO ()
 run grammarFile srcPath moduleName = do
-  (addendum, entity, rules) <- parseGrammar grammarFile >>= dieOnLexerError >>= dieOnParserError
-  let grammar = Raw.Grammar entity rules
-  case Grammar.Check.check grammar of
+  (addendum, start, rules) <- parseGrammar grammarFile >>= dieOnLexerError >>= dieOnParserError
+  let grammar = Raw.Grammar start rules
+  case Grammar.Check.check (Set.singleton start) grammar of
     Left errs -> do
       for_ errs (print . pPrint)
       exitFailure
     Right grammar -> do
       generateParserModule
-        addendum
-        grammar
+        Request{addendum, starts = Set.singleton start, grammar}
         srcPath
         moduleName
 
-generateParserModule :: [Text] -> Grammar -> FilePath -> [String] -> IO ()
-generateParserModule addendum grammar pathToSrc moduleName = do
+generateParserModule :: Request -> FilePath -> [String] -> IO ()
+generateParserModule request@Request{addendum, starts, grammar} pathToSrc moduleName = do
+  let toolboxes = prepareToolboxes request
   let starting = startingState grammar
   let tables = makeTables grammar starting
   let (table, inv, states) = dematerialise tables
@@ -85,21 +137,19 @@ generateParserModule addendum grammar pathToSrc moduleName = do
       print (pPrint problem)
       putStrLn ""
     exitFailure
-  let parser = makeParser grammar.starter grammar table states
+  let parser = Map.mapWithKey makeParser toolboxes
   let fullPath = pathToSrc </> intercalate "/" moduleName <> ".hs"
-  let
-    terms = brackets $ fsep $ punctuate "," $ map (doubleQuotes . pPrint) $ toList do
-      grammar.terminals \\ Set.fromList
-        ["<num>", "<str>", "<Name>", "<name>", "<op>", "<pun>"]
   let
     moduleBody = vcat
       [ "{-# language PatternSynonyms #-}"
       , "{-# OPTIONS_GHC -Wno-incomplete-patterns #-}"
       , "{-# OPTIONS_GHC -Wno-unused-matches #-}"
-      , "module"
-          <+> cat (punctuate "." (map text moduleName))
-          <+> parens ("parse" <> pPrint grammar.starter)
-          <+> "where"
+      , "module" <+> cat (punctuate "." (map text moduleName)) <+> "("
+      , nest 2 do
+          vcat do
+            map (\starter -> nest 2 do "parse" <> pPrint starter) do
+              toList starts
+      , ") where"
       , "  "
       , "import Data.Text.IO.Utf8 qualified as Text"
       , "import Data.Kind qualified as Kind"
@@ -117,20 +167,13 @@ generateParserModule addendum grammar pathToSrc moduleName = do
       , "  "
       , "infixr 2 :>, :?"
       , "  "
-      , parser
+      , vcat $ toList parser
       , "  "
       , "currentPos :: ([Lexeme], Pos) -> Pos"
       , "currentPos = \\case"
       , "  ([],           end) -> end"
       , "  ((pos, _) : _, _)   -> pos"
       , "  "
-      , "parse" <> pPrint grammar.starter <> " :: FilePath -> IO (Either LexerError (Either (Pos, [String]) " <> pPrint (grammar.types ! grammar.starter) <> "))"
-      , "parse" <> pPrint grammar.starter <> " filepath = do"
-      , "  text <- Text.readFile filepath"
-      , "  case lexText filepath text" <+> terms <+> "of"
-      , "    Left  err   -> pure (Left err)"
-      , ("    Right input -> pure (Right (__run" <> pPrint grammar.starter) <+> (" S" <> pPrint (inv Map.! starting)) <+> "input Nil))"
-
       ]
   writeFile fullPath (show moduleBody)
 
@@ -139,16 +182,16 @@ typeOf grammar entity = case toList (grammar.types ! entity) of
   [ty_] -> ty_
   other -> error $ "unexpected type set " <> show (entity ==> other) <> ", expected single type"
 
-makeParser :: Entity -> Grammar -> Table Int -> Map Int State -> Doc
-makeParser starter  grammar table states = vcat
+makeParser :: Entity -> Toolbox -> Doc
+makeParser starter Toolbox {grammar, start, table, states, inverse} = vcat
   [ genStateType grammar states
   , "  "
   , vcat do
       punctuate "\n" do
-        foldMap (pure . (\e -> gotoEntity starter (typeOf grammar grammar.starter) (typeOf grammar e) e table)) do
+        foldMap (pure . (\e -> gotoEntity starter (typeOf grammar starter) (typeOf grammar e) e table)) do
           Set.delete "Start" grammar.entities
   , "  "
-  , "__run" <> pPrint starter <> " :: St a -> ([Lexeme], Pos) -> Stack' a -> Either (Pos, [String]) " <> pPrint (grammar.types ! grammar.starter)
+  , "__run" <> pPrint starter <> " :: St a -> ([Lexeme], Pos) -> Stack' a -> Either (Pos, [String]) " <> pPrint (grammar.types ! starter)
   , "__run" <> pPrint starter <> " = \\cases {"
   , vcat $ foldMap (pure . uncurry (stateShifts starter)) (Monoidal.assocs table.actions)
   , vcat $ foldMap (pure . uncurry stateReducers) (Map.assocs states)
@@ -156,8 +199,17 @@ makeParser starter  grammar table states = vcat
   , "} where {"
   , vcat $ map (uncurry createReducer) $ Map.assocs reducerActions
   , "}"
+  , "parse" <> pPrint starter <> " :: FilePath -> IO (Either LexerError (Either (Pos, [String]) " <> pPrint (grammar.types ! starter) <> "))"
+  , "parse" <> pPrint starter <> " filepath = do"
+  , "  text <- Text.readFile filepath"
+  , "  case lexText filepath text" <+> terms <+> "of"
+  , "    Left  err   -> pure (Left err)"
+  , ("    Right input -> pure (Right (__run" <> pPrint starter) <+> (" S" <> pPrint (inverse Map.! start)) <+> "input Nil))"
   ]
   where
+    terms = brackets $ fsep $ punctuate "," $ map (doubleQuotes . pPrint) $ toList do
+      grammar.terminals \\ Set.fromList
+        ["<num>", "<str>", "<Name>", "<name>", "<op>", "<pun>"]
 
     reducerActions :: Map Int (Int, FilePath, [Text], Text)
     reducerActions =
@@ -282,11 +334,12 @@ pointBinder pt = case pt.name of
 -}
 reduce :: Int -> Position -> Doc
 reduce state pos = vcat
-  [ ";" <+>  do
+  [ "-- lookahead " <> pPrint pos.lookahead <> ", entity " <> pPrint pos.entity
+  , ";" <+>  do
     hang ((("S" <> int state) <+> input <+> positionBinders pos) <+> "->") 2
-      case pos.entity of
-      "Start" -> "pure res"
-      _       ->
+      case pos.clause.pos.line of
+      0 -> "pure res"
+      _ ->
         ("__goto" <> pPrint pos.entity)
           <+> input
           <+> ("(action" <> pPrint pos.clause.pos.line) <+> "__pos" <+> (fsep params <> ")")

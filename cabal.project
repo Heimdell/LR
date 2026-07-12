@@ -7,4 +7,4 @@ packages:
   ./lr1-parser-default-lexer
 
 program-options
-  ghc-options: -freverse-errors -O0 -j
+  ghc-options: -freverse-errors -O0 -j -fdiagnostics-color=always

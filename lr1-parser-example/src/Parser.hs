@@ -1,7 +1,9 @@
 {-# language PatternSynonyms #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
-module Parser (parseProgram) where
+module Parser (
+    parseProgram
+) where
   
 import Data.Text.IO.Utf8 qualified as Text
 import Data.Kind qualified as Kind
@@ -893,884 +895,1293 @@ __runProgram = \cases {
     __runProgram S114 (__input, __end) (n :> (S177, __p, __stk))
 ; S177 ((__p,  "~") : __input, __end) __stk ->
     __runProgram S145 (__input, __end) (() :> (S177, __p, __stk))
+-- lookahead Nothing, entity Program
 ; S1 ([], __end) (res :> __stk@(_, __pos, _)) -> pure res
+-- lookahead Nothing, entity Program
 ; S2 ([], __end) (stmts :> __stk@(_, __pos, _)) ->
     __gotoProgram ([], __end) (action10 __pos stmts) __stk
+-- lookahead Nothing, entity Stmts
 ; S3 ([], __end) (c :> __stk@(_, __pos, _)) ->
     __gotoStmts ([], __end) (action14 __pos c) __stk
+-- lookahead Nothing, entity Stmt
 ; S4 ([], __end) (c :> __stk@(_, __pos, _)) ->
     __gotoStmt ([], __end) (action17 __pos c) __stk
+-- lookahead Just <name>, entity Stmt
 ; S4 ((__p, LowercaseName tok) : __input, __end) (c :> __stk@(_, __pos, _)) ->
     __gotoStmt ((__p, LowercaseName tok) : __input, __end) (action17 __pos c) __stk
+-- lookahead Nothing, entity Stmt
 ; S5 ([], __end) (e :> __stk@(_, __pos, _)) ->
     __gotoStmt ([], __end) (action18 __pos e) __stk
+-- lookahead Just <name>, entity Stmt
 ; S5 ((__p, LowercaseName tok) : __input, __end) (e :> __stk@(_, __pos, _)) ->
     __gotoStmt ((__p, LowercaseName tok) : __input, __end) (action18 __pos e) __stk
+-- lookahead Nothing, entity Stmts
 ; S7 ([], __end) (cs :> c :? __stk@(_, __pos, _)) ->
     __gotoStmts ([], __end) (action13 __pos c cs) __stk
+-- lookahead Nothing, entity Clause
 ; S10 ([], __end) (_ :> c :? __stk@(_, __pos, _)) ->
     __gotoClause ([], __end) (action26 __pos c) __stk
+-- lookahead Just <name>, entity Clause
 ; S10 ((__p, LowercaseName tok) : __input, __end) (_ :> c :? __stk@(_, __pos, _)) ->
     __gotoClause ((__p, LowercaseName tok) : __input, __end) (action26 __pos c) __stk
+-- lookahead Nothing, entity Effect
 ; S15 ([], __end) (_ :> ds :? _ :? c :? __stk@(_, __pos, _)) ->
     __gotoEffect ([], __end) (action21 __pos c ds) __stk
+-- lookahead Just <name>, entity Effect
 ; S15 ((__p, LowercaseName tok) : __input, __end) (_ :> ds :? _ :? c :? __stk@(_, __pos, _)) ->
     __gotoEffect ((__p, LowercaseName tok) : __input, __end) (action21 __pos c
                                                                              ds) __stk
+-- lookahead Nothing, entity Effect
 ; S17 ([], __end) (_ :> cs :? _ :? c :? __stk@(_, __pos, _)) ->
     __gotoEffect ([], __end) (action23 __pos c cs) __stk
+-- lookahead Just <name>, entity Effect
 ; S17 ((__p, LowercaseName tok) : __input, __end) (_ :> cs :? _ :? c :? __stk@(_, __pos, _)) ->
     __gotoEffect ((__p, LowercaseName tok) : __input, __end) (action23 __pos c
                                                                              cs) __stk
+-- lookahead Nothing, entity Clause
 ; S18 ([], __end) (_ :> cs :? _ :? c :? __stk@(_, __pos, _)) ->
     __gotoClause ([], __end) (action27 __pos c cs) __stk
+-- lookahead Just <name>, entity Clause
 ; S18 ((__p, LowercaseName tok) : __input, __end) (_ :> cs :? _ :? c :? __stk@(_, __pos, _)) ->
     __gotoClause ((__p, LowercaseName tok) : __input, __end) (action27 __pos c
                                                                              cs) __stk
+-- lookahead Nothing, entity Effect
 ; S20 ([], __end) (_ :> ds :? _ :? cs :? _ :? c :? __stk@(_, __pos, _)) ->
     __gotoEffect ([], __end) (action22 __pos c cs ds) __stk
+-- lookahead Just <name>, entity Effect
 ; S20 ((__p, LowercaseName tok) : __input, __end) (_ :> ds :? _ :? cs :? _ :? c :? __stk@(_, __pos, _)) ->
     __gotoEffect ((__p, LowercaseName tok) : __input, __end) (action22 __pos c
                                                                              cs ds) __stk
+-- lookahead Just ), entity Exprs1
 ; S21 ((__p,  ")") : __input, __end) (e :> __stk@(_, __pos, _)) ->
     __gotoExprs1 ((__p,  ")") : __input, __end) (action55 __pos e) __stk
+-- lookahead Just ), entity Expr
 ; S22 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ")") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just ,, entity Expr
 ; S22 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ",") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just ), entity Expr
 ; S23 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ")") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just ), entity Expr
 ; S24 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ")") : __input, __end) (action58 __pos a
                                                               b) __stk
+-- lookahead Just ), entity Expr
 ; S25 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ")") : __input, __end) (action58 __pos a
                                                               b) __stk
+-- lookahead Just ,, entity Expr
 ; S25 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ",") : __input, __end) (action58 __pos a
                                                               b) __stk
+-- lookahead Just ), entity Add
 ; S26 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ")") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
 ; S26 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ), entity Add
 ; S27 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ")") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
 ; S27 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ,, entity Add
 ; S27 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ), entity Add
 ; S28 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ")") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
 ; S28 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ,, entity Add
 ; S28 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just =, entity Add
 ; S28 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "=") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ), entity Add
 ; S29 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ")") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
 ; S29 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just =, entity Add
 ; S29 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "=") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ), entity Add
 ; S30 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ")") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just +, entity Add
 ; S30 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ), entity Add
 ; S31 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ")") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just +, entity Add
 ; S31 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ,, entity Add
 ; S31 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ",") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ), entity Add
 ; S32 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ")") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just +, entity Add
 ; S32 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ,, entity Add
 ; S32 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ",") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just =, entity Add
 ; S32 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "=") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ), entity Add
 ; S33 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ")") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just +, entity Add
 ; S33 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just =, entity Add
 ; S33 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "=") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ), entity Mult
 ; S34 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ")") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
 ; S34 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
 ; S34 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ), entity Mult
 ; S35 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ")") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
 ; S35 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
 ; S35 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ,, entity Mult
 ; S35 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ), entity Mult
 ; S36 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ")") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
 ; S36 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
 ; S36 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ,, entity Mult
 ; S36 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just =, entity Mult
 ; S36 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "=") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ), entity Mult
 ; S37 ((__p,  ")") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ")") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
 ; S37 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
 ; S37 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just =, entity Mult
 ; S37 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "=") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ), entity Term
 ; S42 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ")") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S42 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S42 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ), entity Term
 ; S43 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ")") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S43 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S43 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ,, entity Term
 ; S43 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ), entity Term
 ; S44 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ")") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S44 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S44 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ,, entity Term
 ; S44 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just =, entity Term
 ; S44 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ), entity Term
 ; S45 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ")") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S45 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S45 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just =, entity Term
 ; S45 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ), entity Term
 ; S46 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ")") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S46 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S46 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ), entity Term
 ; S47 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ")") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S47 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S47 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ,, entity Term
 ; S47 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ), entity Term
 ; S48 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ")") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S48 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S48 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ,, entity Term
 ; S48 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just =, entity Term
 ; S48 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ), entity Term
 ; S49 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ")") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S49 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S49 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just =, entity Term
 ; S49 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ), entity Const
 ; S50 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ")") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S50 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S50 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ), entity Const
 ; S51 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ")") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S51 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S51 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S51 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ), entity Const
 ; S52 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ")") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S52 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S52 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S52 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just =, entity Const
 ; S52 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ), entity Const
 ; S53 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ")") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S53 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S53 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just =, entity Const
 ; S53 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ), entity Const
 ; S54 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ")") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S54 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S54 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ), entity Const
 ; S55 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ")") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S55 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S55 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S55 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ), entity Const
 ; S56 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ")") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S56 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S56 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S56 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just =, entity Const
 ; S56 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ), entity Const
 ; S57 ((__p,  ")") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ")") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S57 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S57 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just =, entity Const
 ; S57 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ), entity Exprs1
 ; S73 ((__p,  ")") : __input, __end) (es :> _ :? e :? __stk@(_, __pos, _)) ->
     __gotoExprs1 ((__p,  ")") : __input, __end) (action54 __pos e
                                                                 es) __stk
+-- lookahead Just ), entity Mult
 ; S74 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ")") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just *, entity Mult
 ; S74 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just +, entity Mult
 ; S74 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ), entity Mult
 ; S75 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ")") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just *, entity Mult
 ; S75 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just +, entity Mult
 ; S75 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ,, entity Mult
 ; S75 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ",") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ), entity Mult
 ; S76 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ")") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just *, entity Mult
 ; S76 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just +, entity Mult
 ; S76 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ,, entity Mult
 ; S76 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ",") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just =, entity Mult
 ; S76 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "=") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ), entity Mult
 ; S77 ((__p,  ")") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ")") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just *, entity Mult
 ; S77 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just +, entity Mult
 ; S77 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just =, entity Mult
 ; S77 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "=") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ), entity Term
 ; S78 ((__p,  ")") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ")") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
 ; S78 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
 ; S78 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ), entity Term
 ; S79 ((__p,  ")") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ")") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
 ; S79 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
 ; S79 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ,, entity Term
 ; S79 ((__p,  ",") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ), entity Term
 ; S80 ((__p,  ")") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ")") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
 ; S80 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
 ; S80 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ,, entity Term
 ; S80 ((__p,  ",") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just =, entity Term
 ; S80 ((__p,  "=") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ), entity Term
 ; S81 ((__p,  ")") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ")") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
 ; S81 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
 ; S81 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just =, entity Term
 ; S81 ((__p,  "=") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Add
 ; S82 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ,, entity Add
 ; S82 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ., entity Add
 ; S82 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ".") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
 ; S83 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ,, entity Add
 ; S83 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ., entity Add
 ; S83 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ".") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just =, entity Add
 ; S83 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "=") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
 ; S84 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ,, entity Add
 ; S84 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ., entity Add
 ; S84 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ".") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just =, entity Add
 ; S84 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "=") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just =>, entity Add
 ; S84 ((__p,  "=>") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "=>") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
 ; S85 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ,, entity Add
 ; S85 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ",") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just ., entity Add
 ; S85 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ".") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just =>, entity Add
 ; S85 ((__p,  "=>") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "=>") : __input, __end) (action63 __pos a) __stk
+-- lookahead Just +, entity Add
 ; S86 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ,, entity Add
 ; S86 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ",") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ., entity Add
 ; S86 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ".") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just +, entity Add
 ; S87 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ,, entity Add
 ; S87 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ",") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ., entity Add
 ; S87 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ".") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just =, entity Add
 ; S87 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "=") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just +, entity Add
 ; S88 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ,, entity Add
 ; S88 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ",") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ., entity Add
 ; S88 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ".") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just =, entity Add
 ; S88 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "=") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just =>, entity Add
 ; S88 ((__p,  "=>") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "=>") : __input, __end) (action62 __pos a
                                                               b) __stk
+-- lookahead Just +, entity Add
 ; S89 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "+") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ,, entity Add
 ; S89 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ",") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just ., entity Add
 ; S89 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  ".") : __input, __end) (action62 __pos a b) __stk
+-- lookahead Just =>, entity Add
 ; S89 ((__p,  "=>") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoAdd ((__p,  "=>") : __input, __end) (action62 __pos a
                                                               b) __stk
+-- lookahead Just *, entity Mult
 ; S90 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
 ; S90 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ,, entity Mult
 ; S90 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ., entity Mult
 ; S90 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ".") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
 ; S91 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
 ; S91 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ,, entity Mult
 ; S91 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ., entity Mult
 ; S91 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ".") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just =, entity Mult
 ; S91 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "=") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
 ; S92 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
 ; S92 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ,, entity Mult
 ; S92 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ., entity Mult
 ; S92 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ".") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just =, entity Mult
 ; S92 ((__p,  "=") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "=") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just =>, entity Mult
 ; S92 ((__p,  "=>") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "=>") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Mult
 ; S93 ((__p,  "*") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just +, entity Mult
 ; S93 ((__p,  "+") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ,, entity Mult
 ; S93 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ",") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just ., entity Mult
 ; S93 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ".") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just =>, entity Mult
 ; S93 ((__p,  "=>") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "=>") : __input, __end) (action67 __pos a) __stk
+-- lookahead Just *, entity Term
 ; S98 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S98 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ,, entity Term
 ; S98 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ., entity Term
 ; S98 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ".") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S99 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S99 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ,, entity Term
 ; S99 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ., entity Term
 ; S99 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ".") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just =, entity Term
 ; S99 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S100 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S100 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ,, entity Term
 ; S100 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ., entity Term
 ; S100 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ".") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just =, entity Term
 ; S100 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just =>, entity Term
 ; S100 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=>") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S101 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S101 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ,, entity Term
 ; S101 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just ., entity Term
 ; S101 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ".") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just =>, entity Term
 ; S101 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=>") : __input, __end) (action71 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S102 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S102 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ,, entity Term
 ; S102 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ., entity Term
 ; S102 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ".") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S103 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S103 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ,, entity Term
 ; S103 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ., entity Term
 ; S103 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ".") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just =, entity Term
 ; S103 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S104 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S104 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ,, entity Term
 ; S104 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ., entity Term
 ; S104 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ".") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just =, entity Term
 ; S104 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just =>, entity Term
 ; S104 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=>") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Term
 ; S105 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just +, entity Term
 ; S105 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ,, entity Term
 ; S105 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just ., entity Term
 ; S105 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ".") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just =>, entity Term
 ; S105 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=>") : __input, __end) (action72 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S106 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S106 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S106 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ., entity Const
 ; S106 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ".") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just =, entity Const
 ; S106 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S107 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S107 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S107 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ., entity Const
 ; S107 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ".") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just =, entity Const
 ; S107 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just =>, entity Const
 ; S107 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=>") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S108 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S108 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S108 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ., entity Const
 ; S108 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ".") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S109 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S109 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S109 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ., entity Const
 ; S109 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ".") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just =, entity Const
 ; S109 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S110 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S110 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S110 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ., entity Const
 ; S110 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ".") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just =, entity Const
 ; S110 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just =>, entity Const
 ; S110 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=>") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S111 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S111 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S111 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just ., entity Const
 ; S111 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ".") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just =>, entity Const
 ; S111 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=>") : __input, __end) (action75 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S112 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S112 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S112 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ., entity Const
 ; S112 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ".") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S113 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S113 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S113 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ., entity Const
 ; S113 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ".") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just =, entity Const
 ; S113 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S114 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S114 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S114 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ., entity Const
 ; S114 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ".") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just =, entity Const
 ; S114 ((__p,  "=") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just =>, entity Const
 ; S114 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=>") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Const
 ; S115 ((__p,  "*") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "*") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just +, entity Const
 ; S115 ((__p,  "+") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "+") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ,, entity Const
 ; S115 ((__p,  ",") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ",") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just ., entity Const
 ; S115 ((__p,  ".") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  ".") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just =>, entity Const
 ; S115 ((__p,  "=>") : __input, __end) (n :> __stk@(_, __pos, _)) ->
     __gotoConst ((__p,  "=>") : __input, __end) (action76 __pos n) __stk
+-- lookahead Just *, entity Mult
 ; S124 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just +, entity Mult
 ; S124 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ,, entity Mult
 ; S124 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ",") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ., entity Mult
 ; S124 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ".") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just *, entity Mult
 ; S125 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just +, entity Mult
 ; S125 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ,, entity Mult
 ; S125 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ",") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ., entity Mult
 ; S125 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ".") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just =, entity Mult
 ; S125 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "=") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just *, entity Mult
 ; S126 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just +, entity Mult
 ; S126 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ,, entity Mult
 ; S126 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ",") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ., entity Mult
 ; S126 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ".") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just =, entity Mult
 ; S126 ((__p,  "=") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "=") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just =>, entity Mult
 ; S126 ((__p,  "=>") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "=>") : __input, __end) (action66 __pos a
                                                                b) __stk
+-- lookahead Just *, entity Mult
 ; S127 ((__p,  "*") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "*") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just +, entity Mult
 ; S127 ((__p,  "+") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "+") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ,, entity Mult
 ; S127 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ",") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just ., entity Mult
 ; S127 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  ".") : __input, __end) (action66 __pos a
                                                               b) __stk
+-- lookahead Just =>, entity Mult
 ; S127 ((__p,  "=>") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoMult ((__p,  "=>") : __input, __end) (action66 __pos a
                                                                b) __stk
+-- lookahead Just *, entity Term
 ; S128 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
 ; S128 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ,, entity Term
 ; S128 ((__p,  ",") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ., entity Term
 ; S128 ((__p,  ".") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ".") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
 ; S129 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
 ; S129 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ,, entity Term
 ; S129 ((__p,  ",") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ., entity Term
 ; S129 ((__p,  ".") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ".") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just =, entity Term
 ; S129 ((__p,  "=") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
 ; S130 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
 ; S130 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ,, entity Term
 ; S130 ((__p,  ",") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ., entity Term
 ; S130 ((__p,  ".") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ".") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just =, entity Term
 ; S130 ((__p,  "=") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just =>, entity Term
 ; S130 ((__p,  "=>") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=>") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just *, entity Term
 ; S131 ((__p,  "*") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "*") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just +, entity Term
 ; S131 ((__p,  "+") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "+") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ,, entity Term
 ; S131 ((__p,  ",") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ",") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ., entity Term
 ; S131 ((__p,  ".") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  ".") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just =>, entity Term
 ; S131 ((__p,  "=>") : __input, __end) (_ :> e :? _ :? __stk@(_, __pos, _)) ->
     __gotoTerm ((__p,  "=>") : __input, __end) (action70 __pos e) __stk
+-- lookahead Just ,, entity Expr
 ; S132 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ",") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just ., entity Expr
 ; S132 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ".") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just ,, entity Expr
 ; S133 ((__p,  ",") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ",") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just ., entity Expr
 ; S133 ((__p,  ".") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ".") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just =>, entity Expr
 ; S133 ((__p,  "=>") : __input, __end) (a :> __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  "=>") : __input, __end) (action59 __pos a) __stk
+-- lookahead Just ,, entity Expr
 ; S134 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ",") : __input, __end) (action58 __pos a
                                                               b) __stk
+-- lookahead Just ., entity Expr
 ; S134 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ".") : __input, __end) (action58 __pos a
                                                               b) __stk
+-- lookahead Just ,, entity Expr
 ; S135 ((__p,  ",") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ",") : __input, __end) (action58 __pos a
                                                               b) __stk
+-- lookahead Just ., entity Expr
 ; S135 ((__p,  ".") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  ".") : __input, __end) (action58 __pos a
                                                               b) __stk
+-- lookahead Just =>, entity Expr
 ; S135 ((__p,  "=>") : __input, __end) (b :> _ :? a :? __stk@(_, __pos, _)) ->
     __gotoExpr ((__p,  "=>") : __input, __end) (action58 __pos a
                                                                b) __stk
+-- lookahead Just ,, entity Cond
 ; S142 ((__p,  ",") : __input, __end) (c :> __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  ",") : __input, __end) (action42 __pos c) __stk
+-- lookahead Just ., entity Cond
 ; S142 ((__p,  ".") : __input, __end) (c :> __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  ".") : __input, __end) (action42 __pos c) __stk
+-- lookahead Just ,, entity Cond
 ; S143 ((__p,  ",") : __input, __end) (c :> __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  ",") : __input, __end) (action42 __pos c) __stk
+-- lookahead Just ., entity Cond
 ; S143 ((__p,  ".") : __input, __end) (c :> __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  ".") : __input, __end) (action42 __pos c) __stk
+-- lookahead Just =>, entity Cond
 ; S143 ((__p,  "=>") : __input, __end) (c :> __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  "=>") : __input, __end) (action42 __pos c) __stk
+-- lookahead Just ,, entity Cond
 ; S146 ((__p,  ",") : __input, __end) (e :> __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  ",") : __input, __end) (action44 __pos e) __stk
+-- lookahead Just ., entity Cond
 ; S146 ((__p,  ".") : __input, __end) (e :> __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  ".") : __input, __end) (action44 __pos e) __stk
+-- lookahead Just ,, entity Cond
 ; S147 ((__p,  ",") : __input, __end) (e :> __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  ",") : __input, __end) (action44 __pos e) __stk
+-- lookahead Just ., entity Cond
 ; S147 ((__p,  ".") : __input, __end) (e :> __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  ".") : __input, __end) (action44 __pos e) __stk
+-- lookahead Just =>, entity Cond
 ; S147 ((__p,  "=>") : __input, __end) (e :> __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  "=>") : __input, __end) (action44 __pos e) __stk
+-- lookahead Just ,, entity Change
 ; S152 ((__p,  ",") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
     __gotoChange ((__p,  ",") : __input, __end) (action34 __pos c) __stk
+-- lookahead Just ., entity Change
 ; S152 ((__p,  ".") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
     __gotoChange ((__p,  ".") : __input, __end) (action34 __pos c) __stk
+-- lookahead Just ,, entity Change
 ; S153 ((__p,  ",") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
     __gotoChange ((__p,  ",") : __input, __end) (action35 __pos c) __stk
+-- lookahead Just ., entity Change
 ; S153 ((__p,  ".") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
     __gotoChange ((__p,  ".") : __input, __end) (action35 __pos c) __stk
+-- lookahead Just ,, entity Cond
 ; S154 ((__p,  ",") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  ",") : __input, __end) (action43 __pos c) __stk
+-- lookahead Just ., entity Cond
 ; S154 ((__p,  ".") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  ".") : __input, __end) (action43 __pos c) __stk
+-- lookahead Just ,, entity Cond
 ; S155 ((__p,  ",") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  ",") : __input, __end) (action43 __pos c) __stk
+-- lookahead Just ., entity Cond
 ; S155 ((__p,  ".") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  ".") : __input, __end) (action43 __pos c) __stk
+-- lookahead Just =>, entity Cond
 ; S155 ((__p,  "=>") : __input, __end) (c :> _ :? __stk@(_, __pos, _)) ->
     __gotoCond ((__p,  "=>") : __input, __end) (action43 __pos c) __stk
+-- lookahead Just ,, entity Call
 ; S156 ((__p,  ",") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
     __gotoCall ((__p,  ",") : __input, __end) (action47 __pos pred
                                                               t) __stk
+-- lookahead Just ., entity Call
 ; S156 ((__p,  ".") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
     __gotoCall ((__p,  ".") : __input, __end) (action47 __pos pred
                                                               t) __stk
+-- lookahead Just ,, entity Call
 ; S157 ((__p,  ",") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
     __gotoCall ((__p,  ",") : __input, __end) (action47 __pos pred
                                                               t) __stk
+-- lookahead Just ., entity Call
 ; S157 ((__p,  ".") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
     __gotoCall ((__p,  ".") : __input, __end) (action47 __pos pred
                                                               t) __stk
+-- lookahead Just =>, entity Call
 ; S157 ((__p,  "=>") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
     __gotoCall ((__p,  "=>") : __input, __end) (action47 __pos pred
                                                                t) __stk
+-- lookahead Just ,, entity Tuple
 ; S158 ((__p,  ",") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  ",") : __input, __end) (action50 __pos ) __stk
+-- lookahead Just ., entity Tuple
 ; S158 ((__p,  ".") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  ".") : __input, __end) (action50 __pos ) __stk
+-- lookahead Just ,, entity Tuple
 ; S159 ((__p,  ",") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  ",") : __input, __end) (action50 __pos ) __stk
+-- lookahead Just ., entity Tuple
 ; S159 ((__p,  ".") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  ".") : __input, __end) (action50 __pos ) __stk
+-- lookahead Just =>, entity Tuple
 ; S159 ((__p,  "=>") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  "=>") : __input, __end) (action50 __pos ) __stk
+-- lookahead Just ,, entity Tuple
 ; S164 ((__p,  ",") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  ",") : __input, __end) (action51 __pos es) __stk
+-- lookahead Just ., entity Tuple
 ; S164 ((__p,  ".") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  ".") : __input, __end) (action51 __pos es) __stk
+-- lookahead Just ,, entity Tuple
 ; S165 ((__p,  ",") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  ",") : __input, __end) (action51 __pos es) __stk
+-- lookahead Just ., entity Tuple
 ; S165 ((__p,  ".") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  ".") : __input, __end) (action51 __pos es) __stk
+-- lookahead Just =>, entity Tuple
 ; S165 ((__p,  "=>") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  "=>") : __input, __end) (action51 __pos es) __stk
+-- lookahead Just ->, entity Call
 ; S168 ((__p,  "->") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
     __gotoCall ((__p,  "->") : __input, __end) (action47 __pos pred
                                                                t) __stk
+-- lookahead Just ., entity Call
 ; S168 ((__p,  ".") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
     __gotoCall ((__p,  ".") : __input, __end) (action47 __pos pred
                                                               t) __stk
+-- lookahead Just <-, entity Call
 ; S168 ((__p,  "<-") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
     __gotoCall ((__p,  "<-") : __input, __end) (action47 __pos pred
                                                                t) __stk
+-- lookahead Just =>, entity Call
 ; S168 ((__p,  "=>") : __input, __end) (t :> pred :? __stk@(_, __pos, _)) ->
     __gotoCall ((__p,  "=>") : __input, __end) (action47 __pos pred
                                                                t) __stk
+-- lookahead Just ->, entity Tuple
 ; S169 ((__p,  "->") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  "->") : __input, __end) (action50 __pos ) __stk
+-- lookahead Just ., entity Tuple
 ; S169 ((__p,  ".") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  ".") : __input, __end) (action50 __pos ) __stk
+-- lookahead Just <-, entity Tuple
 ; S169 ((__p,  "<-") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  "<-") : __input, __end) (action50 __pos ) __stk
+-- lookahead Just =>, entity Tuple
 ; S169 ((__p,  "=>") : __input, __end) (_ :> _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  "=>") : __input, __end) (action50 __pos ) __stk
+-- lookahead Just ->, entity Tuple
 ; S171 ((__p,  "->") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  "->") : __input, __end) (action51 __pos es) __stk
+-- lookahead Just ., entity Tuple
 ; S171 ((__p,  ".") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  ".") : __input, __end) (action51 __pos es) __stk
+-- lookahead Just <-, entity Tuple
 ; S171 ((__p,  "<-") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  "<-") : __input, __end) (action51 __pos es) __stk
+-- lookahead Just =>, entity Tuple
 ; S171 ((__p,  "=>") : __input, __end) (_ :> es :? _ :? __stk@(_, __pos, _)) ->
     __gotoTuple ((__p,  "=>") : __input, __end) (action51 __pos es) __stk
+-- lookahead Just ., entity Changes
 ; S172 ((__p,  ".") : __input, __end) (c :> __stk@(_, __pos, _)) ->
     __gotoChanges ((__p,  ".") : __input, __end) (action31 __pos c) __stk
+-- lookahead Just ., entity Conds
 ; S173 ((__p,  ".") : __input, __end) (c :> __stk@(_, __pos, _)) ->
     __gotoConds ((__p,  ".") : __input, __end) (action39 __pos c) __stk
+-- lookahead Just ., entity Conds
 ; S174 ((__p,  ".") : __input, __end) (c :> __stk@(_, __pos, _)) ->
     __gotoConds ((__p,  ".") : __input, __end) (action39 __pos c) __stk
+-- lookahead Just =>, entity Conds
 ; S174 ((__p,  "=>") : __input, __end) (c :> __stk@(_, __pos, _)) ->
     __gotoConds ((__p,  "=>") : __input, __end) (action39 __pos c) __stk
+-- lookahead Just ., entity Changes
 ; S178 ((__p,  ".") : __input, __end) (cs :> _ :? c :? __stk@(_, __pos, _)) ->
     __gotoChanges ((__p,  ".") : __input, __end) (action30 __pos c
                                                                  cs) __stk
+-- lookahead Just ., entity Conds
 ; S179 ((__p,  ".") : __input, __end) (cs :> _ :? c :? __stk@(_, __pos, _)) ->
     __gotoConds ((__p,  ".") : __input, __end) (action38 __pos c
                                                                cs) __stk
+-- lookahead Just ., entity Conds
 ; S180 ((__p,  ".") : __input, __end) (cs :> _ :? c :? __stk@(_, __pos, _)) ->
     __gotoConds ((__p,  ".") : __input, __end) (action38 __pos c
                                                                cs) __stk
+-- lookahead Just =>, entity Conds
 ; S180 ((__p,  "=>") : __input, __end) (cs :> _ :? c :? __stk@(_, __pos, _)) ->
     __gotoConds ((__p,  "=>") : __input, __end) (action38 __pos c
                                                                 cs) __stk
@@ -2115,12 +2526,6 @@ res
 ; action76 pos n =
     ConstInt   pos n
 }
-  
-currentPos :: ([Lexeme], Pos) -> Pos
-currentPos = \case
-  ([],           end) -> end
-  ((pos, _) : _, _)   -> pos
-  
 parseProgram :: FilePath -> IO (Either LexerError (Either (Pos, [String]) Program))
 parseProgram filepath = do
   text <- Text.readFile filepath
@@ -2128,3 +2533,9 @@ parseProgram filepath = do
                               ".", "<-", "=", "=>", "~"] of
     Left  err   -> pure (Left err)
     Right input -> pure (Right (__runProgram  S0 input Nil))
+  
+currentPos :: ([Lexeme], Pos) -> Pos
+currentPos = \case
+  ([],           end) -> end
+  ((pos, _) : _, _)   -> pos
+  
