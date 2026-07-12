@@ -44,7 +44,7 @@ Cond
   |     e:Expr                => "CondGuard  pos e"
 
 Call
-  = pred:"<name>" t:Tuple     => "Call pos pred t"
+  = pre:"<name>" t:Tuple      => "Call pos pre t"
 
 Tuple : "[Expr]"
   = "("           ")"         => "[]"

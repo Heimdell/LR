@@ -31,7 +31,6 @@ import Tables
 import Term
 import Text.Lexer.Default (dieOnLexerError, dieOnParserError)
 import Text.PrettyPrint.HughesPJClass hiding ((<>))
-import qualified RawGrammar as Raw
 import Data.Array (listArray)
 
 infixl 6 <.>
@@ -47,12 +46,14 @@ data Request = Request
 data Toolbox = Toolbox
   { grammar  :: Grammar
   , start    :: State
-  , inverse  :: Map State Int
-  , states   :: Map Int State
+  , inverse  :: Map State StateNum
+  , states   :: Map StateNum State
   , rawTable :: Table State
-  , table    :: Table Int
+  , table    :: Table StateNum
   , addendum :: [Text]
   }
+
+type StateNum = Int
 
 prepareToolboxes :: Request -> Map Entity Toolbox
 prepareToolboxes Request {addendum, starts, grammar} =
@@ -67,7 +68,7 @@ prepareToolboxes Request {addendum, starts, grammar} =
           }
 
         starterRule = Rule "Start" Nothing [starterClause]
-        startingPosition = Position.start
+        startingPosition = Position.startRule
           starter
           (Just (typeOf grammar starter))
           starterClause
@@ -91,7 +92,7 @@ prepareToolboxes Request {addendum, starts, grammar} =
         , addendum
         }
 
-enumerateStates :: Table State -> Map State Int
+enumerateStates :: Table State -> Map State StateNum
 enumerateStates Table {actions} =
   Map.fromList do
     zip (Monoidal.keys actions) [0..]
@@ -99,27 +100,26 @@ enumerateStates Table {actions} =
 invert :: (Ord a, Ord b) => Map a b -> Map b a
 invert = Map.foldMapWithKey (flip Map.singleton)
 
-instance Semigroup Int where
+instance Semigroup StateNum where
   (<>) = error "Semigroup Int"
 
-instance Monoid Int where
+instance Monoid StateNum where
   mempty = error "Monoid Int"
 
-dematerialise :: Table State -> (Table Int, Map State Int, Map Int State)
+dematerialise :: Table State -> (Table StateNum, Map State StateNum, Map StateNum State)
 dematerialise table =
   ( mapTableState (stateNumbers Map.!) table
   , stateNumbers
   , invert stateNumbers
   )
   where
-    stateNumbers :: Map State Int
+    stateNumbers :: Map State StateNum
     stateNumbers = enumerateStates table
 
 createParserFile :: FilePath -> FilePath -> [String] -> IO ()
 createParserFile grammarFile srcPath moduleName = do
   (addendum, starts, rules) <- parseGrammar grammarFile >>= dieOnLexerError >>= dieOnParserError
-  let grammar = Raw.Grammar starts rules
-  case Grammar.Check.check starts grammar of
+  case Grammar.Check.check starts Raw.Grammar {starts, rules} of
     Left errs -> do
       for_ errs (print . pPrint)
       exitFailure
@@ -134,7 +134,6 @@ generateParserModule request@Request{addendum, starts, grammar} pathToSrc module
   let toolboxes = prepareToolboxes request
   let starting = startingState grammar
   let tables = makeTables grammar starting
-  let (table, inv, states) = dematerialise tables
   let problems = conflicts tables starting
   unless (null problems) do
     for_ problems \problem -> do
@@ -148,6 +147,7 @@ generateParserModule request@Request{addendum, starts, grammar} pathToSrc module
       [ "{-# language PatternSynonyms #-}"
       , "{-# OPTIONS_GHC -Wno-incomplete-patterns #-}"
       , "{-# OPTIONS_GHC -Wno-unused-matches #-}"
+      , "{-# OPTIONS_GHC -Wno-unused-local-binds #-}"
       , "module" <+> cat (punctuate "." (map text moduleName)) <+> "("
       , nest 2 do
           vcat do
@@ -229,23 +229,25 @@ makeParser starter Toolbox {grammar, start, table, states, inverse} = vcat
         )
 
     createReducer :: Pos -> (Int, FilePath, [Text], Text) -> Doc
-    createReducer pos (column, filePath, params, body) = vcat
-      [ ("; " <.> action pos) <+> "pos" <+> fsep (map pPrint params) <+> "="
+    createReducer pos (column, _, params, body)
+      | pos.line == 0 = empty
+      | otherwise = vcat
+      [ ("; " <.> actionMethod pos) <+> "pos" <+> fsep (map pPrint params) <+> "="
       -- , "{-# LINE " <+> pPrint line <+> text (show filePath) <+> "#-}"
       , text (replicate (column - 1) ' ') <.> pPrint body
       ]
 
-gotoEntity :: Entity -> Text -> Text -> Entity -> Table Int -> Doc
+gotoEntity :: Entity -> Text -> Text -> Entity -> Table StateNum -> Doc
 gotoEntity starter starterType entityType entity Table {actions} = vcat
-  [ goto entity starter <+> do ":: ([Lexeme], Pos) -> " <.> pPrint entityType <.> " -> " <.> stack starter <.> " a -> Either (Pos, [String]) " <.> pPrint starterType
-  , goto entity starter <+> "toks term stk@(state, _, _) = case state of"
+  [ gotoMethod entity starter <+> do ":: ([Lexeme], Pos) -> " <.> pPrint entityType <.> " -> " <.> stack starter <.> " a -> Either (Pos, [String]) " <.> pPrint starterType
+  , gotoMethod entity starter <+> "toks term stk@(state, _, _) = case state of"
   , vcat do
       map stateTransition do
         Monoidal.assocs actions
   , "  _ -> error \"\""
   ]
   where
-    stateTransition :: (Int, Action Int) -> Doc
+    stateTransition :: (StateNum, Action StateNum) -> Doc
     stateTransition (start, Action {goto})
       | Monoidal.member entity goto = do
         "  " <.> s starter start <.> " -> "
@@ -254,14 +256,14 @@ gotoEntity starter starterType entityType entity Table {actions} = vcat
              <.> push starter <.> " term stk)"
       | otherwise = mempty
 
-genStateType :: Entity -> Grammar -> Map Int State -> Doc
+genStateType :: Entity -> Grammar -> Map StateNum State -> Doc
 genStateType starter grammar states = vcat
   [ "data " <.> st starter <.> " :: [Kind.Type] -> Kind.Type where"
   , nest 2 do
       vcat $ map (uncurry (genState starter grammar)) $ Map.assocs states
   ]
 
-genState :: Entity -> Grammar -> Int -> State -> Doc
+genState :: Entity -> Grammar -> StateNum -> State -> Doc
 genState target grammar number state =
   s target number <+> "::" <+> st target <+> do
     parens
@@ -309,7 +311,7 @@ stackToBinders target (start : rest) = parens do
 stackToBinders _ [] = error ""
 
 pair :: Doc -> Doc -> Doc
-pair f s = parens ((f <.> ",") <+> s)
+pair one another = parens ((one <.> ",") <+> another)
 
 pointToBinder :: Text -> Text -> Term -> Doc
 pointToBinder range name = \case
@@ -341,7 +343,7 @@ pointBinder pt = case pt.name of
   In grammar: store in rules line of reducing action.
               store (line => action) map.
 -}
-reduce :: Entity -> Int -> Position -> Doc
+reduce :: Entity -> StateNum -> Position -> Doc
 reduce target state pos = vcat
   [ "-- lookahead " <.> pPrint pos.lookahead <.> ", entity " <.> pPrint pos.entity
   , ";" <+>  do
@@ -351,7 +353,7 @@ reduce target state pos = vcat
       _ ->
         ("__goto" @: pos.entity <.> "For" @: target)
           <+> input
-          <+> ("(action" <.> pPrint pos.clause.pos.line) <+> "__pos" <+> (fsep params <.> ")")
+          <+> ("(" <.> actionMethod pos.clause.pos) <+> "__pos" <+> (fsep params <.> ")")
           <+> "__stk"
   ]
   where
@@ -362,14 +364,14 @@ reduce target state pos = vcat
 
     params = foldMap (maybeToList . fmap pPrint . (.name)) pos.clause.points
 
-stateReducers :: Entity -> Int -> State -> Doc
+stateReducers :: Entity -> StateNum -> State -> Doc
 stateReducers target number state =
   vcat $ state.positions & foldMap \pos -> do
     case pos.locus of
       Just {} -> []
       Nothing -> [reduce target number pos]
 
-stateErrors :: Entity -> Int -> State -> Doc
+stateErrors :: Entity -> StateNum -> State -> Doc
 stateErrors target number state =
   ";" <+>  do
     hang (s target number <+> "__input" <+> "_" <+> "->") 2 do
@@ -384,7 +386,7 @@ stateErrors target number state =
         Nothing      -> Set.singleton pos.lookahead
         _            -> Set.empty
 
-shift :: Entity -> Int -> Term -> Int -> Doc
+shift :: Entity -> StateNum -> Term -> StateNum -> Doc
 shift starter from term to = do
   ";" <+> do
     hang (s starter from
@@ -402,16 +404,16 @@ doc @: target = doc <.> pPrint target
 parse :: Entity -> Doc
 parse target = "parse" @: target
 
-goto :: Entity -> Entity -> Doc
-goto entity target = "__goto" @: entity <.> "For" @: target
+gotoMethod :: Entity -> Entity -> Doc
+gotoMethod entity target = "__goto" @: entity <.> "For" @: target
 
-action :: Pos -> Doc
-action pos = "action" <.> pPrint pos.line
+actionMethod :: Pos -> Doc
+actionMethod pos = "action" <.> pPrint pos.line
 
 run :: Entity -> Doc
 run target = "__run" @: target
 
-s :: Entity -> Int -> Doc
+s :: Entity -> StateNum -> Doc
 s target n = "S" <.> pPrint target <.> int n
 
 stack :: Entity -> Doc
@@ -435,11 +437,11 @@ st target = "St" @: target
 {-
   TODO: pull "to" from ACTION table.
 -}
-stateShifts :: Entity -> Int -> Action Int -> Doc
+stateShifts :: Entity -> StateNum -> Action StateNum -> Doc
 stateShifts starter from Action {action} =
-  vcat $ action & Monoidal.assocs & foldMap \(term, decisions) -> do
+  vcat $ action & Monoidal.assocs & foldMap \(lookahead, decisions) -> do
     decisions & foldMap \case
-      Shift to -> case term of
+      Shift to -> case lookahead of
         Just term -> [shift starter from term to]
         Nothing   -> []
       _ -> []

@@ -29,7 +29,6 @@ executable lr1-parser-example
     -- other-extensions:
     build-depends:
         base,
-        LR,
         shower,
         text,
         lr1-parser-pos,

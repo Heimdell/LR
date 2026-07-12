@@ -5,7 +5,7 @@ module Tables.Structure where
 
 import Data.Foldable     (toList, for_, fold)
 import Data.Map.Monoidal (type (==>) (Monoidal), (==>))
-import Data.Map          ((!), Map)
+import Data.Map          ((!))
 import Data.Set          (Set)
 import GHC.Generics      (Generic, Generically (..))
 
@@ -13,25 +13,17 @@ import Data.Set qualified as Set
 
 import Fixpoint (graphClosure)
 import Grammar  (Grammar())
-import Position (Position(..), groupPositionsByPrefices)
-import Position (splitPositionsByCategory, SortedPositions (..), PrettyPosition (..))
+import Position (Position(..))
+import Position (splitPositionsByCategory, SortedPositions (..))
 import State    (State(positions, State), closure)
 import Term
-import Rule
 import qualified Data.Map.Monoidal as Monoidal
 import Control.Monad.Reader
-import Control.Monad.State hiding (State)
-import Control.Monad.State qualified as State
-import Control.Monad.Writer
+import Control.Monad.State hiding (State, state)
 import Control.Monad
 import Decision.Structure
-import Text.PrettyPrint.HughesPJClass hiding ((<>))
-import Data.Traversable
 import Data.Function ((&))
-import qualified Data.Text as Text
 import Control.Monad.Identity (Identity (runIdentity))
-import qualified Data.Map as Map
-import Debug.Trace
 
 {- |
   In classic formulation, GOTO and ACTION are somewhat separate tables.
@@ -185,22 +177,22 @@ data Discovered = Discovered
 type ConflictM = ReaderT [Point] (StateT Discovered Identity)
 
 tableToConflicts :: State -> Table State -> ConflictM ()
-tableToConflicts start Table{actions = Monoidal actions} = go start
+tableToConflicts start Table{actions = Monoidal acts} = go start
   where
     go :: State -> ConflictM ()
     go st = do
       visited <- gets (Set.member st . (.visitedStates))
       unless visited do
         modify \disc -> disc {visitedStates = Set.insert st disc.visitedStates}
-        let Action {action, goto} = actions ! st
+        let Action {action, goto} = acts ! st
         for_ (Monoidal.assocs goto) \(point, st') -> do
           local (++ [E Nothing point]) do
             go st'
 
-        for_ (Monoidal.assocs action) \(term, actions) -> do
+        for_ (Monoidal.assocs action) \(lookahead, actions) -> do
           for_ actions \case
             Shift st' -> do
-              case term of
+              case lookahead of
                 Just term -> do
                   local (++ [T Nothing term]) do
                     go st'
@@ -211,7 +203,7 @@ tableToConflicts start Table{actions = Monoidal actions} = go start
 
           case toList actions of
             [_] -> pure ()
-            _   -> reportConflict st term
+            _   -> reportConflict st lookahead
 
     reportConflict :: State -> Maybe Term -> ConflictM ()
     reportConflict st term = do

@@ -3,11 +3,11 @@ module RawGrammar.Pretty where
 import Data.Function                  ((&))
 import Text.PrettyPrint.HughesPJClass (vcat, Pretty(pPrint))
 
-import RawGrammar.Structure (Grammar(ruleOrder, Grammar))
+import RawGrammar.Structure
 
 instance Pretty Grammar where
-  pPrint Grammar {ruleOrder} =
-    ruleOrder
+  pPrint Grammar {rules} =
+    rules
       & fmap pPrint
       & vcat
 

@@ -15,8 +15,6 @@ import Rule
 import Term              (Point(E, T), Entity, Term)
 
 import Data.Map.Monoidal qualified as Map
-import Data.Array (listArray)
-import Data.Text.Position
 import Data.Text (Text)
 import Data.Traversable (for)
 
@@ -45,8 +43,8 @@ makeGrammar ruleOrder = Grammar
       Map.fromList (map singleRule (evalState (assignNumberToRulesClauses ruleOrder) 0))
 
     assignNumberToRulesClauses :: [Rule] -> State Int [Rule]
-    assignNumberToRulesClauses rules = do
-      for rules \rule -> do
+    assignNumberToRulesClauses ruleset = do
+      for ruleset \rule -> do
         clauses <- for rule.clauses \clause -> do
           index <- get <* modify (+ 1)
           pure (setNumber index clause)

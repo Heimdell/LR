@@ -67,8 +67,8 @@ instance HasField "parsed" Position [Point] where
 {- |
   Start parsing a rule, expecting given `lookahead` term.
 -}
-start :: Entity -> Maybe Text -> Clause -> Maybe Term -> Position
-start entity type_ clause lookahead = Position
+startRule :: Entity -> Maybe Text -> Clause -> Maybe Term -> Position
+startRule entity type_ clause lookahead = Position
   { offset = 0
   , lookahead
   , clause

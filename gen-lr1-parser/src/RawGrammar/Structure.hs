@@ -5,6 +5,6 @@ import Term
 import Data.Set (Set)
 
 data Grammar = Grammar
-  { starter   :: Set Entity
-  , ruleOrder :: [Rule]
+  { starts :: Set Entity
+  , rules  :: [Rule]
   }

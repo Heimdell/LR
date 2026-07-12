@@ -1,6 +1,7 @@
 {-# language PatternSynonyms #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 module Frontend.Parser (
     parseGrammar
 ) where
@@ -421,8 +422,6 @@ __runGrammar = \cases {
 ; SGrammar38 __input _ -> Left  (currentPos __input, ["start"])
 ; SGrammar39 __input _ -> Left  (currentPos __input, ["start"])
 } where {
-; action0 pos res =
-res
 ; action17 pos t =
          Term   t
 ; action18 pos e =

@@ -93,7 +93,7 @@ closure grammar kernel = do
           grammar.rules ! entity                 >>- \rule ->
           lookaheadAfterCurrentPoint grammar pos >>- \term ->
           (rule.clauses :: [Clause])             >>- \clause ->
-            Set.singleton (start rule.entity rule.type_ clause term)
+            Set.singleton (startRule rule.entity rule.type_ clause term)
 
       _ -> mempty
 
@@ -105,4 +105,4 @@ startingState grammar =
   closure grammar do
     (grammar.rules ! "Start") & foldMap \rule -> do
       rule.clauses >>- \clause -> do
-        Set.singleton (start rule.entity rule.type_ clause Nothing)
+        Set.singleton (startRule rule.entity rule.type_ clause Nothing)

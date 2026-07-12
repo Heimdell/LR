@@ -1,6 +1,7 @@
 {-# language PatternSynonyms #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 module Parser (
     parseProgram,
     parseTestSuite
@@ -2107,24 +2108,24 @@ __runProgram = \cases {
 ; SProgram155 ((__p,  "=>") : __input, __end) ((PushProgram c (PushProgram' _ __stk@(_, __pos, _)))) ->
     __gotoCondForProgram ((__p,  "=>") : __input, __end) (action43 __pos c) __stk
 -- lookahead Just ,, entity Call
-; SProgram156 ((__p,  ",") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForProgram ((__p,  ",") : __input, __end) (action47 __pos pred
+; SProgram156 ((__p,  ",") : __input, __end) ((PushProgram t (PushProgram' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  ",") : __input, __end) (action47 __pos pre
                                                                         t) __stk
 -- lookahead Just ., entity Call
-; SProgram156 ((__p,  ".") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForProgram ((__p,  ".") : __input, __end) (action47 __pos pred
+; SProgram156 ((__p,  ".") : __input, __end) ((PushProgram t (PushProgram' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  ".") : __input, __end) (action47 __pos pre
                                                                         t) __stk
 -- lookahead Just ,, entity Call
-; SProgram157 ((__p,  ",") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForProgram ((__p,  ",") : __input, __end) (action47 __pos pred
+; SProgram157 ((__p,  ",") : __input, __end) ((PushProgram t (PushProgram' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  ",") : __input, __end) (action47 __pos pre
                                                                         t) __stk
 -- lookahead Just ., entity Call
-; SProgram157 ((__p,  ".") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForProgram ((__p,  ".") : __input, __end) (action47 __pos pred
+; SProgram157 ((__p,  ".") : __input, __end) ((PushProgram t (PushProgram' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  ".") : __input, __end) (action47 __pos pre
                                                                         t) __stk
 -- lookahead Just =>, entity Call
-; SProgram157 ((__p,  "=>") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForProgram ((__p,  "=>") : __input, __end) (action47 __pos pred
+; SProgram157 ((__p,  "=>") : __input, __end) ((PushProgram t (PushProgram' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  "=>") : __input, __end) (action47 __pos pre
                                                                          t) __stk
 -- lookahead Just ,, entity Tuple
 ; SProgram158 ((__p,  ",") : __input, __end) ((PushProgram _ (PushProgram' _ __stk@(_, __pos, _)))) ->
@@ -2157,20 +2158,20 @@ __runProgram = \cases {
 ; SProgram165 ((__p,  "=>") : __input, __end) ((PushProgram _ (PushProgram' es (PushProgram' _ __stk@(_, __pos, _))))) ->
     __gotoTupleForProgram ((__p,  "=>") : __input, __end) (action51 __pos es) __stk
 -- lookahead Just ->, entity Call
-; SProgram168 ((__p,  "->") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForProgram ((__p,  "->") : __input, __end) (action47 __pos pred
+; SProgram168 ((__p,  "->") : __input, __end) ((PushProgram t (PushProgram' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  "->") : __input, __end) (action47 __pos pre
                                                                          t) __stk
 -- lookahead Just ., entity Call
-; SProgram168 ((__p,  ".") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForProgram ((__p,  ".") : __input, __end) (action47 __pos pred
+; SProgram168 ((__p,  ".") : __input, __end) ((PushProgram t (PushProgram' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  ".") : __input, __end) (action47 __pos pre
                                                                         t) __stk
 -- lookahead Just <-, entity Call
-; SProgram168 ((__p,  "<-") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForProgram ((__p,  "<-") : __input, __end) (action47 __pos pred
+; SProgram168 ((__p,  "<-") : __input, __end) ((PushProgram t (PushProgram' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  "<-") : __input, __end) (action47 __pos pre
                                                                          t) __stk
 -- lookahead Just =>, entity Call
-; SProgram168 ((__p,  "=>") : __input, __end) ((PushProgram t (PushProgram' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForProgram ((__p,  "=>") : __input, __end) (action47 __pos pred
+; SProgram168 ((__p,  "=>") : __input, __end) ((PushProgram t (PushProgram' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForProgram ((__p,  "=>") : __input, __end) (action47 __pos pre
                                                                          t) __stk
 -- lookahead Just ->, entity Tuple
 ; SProgram169 ((__p,  "->") : __input, __end) ((PushProgram _ (PushProgram' _ __stk@(_, __pos, _)))) ->
@@ -2542,8 +2543,6 @@ __runProgram = \cases {
 ; SProgram179 __input _ -> Left  (currentPos __input, ["."])
 ; SProgram180 __input _ -> Left  (currentPos __input, [".", "=>"])
 } where {
-; action0 pos res =
-res
 ; action10 pos stmts =
           Program {stmts}
 ; action13 pos c cs =
@@ -2582,8 +2581,8 @@ res
     CondRefute pos c
 ; action44 pos e =
         CondGuard  pos e
-; action47 pos pred t =
-    Call pos pred t
+; action47 pos pre t =
+    Call pos pre t
 ; action50 pos =
     []
 ; action51 pos es =
@@ -3508,19 +3507,19 @@ __runTestSuite = \cases {
 ; STestSuite26 ([], __end) ((PushTestSuite t __stk@(_, __pos, _))) ->
     __gotoTestsForTestSuite ([], __end) (action87 __pos t) __stk
 -- lookahead Nothing, entity Call
-; STestSuite27 ([], __end) ((PushTestSuite t (PushTestSuite' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForTestSuite ([], __end) (action47 __pos pred t) __stk
+; STestSuite27 ([], __end) ((PushTestSuite t (PushTestSuite' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForTestSuite ([], __end) (action47 __pos pre t) __stk
 -- lookahead Just expect, entity Call
-; STestSuite27 ((__p,  "expect") : __input, __end) ((PushTestSuite t (PushTestSuite' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForTestSuite ((__p,  "expect") : __input, __end) (action47 __pos pred
+; STestSuite27 ((__p,  "expect") : __input, __end) ((PushTestSuite t (PushTestSuite' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForTestSuite ((__p,  "expect") : __input, __end) (action47 __pos pre
                                                                                t) __stk
 -- lookahead Just guard, entity Call
-; STestSuite27 ((__p,  "guard") : __input, __end) ((PushTestSuite t (PushTestSuite' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForTestSuite ((__p,  "guard") : __input, __end) (action47 __pos pred
+; STestSuite27 ((__p,  "guard") : __input, __end) ((PushTestSuite t (PushTestSuite' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForTestSuite ((__p,  "guard") : __input, __end) (action47 __pos pre
                                                                               t) __stk
 -- lookahead Just notify, entity Call
-; STestSuite27 ((__p,  "notify") : __input, __end) ((PushTestSuite t (PushTestSuite' pred __stk@(_, __pos, _)))) ->
-    __gotoCallForTestSuite ((__p,  "notify") : __input, __end) (action47 __pos pred
+; STestSuite27 ((__p,  "notify") : __input, __end) ((PushTestSuite t (PushTestSuite' pre __stk@(_, __pos, _)))) ->
+    __gotoCallForTestSuite ((__p,  "notify") : __input, __end) (action47 __pos pre
                                                                                t) __stk
 -- lookahead Nothing, entity Tuple
 ; STestSuite28 ([], __end) ((PushTestSuite _ (PushTestSuite' _ __stk@(_, __pos, _)))) ->
@@ -4361,8 +4360,6 @@ __runTestSuite = \cases {
 ; STestSuite107 __input _ ->
     Left  (currentPos __input, [")", "*", "+", "="])
 } where {
-; action0 pos res =
-res
 ; action10 pos stmts =
           Program {stmts}
 ; action13 pos c cs =
@@ -4401,8 +4398,8 @@ res
     CondRefute pos c
 ; action44 pos e =
         CondGuard  pos e
-; action47 pos pred t =
-    Call pos pred t
+; action47 pos pre t =
+    Call pos pre t
 ; action50 pos =
     []
 ; action51 pos es =

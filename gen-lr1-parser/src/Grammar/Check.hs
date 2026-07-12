@@ -16,8 +16,8 @@ import Control.Monad.Error.Class (MonadError(throwError))
 import Text.PrettyPrint.HughesPJClass
 
 declaredEntities :: Raw.Grammar -> Set Entity
-declaredEntities Raw.Grammar {ruleOrder} =
-  foldMap (Set.singleton . (.entity)) ruleOrder
+declaredEntities Raw.Grammar {rules} =
+  foldMap (Set.singleton . (.entity)) rules
 
 data Scope = Scope
   { declared :: Set Entity
@@ -52,8 +52,8 @@ define entity = do
   modify \scope -> scope {defined = Set.insert entity scope.defined}
 
 checkGrammar :: Raw.Grammar -> M ()
-checkGrammar Raw.Grammar {ruleOrder} = do
-  for_ ruleOrder checkRule
+checkGrammar Raw.Grammar {rules} = do
+  for_ rules checkRule
 
 checkRule :: Rule -> M ()
 checkRule Rule {entity, clauses} = do
@@ -70,7 +70,7 @@ check :: Set Entity -> Raw.Grammar -> Either (Set Error) Scoped.Grammar
 check starters grammar = do
   let (_, errors) = evalState (runWriterT checker) mempty { declared = declaredEntities grammar }
   if null errors
-  then pure (Scoped.makeGrammar grammar.ruleOrder)
+  then pure (Scoped.makeGrammar grammar.rules)
   else throwError errors
   where
     checker = do
