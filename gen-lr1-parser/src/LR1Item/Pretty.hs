@@ -43,12 +43,12 @@ instance Pretty PrettyPosition where
       (front, rest) = splitAt offset (toList clause.points)
 
 instance Pretty LR1Item where
-  pPrint LR1Item {entity, clause, offset, lookahead} =
-    pPrint entity <+> "=" <+> fsep (map pPrint front) <+> (case rest of
+  pPrint lr1item =
+    pPrint lr1item.entity <+> "=" <+> fsep (map pPrint front) <+> (case rest of
         [] -> "reducing on"
         locus : other ->
           ("[" <> pPrint locus <> "]")
             <+> fsep (map pPrint other)
-      ) <+> braces (pPrint lookahead)
+      ) <+> braces (pPrint lr1item.lookahead)
     where
-      (front, rest) = splitAt offset (toList clause.points)
+      (front, rest) = splitAt lr1item.offset (toList lr1item.clause.points)

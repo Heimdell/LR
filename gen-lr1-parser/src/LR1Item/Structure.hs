@@ -18,17 +18,21 @@ import Symbol
 import Data.Foldable
 import Data.Text (Text)
 
+import LR0Item.Structure
+
 {- |
   LR1Item in a rule during parsing process.
 -}
 data LR1Item = LR1Item
   { lookahead :: Lookahead     -- ^ term expected right after rule is parsed
-  , offset    :: Int      -- ^ mark of the rule
-  , clause    :: Clause   -- ^ reference to the rule
-  , type_     :: Maybe Text
-  , entity    :: NonTerminal
+  , lr0item   :: LR0Item
   }
   deriving stock (Eq, Ord)
+
+instance HasField "clause" LR1Item Clause where getField = (.lr0item.clause)
+instance HasField "offset" LR1Item Int where getField = (.lr0item.offset)
+instance HasField "entity" LR1Item NonTerminal where getField = (.lr0item.entity)
+instance HasField "type_" LR1Item (Maybe Text) where getField = (.lr0item.type_)
 
 {- |
   > E = E + T
@@ -36,13 +40,13 @@ data LR1Item = LR1Item
   Current point of the position.
 -}
 instance HasField "locus" LR1Item (Maybe Symbol) where
-  getField LR1Item {clause, offset} =
-    if offset >= length clause.points
+  getField lr1item =
+    if lr1item.offset >= length lr1item.clause.points
     then Nothing
-    else Just (clause.points Array.! offset)
+    else Just (lr1item.clause.points Array.! lr1item.offset)
 
 instance HasField "reducer" LR1Item Text where
-  getField LR1Item {clause} = clause.reducer
+  getField = (.clause.reducer)
 
 {- |
   > E = E + T
@@ -54,26 +58,30 @@ instance HasField "reducer" LR1Item Text where
   Next position.
 -}
 instance HasField "next" LR1Item (Maybe LR1Item) where
-  getField pos@LR1Item{clause, offset} =
-    if offset >= length clause.points
+  getField lr1item =
+    if lr1item.offset >= length lr1item.clause.points
     then Nothing
-    else Just (pos :: LR1Item)
-      { offset = offset + 1
+    else Just (lr1item :: LR1Item)
+      { lr0item = lr1item.lr0item
+        { offset = lr1item.offset + 1
+        }
       }
 
 instance HasField "parsed" LR1Item [Symbol] where
-  getField LR1Item {offset, clause} = take offset $ toList clause.points
+  getField lr1item = take lr1item.offset $ toList lr1item.clause.points
 
 {- |
   Start parsing a rule, expecting given `lookahead` term.
 -}
 startRule :: NonTerminal -> Maybe Text -> Clause -> Lookahead -> LR1Item
 startRule entity type_ clause lookahead = LR1Item
-  { offset = 0
-  , lookahead
-  , clause
-  , entity
-  , type_
+  { lookahead
+  , lr0item = LR0Item
+    { offset = 0
+    , clause
+    , entity
+    , type_
+    }
   }
 
 {- |
@@ -105,9 +113,9 @@ groupPositionsByCurrentPoints positions =
     point ==> Set.singleton pos
 
 data SortedPositions = SortedPositions
-  { expectsNonTerminal   :: NonTerminal    ==> Set LR1Item
-  , expectsTerminal :: Lookahead ==> Set LR1Item
-  , needsReduction  ::               Set LR1Item
+  { expectsNonTerminal :: NonTerminal ==> Set LR1Item
+  , expectsTerminal    :: Lookahead   ==> Set LR1Item
+  , needsReduction     ::                 Set LR1Item
   }
   deriving stock (Generic)
   deriving       (Semigroup, Monoid) via Generically SortedPositions
@@ -115,9 +123,9 @@ data SortedPositions = SortedPositions
 splitPositionsByCategory :: Set LR1Item -> SortedPositions
 splitPositionsByCategory = foldMap \pos -> do
   case pos.locus of
-    Nothing           -> mempty { needsReduction  =                        Set.singleton pos }
-    Just (T _ term)   -> mempty { expectsTerminal = LookForTerm term   ==> Set.singleton pos }
-    Just (E _ entity) -> mempty { expectsNonTerminal   =             entity ==> Set.singleton pos }
+    Nothing           -> mempty { needsReduction     =                        Set.singleton pos }
+    Just (T _ term)   -> mempty { expectsTerminal    = LookForTerm term   ==> Set.singleton pos }
+    Just (E _ entity) -> mempty { expectsNonTerminal =             entity ==> Set.singleton pos }
       :: SortedPositions
 
 -- examplePosSet :: Set LR1Item

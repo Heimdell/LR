@@ -42,15 +42,15 @@ instance Pretty Conflict where
     ]
 
 positionLine :: [Symbol] -> LR1Item -> Doc
-positionLine points pos@LR1Item {offset, clause, lookahead} = do
-  let (before, after) = splitAt (length points - offset) points
-  let additional = drop offset $ toList clause.points
+positionLine points pos = do
+  let (before, after) = splitAt (length points - pos.offset) points
+  let additional = drop pos.offset $ toList pos.clause.points
   if null additional
   then do
     vcat [fsep
       [ fsep (map pPrint before)
       , zeroWidthText "\ESC[4m" <> fsep (map pPrint after) <> zeroWidthText "\ESC[0m"
-      , zeroWidthText "\ESC[0m\ESC[2m" <> pPrint lookahead
+      , zeroWidthText "\ESC[0m\ESC[2m" <> pPrint pos.lookahead
       , "..." <> zeroWidthText "\ESC[0m"
       ], nest 2 (pPrintShaded pos)]
   else do
@@ -58,7 +58,7 @@ positionLine points pos@LR1Item {offset, clause, lookahead} = do
       [ fsep (map pPrint before)
       , zeroWidthText "\ESC[4m" <> fsep (map pPrint after) <> zeroWidthText "\ESC[2;3;4m"
       , fsep (map pPrint additional) <> zeroWidthText "\ESC[0m"
-      , zeroWidthText "\ESC[0m\ESC[2;3m" <> pPrint lookahead
+      , zeroWidthText "\ESC[0m\ESC[2;3m" <> pPrint pos.lookahead
       , "..." <> zeroWidthText "\ESC[0m"
       ], nest 2 (pPrintShaded pos)]
 
