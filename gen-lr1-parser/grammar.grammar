@@ -14,13 +14,13 @@ add
 
 start Grammar
 
-Term        = t:"<str>"  => "Term        t"
+Terminal    = t:"<str>"  => "Terminal    t"
 NonTerminal = e:"<Name>" => "NonTerminal e"
 
 Symbol
-  = n:"<name>" ":" t:Term        => "T (Just n) t"
+  = n:"<name>" ":" t:Terminal    => "T (Just n) t"
   | n:"<name>" ":" e:NonTerminal => "E (Just n) e"
-  |                t:Term        => "T  Nothing t"
+  |                t:Terminal    => "T  Nothing t"
 
 Symbols : "[Symbol]"
   = p:Symbol            => "[p]"

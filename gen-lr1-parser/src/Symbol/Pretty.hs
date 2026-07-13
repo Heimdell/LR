@@ -7,7 +7,7 @@ import Data.Text qualified as Text
 import Symbol.Structure
 import Data.Text (Text)
 
-instance Pretty Term   where pPrint = pPrint . (.term)
+instance Pretty Terminal   where pPrint = pPrint . (.term)
 instance Pretty NonTerminal where pPrint = pPrint . (.entity)
 
 instance Pretty Symbol where
@@ -15,7 +15,7 @@ instance Pretty Symbol where
     T mbName term   -> maybe (pPrint term)   (\name -> pPrint name <> ":" <> pPrint term  ) mbName
     E mbName entity -> maybe (pPrint entity) (\name -> pPrint name <> ":" <> pPrint entity) mbName
 
-instance Show Term   where show = show . pPrint
+instance Show Terminal   where show = show . pPrint
 instance Show NonTerminal where show = show . pPrint
 
 instance Pretty Text where

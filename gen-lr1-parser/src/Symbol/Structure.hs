@@ -10,13 +10,13 @@ import GHC.Records
 {- |
   Terminal, used in grammar.
 -}
-newtype Term = Term
+newtype Terminal = Terminal
   { term :: Text
   }
   deriving newtype (Eq, Ord, IsString)
 
 data Lookahead
-  = LookForTerm Term
+  = LookForTerm Terminal
   | LookForEOF
   deriving stock (Eq, Ord)
 
@@ -32,7 +32,7 @@ newtype NonTerminal = NonTerminal
   Terminal or non-terminal, used in grammar.
 -}
 data Symbol
-  = T (Maybe Text) Term
+  = T (Maybe Text) Terminal
   | E (Maybe Text) NonTerminal
   deriving stock (Eq, Ord)
 
@@ -44,7 +44,7 @@ instance HasField "name" Symbol (Maybe Text) where
 {- |
   Check it point is a terminal.
 -}
-pointTerminals :: Symbol -> Maybe Term
+pointTerminals :: Symbol -> Maybe Terminal
 pointTerminals = \case
   T _ term -> Just term
   _        -> Nothing

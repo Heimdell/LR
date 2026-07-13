@@ -398,25 +398,25 @@ stackToBinders [] = error ""
 pair :: Doc -> Doc -> Doc
 pair one another = parens ((one <.> ",") <+> another)
 
-pointToBinder :: Text -> Text -> Term -> Doc
+pointToBinder :: Text -> Text -> Terminal -> Doc
 pointToBinder range name = \case
-  "<num>"      -> parens do (pPrint range <.> ", NumberLiteral") <+> pPrint name
-  "<str>"      -> parens do (pPrint range <.> ", StringLiteral") <+> pPrint name
-  "<name>"     -> parens do (pPrint range <.> ", LowercaseName") <+> pPrint name
-  "<Name>"     -> parens do (pPrint range <.> ", UppercaseName") <+> pPrint name
-  "<op>"       -> parens do (pPrint range <.> ", Operator")      <+> pPrint name
-  "<pun>"      -> parens do (pPrint range <.> ", Punctuator")    <+> pPrint name
-  Term keyword -> parens do (pPrint range <.> ", ")              <+> doubleQuotes (pPrint keyword)
+  "<num>"          -> parens do (pPrint range <.> ", NumberLiteral") <+> pPrint name
+  "<str>"          -> parens do (pPrint range <.> ", StringLiteral") <+> pPrint name
+  "<name>"         -> parens do (pPrint range <.> ", LowercaseName") <+> pPrint name
+  "<Name>"         -> parens do (pPrint range <.> ", UppercaseName") <+> pPrint name
+  "<op>"           -> parens do (pPrint range <.> ", Operator")      <+> pPrint name
+  "<pun>"          -> parens do (pPrint range <.> ", Punctuator")    <+> pPrint name
+  Terminal keyword -> parens do (pPrint range <.> ", ")              <+> doubleQuotes (pPrint keyword)
 
-termIsBinding :: Term -> Bool
+termIsBinding :: Terminal -> Bool
 termIsBinding = \case
-  "<num>"  -> True
-  "<str>"  -> True
-  "<name>" -> True
-  "<Name>" -> True
-  "<op>"   -> True
-  "<pun>"  -> True
-  Term _   -> False
+  "<num>"    -> True
+  "<str>"    -> True
+  "<name>"   -> True
+  "<Name>"   -> True
+  "<op>"     -> True
+  "<pun>"    -> True
+  Terminal _ -> False
 
 pointBinder :: Symbol -> Doc
 pointBinder pt = case pt.name of
@@ -471,7 +471,7 @@ stateErrors target number state =
         Nothing      -> Set.singleton pos.lookahead
         _            -> Set.empty
 
-shift :: NonTerminal -> StateNum -> Term -> StateNum -> Doc
+shift :: NonTerminal -> StateNum -> Terminal -> StateNum -> Doc
 shift target from term to = do
   ";" <+> do
     hang (s target from

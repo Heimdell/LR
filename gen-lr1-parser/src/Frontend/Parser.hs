@@ -51,9 +51,9 @@ data StGrammar :: [Kind.Type] -> Kind.Type where
   SGrammar20 :: StGrammar (Text : a)
   SGrammar21 :: StGrammar (Text : a)
   SGrammar22 :: StGrammar (Text : a)
-  SGrammar23 :: StGrammar (Term : a)
+  SGrammar23 :: StGrammar (Terminal : a)
   SGrammar24 :: StGrammar (() : Text : a)
-  SGrammar25 :: StGrammar (Term : () : Text : a)
+  SGrammar25 :: StGrammar (Terminal : () : Text : a)
   SGrammar26 :: StGrammar (NonTerminal : () : Text : a)
   SGrammar27 :: StGrammar (Symbol : a)
   SGrammar28 :: StGrammar ([Symbol] : Symbol : a)
@@ -147,8 +147,8 @@ __gotoSymbolsForGrammar toks term stk@(state, _, _) = case state of
   SGrammar27 -> __runGrammar SGrammar28 toks (term :> stk)
   _ -> error ""
 
-__gotoTermForGrammar :: ([Lexeme], Pos) -> Term -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoTermForGrammar toks term stk@(state, _, _) = case state of
+__gotoTerminalForGrammar :: ([Lexeme], Pos) -> Terminal -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
+__gotoTerminalForGrammar toks term stk@(state, _, _) = case state of
   SGrammar8 -> __runGrammar SGrammar23 toks (term :> stk)
   SGrammar10 -> __runGrammar SGrammar23 toks (term :> stk)
   SGrammar18 -> __runGrammar SGrammar23 toks (term :> stk)
@@ -276,15 +276,15 @@ __runGrammar = \cases {
 ; SGrammar19 ([], __end) ((clauses :> (_, _, _ :> (_, _, type_ :> (_, _, _ :> (_, _, entity :> __stk@(_, __pos, _))))))) ->
     __gotoRuleForGrammar ([], __end) (action38 __pos entity type_
                                                      clauses) __stk
--- lookahead <name>, entity Term
+-- lookahead <name>, entity Terminal
 ; SGrammar20 ((__p, LowercaseName tok) : __input, __end) ((t :> __stk@(_, __pos, _))) ->
-    __gotoTermForGrammar ((__p, LowercaseName tok) : __input, __end) (action17 __pos t) __stk
--- lookahead <str>, entity Term
+    __gotoTerminalForGrammar ((__p, LowercaseName tok) : __input, __end) (action17 __pos t) __stk
+-- lookahead <str>, entity Terminal
 ; SGrammar20 ((__p, StringLiteral tok) : __input, __end) ((t :> __stk@(_, __pos, _))) ->
-    __gotoTermForGrammar ((__p, StringLiteral tok) : __input, __end) (action17 __pos t) __stk
--- lookahead =>, entity Term
+    __gotoTerminalForGrammar ((__p, StringLiteral tok) : __input, __end) (action17 __pos t) __stk
+-- lookahead =>, entity Terminal
 ; SGrammar20 ((__p,  "=>") : __input, __end) ((t :> __stk@(_, __pos, _))) ->
-    __gotoTermForGrammar ((__p,  "=>") : __input, __end) (action17 __pos t) __stk
+    __gotoTerminalForGrammar ((__p,  "=>") : __input, __end) (action17 __pos t) __stk
 -- lookahead <name>, entity NonTerminal
 ; SGrammar21 ((__p, LowercaseName tok) : __input, __end) ((e :> __stk@(_, __pos, _))) ->
     __gotoNonTerminalForGrammar ((__p, LowercaseName tok) : __input, __end) (action18 __pos e) __stk
@@ -420,7 +420,7 @@ __runGrammar = \cases {
 ; SGrammar39 __input _ -> Left  (currentPos __input, ["<eof>"])
 } where {
 ; action17 pos t =
-              Term        t
+              Terminal    t
 ; action18 pos e =
               NonTerminal e
 ; action21 pos n t =

@@ -13,7 +13,7 @@ import Data.Array qualified as Array
 import Data.Set   qualified as Set
 import Data.Map.Monoidal (type (==>), (==>))
 
-import Symbol (Symbol, NonTerminal(entity), Term, pointTerminals, pointEntities)
+import Symbol (Symbol, NonTerminal(entity), Terminal, pointTerminals, pointEntities)
 import Data.Text.Position (Pos)
 
 
@@ -42,7 +42,7 @@ data Clause = Clause
 {- |
   Terminals, mentioned in the rule.
 -}
-ruleTerminals :: Rule -> Set Term
+ruleTerminals :: Rule -> Set Terminal
 ruleTerminals rule
   = foldMap (foldMap (foldMap Set.singleton . pointTerminals) . (.points)) rule.clauses
 

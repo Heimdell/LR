@@ -12,7 +12,7 @@ import Data.Function
 import Data.Map.Monoidal (type (==>), (!), (==>))
 import Fixpoint          (fixpoint)
 import Rule
-import Symbol              (Symbol(E, T), NonTerminal, Term)
+import Symbol              (Symbol(E, T), NonTerminal, Terminal)
 
 import Data.Map.Monoidal qualified as Map
 import Data.Text (Text)
@@ -21,9 +21,9 @@ import Data.Traversable (for)
 data Grammar = Grammar
   { ruleOrder :: [Rule]
   , rules     :: NonTerminal ==> Set Rule
-  , terminals :: Set Term
+  , terminals :: Set Terminal
   , entities  :: Set NonTerminal
-  , first     :: NonTerminal ==> Set Term
+  , first     :: NonTerminal ==> Set Terminal
   -- , starter   :: NonTerminal
   , types     :: NonTerminal ==> Set Text
   }
@@ -53,10 +53,10 @@ makeGrammar ruleOrder = Grammar
     singleRule :: Rule -> (NonTerminal, Set Rule)
     singleRule rule = (rule.entity, Set.singleton rule)
 
-    first :: NonTerminal ==> Set Term
+    first :: NonTerminal ==> Set Terminal
     first = fixpoint (foldMap fromRule (fold rules)) mempty
       where
-        fromRule :: Rule -> NonTerminal ==> Set Term -> NonTerminal ==> Set Term
+        fromRule :: Rule -> NonTerminal ==> Set Terminal -> NonTerminal ==> Set Terminal
         fromRule rule cache = do
           rule.entity ==> do
             rule.clauses & foldMap \clause -> do
