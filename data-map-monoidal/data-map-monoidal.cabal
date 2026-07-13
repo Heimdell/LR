@@ -1,0 +1,31 @@
+cabal-version:      3.0
+name:               data-map-monoidal
+version:            0.1.0.0
+-- synopsis:
+-- description:
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             Kirill Andreev
+maintainer:         hindmst.one@gmail.com
+-- copyright:
+category:           Data
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common warnings
+    ghc-options: -Wall
+    default-extensions:
+      ExplicitNamespaces
+      BlockArguments
+      DerivingStrategies
+      OverloadedStrings
+
+library
+    import:           warnings
+    exposed-modules:  Data.Map.Monoidal
+    other-modules: Data.Map.Monoidal.Structure, Data.Map.Monoidal.Pretty
+    -- other-extensions:
+    build-depends:    base ^>=4.20.2.0, containers, pretty
+    hs-source-dirs:   src
+    default-language: GHC2021
