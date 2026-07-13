@@ -11,7 +11,7 @@ import Data.Set qualified as Set
 import Data.Map.Monoidal  ((==>))
 import LR1Item.Structure
 import Rule
-import Symbol               (Term, Entity)
+import Symbol               (Entity, Lookahead)
 
 import Data.Map.Monoidal qualified as Map
 
@@ -27,7 +27,7 @@ data PrettyPosition = PrettyPosition
   { clause    :: Clause
   , offset    :: Int
   , entity    :: Entity
-  , lookahead :: Set (Maybe Term)
+  , lookahead :: Set Lookahead
   }
   deriving stock (Eq, Ord)
 

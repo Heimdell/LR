@@ -11,7 +11,7 @@ import Fixpoint          ((>>-), graphClosure)
 import Grammar           (Grammar(rules))
 import LR1Item
 import Rule
-import Symbol              (Symbol(E))
+import Symbol
 
 {- |
   Parser state.
@@ -105,4 +105,4 @@ startingState grammar =
   closure grammar do
     (grammar.rules ! "Start") & foldMap \rule -> do
       rule.clauses >>- \clause -> do
-        Set.singleton (startRule rule.entity rule.type_ clause Nothing)
+        Set.singleton (startRule rule.entity rule.type_ clause LookForEOF)

@@ -25,9 +25,9 @@ doReduce = (Set.singleton .) . Reduce
 doAccept :: Set (Decision state)
 doAccept = Set.singleton Accept
 
-reducingDecision :: LR1Item -> Maybe Term ==> Set (Decision state)
+reducingDecision :: LR1Item -> Lookahead ==> Set (Decision state)
 reducingDecision pos
-  | pos.entity == "Start" = Nothing       ==> doAccept
+  | pos.entity == "Start" = LookForEOF    ==> doAccept
   | otherwise             = pos.lookahead ==> doReduce pos.entity pos.clause
 
 onlyShift :: (Decision LR1State) -> [LR1State]

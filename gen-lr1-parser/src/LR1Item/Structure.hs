@@ -14,7 +14,7 @@ import Data.Map.Monoidal (type (==>), (!), (==>))
 import Fixpoint          ((>>-))
 import Grammar           (Grammar(first, Grammar))
 import Rule
-import Symbol              (Symbol(..), Entity, Term)
+import Symbol
 import Data.Foldable
 import Data.Text (Text)
 
@@ -22,7 +22,7 @@ import Data.Text (Text)
   LR1Item in a rule during parsing process.
 -}
 data LR1Item = LR1Item
-  { lookahead :: Maybe Term     -- ^ term expected right after rule is parsed
+  { lookahead :: Lookahead     -- ^ term expected right after rule is parsed
   , offset    :: Int      -- ^ mark of the rule
   , clause    :: Clause   -- ^ reference to the rule
   , type_     :: Maybe Text
@@ -67,7 +67,7 @@ instance HasField "parsed" LR1Item [Symbol] where
 {- |
   Start parsing a rule, expecting given `lookahead` term.
 -}
-startRule :: Entity -> Maybe Text -> Clause -> Maybe Term -> LR1Item
+startRule :: Entity -> Maybe Text -> Clause -> Lookahead -> LR1Item
 startRule entity type_ clause lookahead = LR1Item
   { offset = 0
   , lookahead
@@ -89,11 +89,11 @@ startRule entity type_ clause lookahead = LR1Item
   >         ^
   > lacp = {)}
 -}
-lookaheadAfterCurrentPoint :: Grammar -> LR1Item -> Set (Maybe Term)
+lookaheadAfterCurrentPoint :: Grammar -> LR1Item -> Set Lookahead
 lookaheadAfterCurrentPoint Grammar {first} pos = case pos.next >>= (.locus) of
   Nothing           -> Set.singleton pos.lookahead
-  Just (T _ term)   -> Set.singleton (Just term)
-  Just (E _ entity) -> Set.map Just (first ! entity)
+  Just (T _ term)   -> Set.singleton (LookForTerm term)
+  Just (E _ entity) -> Set.map LookForTerm (first ! entity)
 
 {- |
   Group a set of position by current point to be parsed.
@@ -105,9 +105,9 @@ groupPositionsByCurrentPoints positions =
     point ==> Set.singleton pos
 
 data SortedPositions = SortedPositions
-  { expectsEntity   ::       Entity ==> Set LR1Item
-  , expectsTerminal :: Maybe Term   ==> Set LR1Item
-  , needsReduction  ::            Set LR1Item
+  { expectsEntity   :: Entity    ==> Set LR1Item
+  , expectsTerminal :: Lookahead ==> Set LR1Item
+  , needsReduction  ::               Set LR1Item
   }
   deriving stock (Generic)
   deriving       (Semigroup, Monoid) via Generically SortedPositions
@@ -115,9 +115,10 @@ data SortedPositions = SortedPositions
 splitPositionsByCategory :: Set LR1Item -> SortedPositions
 splitPositionsByCategory = foldMap \pos -> do
   case pos.locus of
-    Nothing           -> mempty { needsReduction  =                 Set.singleton pos }
-    Just (T _ term)   -> mempty { expectsTerminal = Just term   ==> Set.singleton pos }
-    Just (E _ entity) -> mempty { expectsEntity   =      entity ==> Set.singleton pos } :: SortedPositions
+    Nothing           -> mempty { needsReduction  =                        Set.singleton pos }
+    Just (T _ term)   -> mempty { expectsTerminal = LookForTerm term   ==> Set.singleton pos }
+    Just (E _ entity) -> mempty { expectsEntity   =             entity ==> Set.singleton pos }
+      :: SortedPositions
 
 -- examplePosSet :: Set LR1Item
 -- examplePosSet = Set.fromList

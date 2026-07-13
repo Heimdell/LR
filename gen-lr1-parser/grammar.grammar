@@ -17,17 +17,17 @@ start Grammar
 Term   = t:"<str>"  => "Term   t"
 Entity = e:"<Name>" => "Entity e"
 
-Point
+Symbol
   = n:"<name>" ":" t:Term   => "T (Just n) t"
   | n:"<name>" ":" e:Entity => "E (Just n) e"
   |                t:Term   => "T  Nothing t"
 
-Points : "[Point]"
-  = p:Point           => "[p]"
-  | p:Point ps:Points => " p : ps"
+Symbols : "[Symbol]"
+  = p:Symbol            => "[p]"
+  | p:Symbol ps:Symbols => " p : ps"
 
 Clause
-  = points:Points "=>" reducer:"<str>" =>
+  = points:Symbols "=>" reducer:"<str>" =>
     "Clause {mark = 0, pos, points = listToArray points, reducer}"
 
 Clauses : "[Clause]"

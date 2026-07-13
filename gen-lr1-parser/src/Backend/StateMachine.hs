@@ -11,7 +11,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Map.Monoidal ((!), (==>))
 import Data.Map.Monoidal qualified as Monoidal
-import Data.Maybe (maybeToList, fromMaybe)
+import Data.Maybe (maybeToList)
 import Data.Ord (comparing)
 import Data.Set ((\\), Set)
 import Data.Text (Text)
@@ -72,7 +72,7 @@ prepareToolboxes Request {addendum, starts, grammar} =
           target
           (Just (typeOf grammar target))
           starterClause
-          Nothing
+          LookForEOF
 
         grammar' = grammar
           { rules = grammar.rules <> do
@@ -444,8 +444,8 @@ reduce target state pos = vcat
   where
     input :: Doc
     input = case pos.lookahead of
-      Nothing  -> "([], __end)"
-      Just tok -> parens (pointToBinder "__p" "tok" tok <+> ":" <+> ("__input" <.> ",") <+> "__end")
+      LookForEOF  -> "([], __end)"
+      LookForTerm tok -> parens (pointToBinder "__p" "tok" tok <+> ":" <+> ("__input" <.> ",") <+> "__end")
 
     params = foldMap (maybeToList . fmap pPrint . (.name)) pos.clause.points
 
@@ -464,10 +464,10 @@ stateErrors target number state =
         ("currentPos __input," <+> brackets
           (fsep $ punctuate "," $ map (doubleQuotes . text . show) stateTerminals))
   where
-    stateTerminals :: [Term]
-    stateTerminals = map (fromMaybe "<eof>") $ Set.toList $ state.positions & foldMap \pos ->
+    stateTerminals :: [Doc]
+    stateTerminals = map pPrint $ Set.toList $ state.positions & foldMap \pos ->
       case pos.locus of
-        Just (T _ t) -> Set.singleton (Just t)
+        Just (T _ t) -> Set.singleton (LookForTerm t)
         Nothing      -> Set.singleton pos.lookahead
         _            -> Set.empty
 
@@ -526,6 +526,6 @@ stateShifts target from Action {action} =
   vcat $ action & Monoidal.assocs & foldMap \(lookahead, decisions) -> do
     decisions & foldMap \case
       Shift to -> case lookahead of
-        Just term -> [shift target from term to]
-        Nothing   -> []
+        LookForTerm term -> [shift target from term to]
+        LookForEOF       -> []
       _ -> []

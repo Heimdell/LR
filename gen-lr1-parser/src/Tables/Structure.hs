@@ -31,8 +31,8 @@ import Control.Monad.Identity (Identity (runIdentity))
   I decided to join both tables by common dimension of parsing state.
 -}
 data Action state = Action
-  { goto   :: Entity ==> state         -- ^ move after non-terminal is parsed
-  , action :: Maybe Term   ==> Set (Decision state)  -- ^ action after terminal is parsed
+  { goto   :: Entity    ==> state         -- ^ move after non-terminal is parsed
+  , action :: Lookahead ==> Set (Decision state)  -- ^ action after terminal is parsed
   }
   deriving stock (Eq, Ord, Generic)
   deriving       (Semigroup, Monoid) via Generically (Action state)
@@ -112,7 +112,7 @@ makeTables grammar firstState =
 
 data Conflict = Conflict
   { leading   :: [Symbol]
-  , term      :: Maybe Term
+  , term      :: Lookahead
   , positions :: Set LR1Item
   }
   deriving stock (Eq, Ord)
@@ -153,10 +153,10 @@ tableToConflicts start Table{actions = Monoidal acts} = go start
           for_ actions \case
             Shift st' -> do
               case lookahead of
-                Just term -> do
+                LookForTerm term -> do
                   local (++ [T Nothing term]) do
                     go st'
-                Nothing -> do
+                LookForEOF -> do
                   pure ()
             _ -> do
               pure ()
@@ -165,19 +165,19 @@ tableToConflicts start Table{actions = Monoidal acts} = go start
             [_] -> pure ()
             _   -> reportConflict st lookahead
 
-    reportConflict :: LR1State -> Maybe Term -> ConflictM ()
+    reportConflict :: LR1State -> Lookahead -> ConflictM ()
     reportConflict st term = do
       let
         positions = st.positions & Set.filter \pos ->
           case pos.locus of
-            Just (T _ term') -> term == Just term'
+            Just (T _ term') -> term == LookForTerm term'
             Nothing          -> pos.lookahead == term
             _                -> False
 
         cutPositions = positions & Set.map \pos ->
           case pos.locus of
             Nothing -> pos
-            Just _  -> (pos :: LR1Item) {lookahead = Just "?"}
+            Just _  -> (pos :: LR1Item) {lookahead = LookForTerm "?"}
 
         -- additional
       reported <- gets (Monoidal.member cutPositions . (.foundConflicts))

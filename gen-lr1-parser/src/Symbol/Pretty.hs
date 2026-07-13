@@ -4,7 +4,7 @@ import Text.PrettyPrint.HughesPJClass (text, Pretty(pPrint))
 
 import Data.Text qualified as Text
 
-import Symbol.Structure (Symbol(..), Entity(entity), Term(term))
+import Symbol.Structure
 import Data.Text (Text)
 
 instance Pretty Term   where pPrint = pPrint . (.term)
@@ -20,3 +20,8 @@ instance Show Entity where show = show . pPrint
 
 instance Pretty Text where
   pPrint = text . Text.unpack
+
+instance Pretty Lookahead where
+  pPrint = \case
+    LookForTerm term -> pPrint term
+    LookForEOF       -> "<eof>"

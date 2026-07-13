@@ -15,6 +15,11 @@ newtype Term = Term
   }
   deriving newtype (Eq, Ord, IsString)
 
+data Lookahead
+  = LookForTerm Term
+  | LookForEOF
+  deriving stock (Eq, Ord)
+
 {- |
   Non-terminal, used in grammar.
 -}
