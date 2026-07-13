@@ -7,7 +7,7 @@ import Text.PrettyPrint.HughesPJClass (vcat, Doc, Pretty(pPrint))
 
 import Grammar.Structure (Grammar(rules, Grammar))
 import Rule              (Rule)
-import Symbol              (Entity)
+import Symbol              (NonTerminal)
 
 import qualified Data.Map.Monoidal as Map
 
@@ -18,7 +18,7 @@ instance Pretty Grammar where
       & fmap ruleBlock
       & vcat
     where
-      ruleBlock :: (Entity, Set Rule) -> Doc
+      ruleBlock :: (NonTerminal, Set Rule) -> Doc
       ruleBlock (_, ruleset) =
         vcat (map pPrint (toList ruleset))
 

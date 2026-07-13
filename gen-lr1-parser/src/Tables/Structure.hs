@@ -31,7 +31,7 @@ import Control.Monad.Identity (Identity (runIdentity))
   I decided to join both tables by common dimension of parsing state.
 -}
 data Action state = Action
-  { goto   :: Entity    ==> state         -- ^ move after non-terminal is parsed
+  { goto   :: NonTerminal    ==> state         -- ^ move after non-terminal is parsed
   , action :: Lookahead ==> Set (Decision state)  -- ^ action after terminal is parsed
   }
   deriving stock (Eq, Ord, Generic)
@@ -102,7 +102,7 @@ adjacentSubgraph grammar state@LR1State {positions} =
     sorted = splitPositionsByCategory positions
 
     gotos, shifts, reduce :: Action LR1State
-    gotos  = mempty { goto   =           advanceOnePoint grammar <$> sorted.expectsEntity   }
+    gotos  = mempty { goto   =           advanceOnePoint grammar <$> sorted.expectsNonTerminal   }
     shifts = mempty { action = doShift . advanceOnePoint grammar <$> sorted.expectsTerminal }
     reduce = mempty { action =           foldMap reducingDecision    sorted.needsReduction  }
 

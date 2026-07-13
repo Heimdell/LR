@@ -31,29 +31,30 @@ data StGrammar :: [Kind.Type] -> Kind.Type where
   SGrammar1 :: StGrammar (Text : a)
   SGrammar2 :: StGrammar ([Symbol] : a)
   SGrammar3 :: StGrammar (Clause : a)
-  SGrammar4 :: StGrammar (Entity : a)
+  SGrammar4 :: StGrammar (NonTerminal : a)
   SGrammar5 :: StGrammar (() : a)
-  SGrammar6 :: StGrammar (Entity : a)
+  SGrammar6 :: StGrammar (NonTerminal : a)
   SGrammar7 :: StGrammar (() : [Symbol] : a)
   SGrammar8 :: StGrammar (() : Clause : a)
-  SGrammar9 :: StGrammar (() : Entity : a)
-  SGrammar10 :: StGrammar (() : Entity : a)
-  SGrammar11 :: StGrammar ([Entity] : () : a)
-  SGrammar12 :: StGrammar (() : Entity : a)
+  SGrammar9 :: StGrammar (() : NonTerminal : a)
+  SGrammar10 :: StGrammar (() : NonTerminal : a)
+  SGrammar11 :: StGrammar ([NonTerminal] : () : a)
+  SGrammar12 :: StGrammar (() : NonTerminal : a)
   SGrammar13 :: StGrammar (Text : () : [Symbol] : a)
   SGrammar14 :: StGrammar ([Clause] : () : Clause : a)
-  SGrammar15 :: StGrammar (Text : () : Entity : a)
-  SGrammar16 :: StGrammar ([Clause] : () : Entity : a)
-  SGrammar17 :: StGrammar ([Entity] : () : Entity : a)
-  SGrammar18 :: StGrammar (() : Text : () : Entity : a)
-  SGrammar19 :: StGrammar ([Clause] : () : Text : () : Entity : a)
+  SGrammar15 :: StGrammar (Text : () : NonTerminal : a)
+  SGrammar16 :: StGrammar ([Clause] : () : NonTerminal : a)
+  SGrammar17 :: StGrammar ([NonTerminal] : () : NonTerminal : a)
+  SGrammar18 :: StGrammar (() : Text : () : NonTerminal : a)
+  SGrammar19 :: StGrammar ([Clause] : () : Text : () : NonTerminal :
+                           a)
   SGrammar20 :: StGrammar (Text : a)
   SGrammar21 :: StGrammar (Text : a)
   SGrammar22 :: StGrammar (Text : a)
   SGrammar23 :: StGrammar (Term : a)
   SGrammar24 :: StGrammar (() : Text : a)
   SGrammar25 :: StGrammar (Term : () : Text : a)
-  SGrammar26 :: StGrammar (Entity : () : Text : a)
+  SGrammar26 :: StGrammar (NonTerminal : () : Text : a)
   SGrammar27 :: StGrammar (Symbol : a)
   SGrammar28 :: StGrammar ([Symbol] : Symbol : a)
   SGrammar29 :: StGrammar (() : a)
@@ -61,40 +62,45 @@ data StGrammar :: [Kind.Type] -> Kind.Type where
   SGrammar31 :: StGrammar ([Text] : () : a)
   SGrammar32 :: StGrammar ([Text] : Text : a)
   SGrammar33 :: StGrammar (a)
-  SGrammar34 :: StGrammar (([Text], Set Entity, [Rule]) : a)
+  SGrammar34 :: StGrammar (([Text], Set NonTerminal, [Rule]) : a)
   SGrammar35 :: StGrammar (Rule : a)
   SGrammar36 :: StGrammar ([Text] : a)
   SGrammar37 :: StGrammar ([Rule] : Rule : a)
-  SGrammar38 :: StGrammar ([Entity] : [Text] : a)
-  SGrammar39 :: StGrammar ([Rule] : [Entity] : [Text] : a)
+  SGrammar38 :: StGrammar ([NonTerminal] : [Text] : a)
+  SGrammar39 :: StGrammar ([Rule] : [NonTerminal] : [Text] : a)
 
-__gotoAdditionsForGrammar :: ([Lexeme], Pos) -> [Text] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoAdditionsForGrammar :: ([Lexeme], Pos) -> [Text] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
 __gotoAdditionsForGrammar toks term stk@(state, _, _) = case state of
   SGrammar33 -> __runGrammar SGrammar36 toks (term :> stk)
   _ -> error ""
 
-__gotoClauseForGrammar :: ([Lexeme], Pos) -> Clause -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoClauseForGrammar :: ([Lexeme], Pos) -> Clause -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
 __gotoClauseForGrammar toks term stk@(state, _, _) = case state of
   SGrammar8 -> __runGrammar SGrammar3 toks (term :> stk)
   SGrammar10 -> __runGrammar SGrammar3 toks (term :> stk)
   SGrammar18 -> __runGrammar SGrammar3 toks (term :> stk)
   _ -> error ""
 
-__gotoClausesForGrammar :: ([Lexeme], Pos) -> [Clause] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoClausesForGrammar :: ([Lexeme], Pos) -> [Clause] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
 __gotoClausesForGrammar toks term stk@(state, _, _) = case state of
   SGrammar8 -> __runGrammar SGrammar14 toks (term :> stk)
   SGrammar10 -> __runGrammar SGrammar16 toks (term :> stk)
   SGrammar18 -> __runGrammar SGrammar19 toks (term :> stk)
   _ -> error ""
 
-__gotoEntitiesForGrammar :: ([Lexeme], Pos) -> [Entity] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
-__gotoEntitiesForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar5 -> __runGrammar SGrammar11 toks (term :> stk)
-  SGrammar12 -> __runGrammar SGrammar17 toks (term :> stk)
+__gotoGrammarForGrammar :: ([Lexeme], Pos) -> ([Text], Set NonTerminal, [Rule]) -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
+__gotoGrammarForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar33 -> __runGrammar SGrammar34 toks (term :> stk)
   _ -> error ""
 
-__gotoEntityForGrammar :: ([Lexeme], Pos) -> Entity -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
-__gotoEntityForGrammar toks term stk@(state, _, _) = case state of
+__gotoLinesForGrammar :: ([Lexeme], Pos) -> [Text] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
+__gotoLinesForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar29 -> __runGrammar SGrammar31 toks (term :> stk)
+  SGrammar30 -> __runGrammar SGrammar32 toks (term :> stk)
+  _ -> error ""
+
+__gotoNonTerminalForGrammar :: ([Lexeme], Pos) -> NonTerminal -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
+__gotoNonTerminalForGrammar toks term stk@(state, _, _) = case state of
   SGrammar5 -> __runGrammar SGrammar6 toks (term :> stk)
   SGrammar12 -> __runGrammar SGrammar6 toks (term :> stk)
   SGrammar24 -> __runGrammar SGrammar26 toks (term :> stk)
@@ -102,35 +108,30 @@ __gotoEntityForGrammar toks term stk@(state, _, _) = case state of
   SGrammar38 -> __runGrammar SGrammar4 toks (term :> stk)
   _ -> error ""
 
-__gotoGrammarForGrammar :: ([Lexeme], Pos) -> ([Text], Set Entity, [Rule]) -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
-__gotoGrammarForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar33 -> __runGrammar SGrammar34 toks (term :> stk)
+__gotoNonTerminalsForGrammar :: ([Lexeme], Pos) -> [NonTerminal] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
+__gotoNonTerminalsForGrammar toks term stk@(state, _, _) = case state of
+  SGrammar5 -> __runGrammar SGrammar11 toks (term :> stk)
+  SGrammar12 -> __runGrammar SGrammar17 toks (term :> stk)
   _ -> error ""
 
-__gotoLinesForGrammar :: ([Lexeme], Pos) -> [Text] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
-__gotoLinesForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar29 -> __runGrammar SGrammar31 toks (term :> stk)
-  SGrammar30 -> __runGrammar SGrammar32 toks (term :> stk)
-  _ -> error ""
-
-__gotoRuleForGrammar :: ([Lexeme], Pos) -> Rule -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoRuleForGrammar :: ([Lexeme], Pos) -> Rule -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
 __gotoRuleForGrammar toks term stk@(state, _, _) = case state of
   SGrammar35 -> __runGrammar SGrammar35 toks (term :> stk)
   SGrammar38 -> __runGrammar SGrammar35 toks (term :> stk)
   _ -> error ""
 
-__gotoRulesForGrammar :: ([Lexeme], Pos) -> [Rule] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoRulesForGrammar :: ([Lexeme], Pos) -> [Rule] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
 __gotoRulesForGrammar toks term stk@(state, _, _) = case state of
   SGrammar35 -> __runGrammar SGrammar37 toks (term :> stk)
   SGrammar38 -> __runGrammar SGrammar39 toks (term :> stk)
   _ -> error ""
 
-__gotoStartersForGrammar :: ([Lexeme], Pos) -> [Entity] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoStartersForGrammar :: ([Lexeme], Pos) -> [NonTerminal] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
 __gotoStartersForGrammar toks term stk@(state, _, _) = case state of
   SGrammar36 -> __runGrammar SGrammar38 toks (term :> stk)
   _ -> error ""
 
-__gotoSymbolForGrammar :: ([Lexeme], Pos) -> Symbol -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoSymbolForGrammar :: ([Lexeme], Pos) -> Symbol -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
 __gotoSymbolForGrammar toks term stk@(state, _, _) = case state of
   SGrammar8 -> __runGrammar SGrammar27 toks (term :> stk)
   SGrammar10 -> __runGrammar SGrammar27 toks (term :> stk)
@@ -138,7 +139,7 @@ __gotoSymbolForGrammar toks term stk@(state, _, _) = case state of
   SGrammar27 -> __runGrammar SGrammar27 toks (term :> stk)
   _ -> error ""
 
-__gotoSymbolsForGrammar :: ([Lexeme], Pos) -> [Symbol] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoSymbolsForGrammar :: ([Lexeme], Pos) -> [Symbol] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
 __gotoSymbolsForGrammar toks term stk@(state, _, _) = case state of
   SGrammar8 -> __runGrammar SGrammar2 toks (term :> stk)
   SGrammar10 -> __runGrammar SGrammar2 toks (term :> stk)
@@ -146,7 +147,7 @@ __gotoSymbolsForGrammar toks term stk@(state, _, _) = case state of
   SGrammar27 -> __runGrammar SGrammar28 toks (term :> stk)
   _ -> error ""
 
-__gotoTermForGrammar :: ([Lexeme], Pos) -> Term -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoTermForGrammar :: ([Lexeme], Pos) -> Term -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
 __gotoTermForGrammar toks term stk@(state, _, _) = case state of
   SGrammar8 -> __runGrammar SGrammar23 toks (term :> stk)
   SGrammar10 -> __runGrammar SGrammar23 toks (term :> stk)
@@ -155,7 +156,7 @@ __gotoTermForGrammar toks term stk@(state, _, _) = case state of
   SGrammar27 -> __runGrammar SGrammar23 toks (term :> stk)
   _ -> error ""
 
-__runGrammar :: StGrammar a -> ([Lexeme], Pos) -> Stack' StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__runGrammar :: StGrammar a -> ([Lexeme], Pos) -> Stack' StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
 __runGrammar = \cases {
 ; SGrammar2 ((__p,  "=>") : __input, __end) __stk ->
     __runGrammar SGrammar7 (__input, __end) (() :> (SGrammar2, __p, __stk))
@@ -211,27 +212,27 @@ __runGrammar = \cases {
     __runGrammar SGrammar5 (__input, __end) (() :> (SGrammar36, __p, __stk))
 ; SGrammar38 ((__p, UppercaseName n) : __input, __end) __stk ->
     __runGrammar SGrammar1 (__input, __end) (n :> (SGrammar38, __p, __stk))
--- lookahead ,, entity Entity
+-- lookahead ,, entity NonTerminal
 ; SGrammar0 ((__p,  ",") : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoEntityForGrammar ((__p,  ",") : __input, __end) (action18 __pos e) __stk
--- lookahead <Name>, entity Entity
+    __gotoNonTerminalForGrammar ((__p,  ",") : __input, __end) (action18 __pos e) __stk
+-- lookahead <Name>, entity NonTerminal
 ; SGrammar0 ((__p, UppercaseName tok) : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoEntityForGrammar ((__p, UppercaseName tok) : __input, __end) (action18 __pos e) __stk
--- lookahead :, entity Entity
+    __gotoNonTerminalForGrammar ((__p, UppercaseName tok) : __input, __end) (action18 __pos e) __stk
+-- lookahead :, entity NonTerminal
 ; SGrammar1 ((__p,  ":") : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoEntityForGrammar ((__p,  ":") : __input, __end) (action18 __pos e) __stk
--- lookahead =, entity Entity
+    __gotoNonTerminalForGrammar ((__p,  ":") : __input, __end) (action18 __pos e) __stk
+-- lookahead =, entity NonTerminal
 ; SGrammar1 ((__p,  "=") : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoEntityForGrammar ((__p,  "=") : __input, __end) (action18 __pos e) __stk
+    __gotoNonTerminalForGrammar ((__p,  "=") : __input, __end) (action18 __pos e) __stk
 -- lookahead <Name>, entity Clauses
 ; SGrammar3 ((__p, UppercaseName tok) : __input, __end) ((c :> __stk@(_, __pos, _))) ->
     __gotoClausesForGrammar ((__p, UppercaseName tok) : __input, __end) (action34 __pos c) __stk
 -- lookahead <eof>, entity Clauses
 ; SGrammar3 ([], __end) ((c :> __stk@(_, __pos, _))) ->
     __gotoClausesForGrammar ([], __end) (action34 __pos c) __stk
--- lookahead <Name>, entity Entities
+-- lookahead <Name>, entity NonTerminals
 ; SGrammar6 ((__p, UppercaseName tok) : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoEntitiesForGrammar ((__p, UppercaseName tok) : __input, __end) (action57 __pos e) __stk
+    __gotoNonTerminalsForGrammar ((__p, UppercaseName tok) : __input, __end) (action57 __pos e) __stk
 -- lookahead <Name>, entity Starters
 ; SGrammar11 ((__p, UppercaseName tok) : __input, __end) ((es :> (_, _, _ :> __stk@(_, __pos, _)))) ->
     __gotoStartersForGrammar ((__p, UppercaseName tok) : __input, __end) (action54 __pos es) __stk
@@ -262,10 +263,10 @@ __runGrammar = \cases {
 ; SGrammar16 ([], __end) ((clauses :> (_, _, _ :> (_, _, entity :> __stk@(_, __pos, _))))) ->
     __gotoRuleForGrammar ([], __end) (action39 __pos entity
                                                      clauses) __stk
--- lookahead <Name>, entity Entities
+-- lookahead <Name>, entity NonTerminals
 ; SGrammar17 ((__p, UppercaseName tok) : __input, __end) ((es :> (_, _, _ :> (_, _, e :> __stk@(_, __pos, _))))) ->
-    __gotoEntitiesForGrammar ((__p, UppercaseName tok) : __input, __end) (action58 __pos e
-                                                                                         es) __stk
+    __gotoNonTerminalsForGrammar ((__p, UppercaseName tok) : __input, __end) (action58 __pos e
+                                                                                             es) __stk
 -- lookahead <Name>, entity Rule
 ; SGrammar19 ((__p, UppercaseName tok) : __input, __end) ((clauses :> (_, _, _ :> (_, _, type_ :> (_, _, _ :> (_, _, entity :> __stk@(_, __pos, _))))))) ->
     __gotoRuleForGrammar ((__p, UppercaseName tok) : __input, __end) (action38 __pos entity
@@ -284,15 +285,15 @@ __runGrammar = \cases {
 -- lookahead =>, entity Term
 ; SGrammar20 ((__p,  "=>") : __input, __end) ((t :> __stk@(_, __pos, _))) ->
     __gotoTermForGrammar ((__p,  "=>") : __input, __end) (action17 __pos t) __stk
--- lookahead <name>, entity Entity
+-- lookahead <name>, entity NonTerminal
 ; SGrammar21 ((__p, LowercaseName tok) : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoEntityForGrammar ((__p, LowercaseName tok) : __input, __end) (action18 __pos e) __stk
--- lookahead <str>, entity Entity
+    __gotoNonTerminalForGrammar ((__p, LowercaseName tok) : __input, __end) (action18 __pos e) __stk
+-- lookahead <str>, entity NonTerminal
 ; SGrammar21 ((__p, StringLiteral tok) : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoEntityForGrammar ((__p, StringLiteral tok) : __input, __end) (action18 __pos e) __stk
--- lookahead =>, entity Entity
+    __gotoNonTerminalForGrammar ((__p, StringLiteral tok) : __input, __end) (action18 __pos e) __stk
+-- lookahead =>, entity NonTerminal
 ; SGrammar21 ((__p,  "=>") : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoEntityForGrammar ((__p,  "=>") : __input, __end) (action18 __pos e) __stk
+    __gotoNonTerminalForGrammar ((__p,  "=>") : __input, __end) (action18 __pos e) __stk
 -- lookahead <name>, entity Symbol
 ; SGrammar23 ((__p, LowercaseName tok) : __input, __end) ((t :> __stk@(_, __pos, _))) ->
     __gotoSymbolForGrammar ((__p, LowercaseName tok) : __input, __end) (action23 __pos t) __stk
@@ -419,9 +420,9 @@ __runGrammar = \cases {
 ; SGrammar39 __input _ -> Left  (currentPos __input, ["<eof>"])
 } where {
 ; action17 pos t =
-         Term   t
+              Term        t
 ; action18 pos e =
-         Entity e
+              NonTerminal e
 ; action21 pos n t =
     T (Just n) t
 ; action22 pos n e =
@@ -464,7 +465,7 @@ __runGrammar = \cases {
     (a, Set.fromList s, r)
 }
 
-parseGrammar :: FilePath -> IO (Either LexerError (Either (Pos, [String]) ([Text], Set Entity, [Rule])))
+parseGrammar :: FilePath -> IO (Either LexerError (Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])))
 parseGrammar filepath = do
   text <- Text.readFile filepath
   case lexText filepath text [",", ":", "=", "=>", "add", "start",

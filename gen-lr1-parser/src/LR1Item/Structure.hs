@@ -26,7 +26,7 @@ data LR1Item = LR1Item
   , offset    :: Int      -- ^ mark of the rule
   , clause    :: Clause   -- ^ reference to the rule
   , type_     :: Maybe Text
-  , entity    :: Entity
+  , entity    :: NonTerminal
   }
   deriving stock (Eq, Ord)
 
@@ -67,7 +67,7 @@ instance HasField "parsed" LR1Item [Symbol] where
 {- |
   Start parsing a rule, expecting given `lookahead` term.
 -}
-startRule :: Entity -> Maybe Text -> Clause -> Lookahead -> LR1Item
+startRule :: NonTerminal -> Maybe Text -> Clause -> Lookahead -> LR1Item
 startRule entity type_ clause lookahead = LR1Item
   { offset = 0
   , lookahead
@@ -105,7 +105,7 @@ groupPositionsByCurrentPoints positions =
     point ==> Set.singleton pos
 
 data SortedPositions = SortedPositions
-  { expectsEntity   :: Entity    ==> Set LR1Item
+  { expectsNonTerminal   :: NonTerminal    ==> Set LR1Item
   , expectsTerminal :: Lookahead ==> Set LR1Item
   , needsReduction  ::               Set LR1Item
   }
@@ -117,7 +117,7 @@ splitPositionsByCategory = foldMap \pos -> do
   case pos.locus of
     Nothing           -> mempty { needsReduction  =                        Set.singleton pos }
     Just (T _ term)   -> mempty { expectsTerminal = LookForTerm term   ==> Set.singleton pos }
-    Just (E _ entity) -> mempty { expectsEntity   =             entity ==> Set.singleton pos }
+    Just (E _ entity) -> mempty { expectsNonTerminal   =             entity ==> Set.singleton pos }
       :: SortedPositions
 
 -- examplePosSet :: Set LR1Item

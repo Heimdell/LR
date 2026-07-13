@@ -12,14 +12,14 @@ import Data.Map.Monoidal (type (==>), (==>))
 
 data Decision state
   = Shift state
-  | Reduce Entity Clause
+  | Reduce NonTerminal Clause
   | Accept
   deriving stock (Eq, Ord)
 
 doShift :: LR1State -> Set (Decision LR1State)
 doShift = Set.singleton . Shift
 
-doReduce :: Entity -> Clause -> Set (Decision state)
+doReduce :: NonTerminal -> Clause -> Set (Decision state)
 doReduce = (Set.singleton .) . Reduce
 
 doAccept :: Set (Decision state)

@@ -23,7 +23,7 @@ data Lookahead
 {- |
   Non-terminal, used in grammar.
 -}
-newtype Entity = Entity
+newtype NonTerminal = NonTerminal
   { entity :: Text
   }
   deriving newtype (Eq, Ord, IsString)
@@ -33,7 +33,7 @@ newtype Entity = Entity
 -}
 data Symbol
   = T (Maybe Text) Term
-  | E (Maybe Text) Entity
+  | E (Maybe Text) NonTerminal
   deriving stock (Eq, Ord)
 
 instance HasField "name" Symbol (Maybe Text) where
@@ -52,7 +52,7 @@ pointTerminals = \case
 {- |
   Check it point is a non-terminal.
 -}
-pointEntities :: Symbol -> Maybe Entity
+pointEntities :: Symbol -> Maybe NonTerminal
 pointEntities = \case
   E _ entity -> Just entity
   _          -> Nothing

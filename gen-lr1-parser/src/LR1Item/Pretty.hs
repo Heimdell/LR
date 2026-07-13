@@ -11,11 +11,11 @@ import Data.Set qualified as Set
 import Data.Map.Monoidal  ((==>))
 import LR1Item.Structure
 import Rule
-import Symbol               (Entity, Lookahead)
+import Symbol               (NonTerminal, Lookahead)
 
 import Data.Map.Monoidal qualified as Map
 
-instance HasField "prefix" LR1Item (Clause, Entity, Int) where
+instance HasField "prefix" LR1Item (Clause, NonTerminal, Int) where
   getField pos = (pos.clause, pos.entity, pos.offset)
 
 groupPositionsByPrefices :: Set LR1Item -> Set PrettyPosition
@@ -26,7 +26,7 @@ groupPositionsByPrefices set =
 data PrettyPosition = PrettyPosition
   { clause    :: Clause
   , offset    :: Int
-  , entity    :: Entity
+  , entity    :: NonTerminal
   , lookahead :: Set Lookahead
   }
   deriving stock (Eq, Ord)

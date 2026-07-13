@@ -39,7 +39,7 @@ infixl 6 <.>
 
 data Request = Request
   { addendum :: [Text]
-  , starts   :: Set Entity
+  , starts   :: Set NonTerminal
   , grammar  :: Grammar
   }
 
@@ -55,7 +55,7 @@ data Toolbox = Toolbox
 
 type StateNum = Int
 
-prepareToolboxes :: Request -> Map Entity Toolbox
+prepareToolboxes :: Request -> Map NonTerminal Toolbox
 prepareToolboxes Request {addendum, starts, grammar} =
   starts & foldMap \target ->
     Map.singleton target do
@@ -173,12 +173,12 @@ generateParserModule request@Request{addendum, starts, grammar} pathToSrc module
       ]
   writeFile fullPath (show moduleBody)
 
-typeOf :: Grammar -> Entity -> Text
+typeOf :: Grammar -> NonTerminal -> Text
 typeOf grammar entity = case toList (grammar.types ! entity) of
   [ty_] -> ty_
   other -> error $ "unexpected type set " <> show (entity ==> other) <> ", expected single type"
 
-makeParser :: Entity -> Toolbox -> Doc
+makeParser :: NonTerminal -> Toolbox -> Doc
 makeParser target toolbox@Toolbox {grammar, start, table, states, inverse} = vcat
   [ -- for each requested entrypoint TRG entity we generate:
     --
@@ -196,7 +196,7 @@ makeParser target toolbox@Toolbox {grammar, start, table, states, inverse} = vca
           & Set.delete "Start"           -- except "Start", it is auxillary
           & toList
           & map \entity ->               -- for each of them
-              gotoEntity                 -- generate goto{Entity}For{Target} function
+              gotoNonTerminal                 -- generate goto{NonTerminal}For{Target} function
                 target                   -- we generate separate set for each target entity
                 (typeOf grammar target)
                 (typeOf grammar entity)
@@ -219,7 +219,7 @@ makeParser target toolbox@Toolbox {grammar, start, table, states, inverse} = vca
       grammar.terminals \\ Set.fromList
         ["<num>", "<str>", "<Name>", "<name>", "<op>", "<pun>"]
 
-makeActionTable :: Entity -> Toolbox -> Doc
+makeActionTable :: NonTerminal -> Toolbox -> Doc
 makeActionTable target Toolbox {grammar, table, states} = vcat
   [ run target <+> "::" <+> st target <+> "a -> ([Lexeme], Pos) ->" <+> stack' target <+> "a -> Either (Pos, [String]) " <.> pPrint (grammar.types ! target)
   , run target <+> "= \\cases {"
@@ -287,8 +287,8 @@ parserStackType = vcat
 {- |
   Generate a column of GOTO table for given entity to parse target entity.
 
-__goto{Entity}For{Target} :: ([Lexeme], Pos) -> [Cond] -> Stack St{Target} a -> Either (Pos, [String]) {Target}
-__goto{Entity}For{Target} toks term stk@(state, _, _) = case state of
+__goto{NonTerminal}For{Target} :: ([Lexeme], Pos) -> [Cond] -> Stack St{Target} a -> Either (Pos, [String]) {Target}
+__goto{NonTerminal}For{Target} toks term stk@(state, _, _) = case state of
   S{Target}9   -> __run{Target} S{Target}13  toks (term :> stk)
   S{Target}11  -> __run{Target} S{Target}14  toks (term :> stk)
   S{Target}176 -> __run{Target} S{Target}179 toks (term :> stk)
@@ -296,8 +296,8 @@ __goto{Entity}For{Target} toks term stk@(state, _, _) = case state of
   _ -> error ""
 
 -}
-gotoEntity :: Entity -> Text -> Text -> Entity -> Table StateNum -> Doc
-gotoEntity target starterType entityType entity Table {actions} = vcat
+gotoNonTerminal :: NonTerminal -> Text -> Text -> NonTerminal -> Table StateNum -> Doc
+gotoNonTerminal target starterType entityType entity Table {actions} = vcat
   [ gotoMethod entity target <+> do ":: ([Lexeme], Pos) ->" <+> pPrint entityType <+> "->" <+> stack target <+> "a -> Either (Pos, [String])" <+> pPrint starterType
   , gotoMethod entity target <+> "toks term stk@(state, _, _) = case state of"
   , vcat do
@@ -321,16 +321,16 @@ gotoEntity target starterType entityType entity Table {actions} = vcat
 
   > data St :: [Kind.Type] -> Kind.Type where
   >   S0 :: St (a)
-  >   S1 :: St (([Text], Set Entity, [Rule]) : a)
+  >   S1 :: St (([Text], Set NonTerminal, [Rule]) : a)
   >   S2 :: St ([Symbol] : a)
   >   S3 :: St (Clause : a)
-  >   S4 :: St (Entity : a)
+  >   S4 :: St (NonTerminal : a)
   >   S5 :: St (Rule : a)
   >   ...
 
   Each name declared in this type will have the entrypoint name as suffix.
 -}
-genStateType :: Entity -> Grammar -> Map StateNum LR1State -> Doc
+genStateType :: NonTerminal -> Grammar -> Map StateNum LR1State -> Doc
 genStateType target grammar states = vcat
   [ "data " <.> st target <.> " :: [Kind.Type] -> Kind.Type where"
   , nest 2 do
@@ -342,12 +342,12 @@ genStateType target grammar states = vcat
 
   > data St :: [Kind.Type] -> Kind.Type where
   >   ...
-  >   S1 :: St ([Text] : Set Entity : [Rule] : a)
+  >   S1 :: St ([Text] : Set NonTerminal : [Rule] : a)
   >   ...
 
   Each name declared in this type will have the entrypoint name as suffix.
 -}
-genState :: Entity -> Grammar -> StateNum -> LR1State -> Doc
+genState :: NonTerminal -> Grammar -> StateNum -> LR1State -> Doc
 genState target grammar number state =
   s target number <+> "::" <+> st target <+> do
     toList state.positions                -- grab all positions from state
@@ -428,7 +428,7 @@ pointBinder pt = case pt.name of
   In grammar: store in rules line of reducing action.
               store (line => action) map.
 -}
-reduce :: Entity -> StateNum -> LR1Item -> Doc
+reduce :: NonTerminal -> StateNum -> LR1Item -> Doc
 reduce target state pos = vcat
   [ "-- lookahead " <.> pPrint pos.lookahead <.> ", entity " <.> pPrint pos.entity
   , ";" <+>  do
@@ -449,14 +449,14 @@ reduce target state pos = vcat
 
     params = foldMap (maybeToList . fmap pPrint . (.name)) pos.clause.points
 
-stateReducers :: Entity -> StateNum -> LR1State -> Doc
+stateReducers :: NonTerminal -> StateNum -> LR1State -> Doc
 stateReducers target number state =
   vcat $ state.positions & foldMap \pos -> do
     case pos.locus of
       Just {} -> []
       Nothing -> [reduce target number pos]
 
-stateErrors :: Entity -> StateNum -> LR1State -> Doc
+stateErrors :: NonTerminal -> StateNum -> LR1State -> Doc
 stateErrors target number state =
   ";" <+>  do
     hang (s target number <+> "__input" <+> "_" <+> "->") 2 do
@@ -471,7 +471,7 @@ stateErrors target number state =
         Nothing      -> Set.singleton pos.lookahead
         _            -> Set.empty
 
-shift :: Entity -> StateNum -> Term -> StateNum -> Doc
+shift :: NonTerminal -> StateNum -> Term -> StateNum -> Doc
 shift target from term to = do
   ";" <+> do
     hang (s target from
@@ -482,46 +482,46 @@ shift target from term to = do
           (if termIsBinding term then "n" else "()") <+> ":>" <+> parens (s target from <.> ", __p, __stk")
         ))
 
-(@:) :: Doc -> Entity -> Doc
+(@:) :: Doc -> NonTerminal -> Doc
 doc @: target = doc <.> pPrint target
 
-parse :: Entity -> Doc
+parse :: NonTerminal -> Doc
 parse target = "parse" @: target
 
-gotoMethod :: Entity -> Entity -> Doc
+gotoMethod :: NonTerminal -> NonTerminal -> Doc
 gotoMethod entity target = "__goto" @: entity <.> "For" @: target
 
 actionMethod :: Pos -> Doc
 actionMethod pos = "action" <.> pPrint pos.line
 
-run :: Entity -> Doc
+run :: NonTerminal -> Doc
 run target = "__run" @: target
 
-s :: Entity -> StateNum -> Doc
+s :: NonTerminal -> StateNum -> Doc
 s target n = "S" <.> pPrint target <.> int n
 
-stack :: Entity -> Doc
+stack :: NonTerminal -> Doc
 stack target = "Stack St" @: target
 
-stack' :: Entity -> Doc
+stack' :: NonTerminal -> Doc
 stack' target = "Stack' St" @: target
 
--- push :: Entity -> Doc
+-- push :: NonTerminal -> Doc
 -- push target = "Push" @: target
 
--- push' :: Entity -> Doc
+-- push' :: NonTerminal -> Doc
 -- push' target = "Push" @: target <.> "'"
 
--- nil :: Entity -> Doc
+-- nil :: NonTerminal -> Doc
 -- nil target = "Nil" @: target
 
-st :: Entity -> Doc
+st :: NonTerminal -> Doc
 st target = "St" @: target
 
 {-
   TODO: pull "to" from ACTION table.
 -}
-stateShifts :: Entity -> StateNum -> Action StateNum -> Doc
+stateShifts :: NonTerminal -> StateNum -> Action StateNum -> Doc
 stateShifts target from Action {action} =
   vcat $ action & Monoidal.assocs & foldMap \(lookahead, decisions) -> do
     decisions & foldMap \case

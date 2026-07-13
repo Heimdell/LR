@@ -8,7 +8,7 @@ import Symbol.Structure
 import Data.Text (Text)
 
 instance Pretty Term   where pPrint = pPrint . (.term)
-instance Pretty Entity where pPrint = pPrint . (.entity)
+instance Pretty NonTerminal where pPrint = pPrint . (.entity)
 
 instance Pretty Symbol where
   pPrint = \case
@@ -16,7 +16,7 @@ instance Pretty Symbol where
     E mbName entity -> maybe (pPrint entity) (\name -> pPrint name <> ":" <> pPrint entity) mbName
 
 instance Show Term   where show = show . pPrint
-instance Show Entity where show = show . pPrint
+instance Show NonTerminal where show = show . pPrint
 
 instance Pretty Text where
   pPrint = text . Text.unpack

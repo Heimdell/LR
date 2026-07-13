@@ -15,20 +15,20 @@ import GHC.Generics
 import Control.Monad.Error.Class (MonadError(throwError))
 import Text.PrettyPrint.HughesPJClass
 
-declaredEntities :: Raw.Grammar -> Set Entity
+declaredEntities :: Raw.Grammar -> Set NonTerminal
 declaredEntities Raw.Grammar {rules} =
   foldMap (Set.singleton . (.entity)) rules
 
 data Scope = Scope
-  { declared :: Set Entity
-  , defined  :: Set Entity
+  { declared :: Set NonTerminal
+  , defined  :: Set NonTerminal
   }
   deriving stock (Generic)
   deriving (Semigroup, Monoid) via Generically Scope
 
 data Error
-  = Undefined Entity
-  | Redefined Entity
+  = Undefined NonTerminal
+  | Redefined NonTerminal
   deriving stock (Eq, Ord)
 
 instance Pretty Error where
@@ -38,13 +38,13 @@ instance Pretty Error where
 
 type M = WriterT (Set Error) (State Scope)
 
-assertExists :: Entity -> M ()
+assertExists :: NonTerminal -> M ()
 assertExists entity = do
   yes <- gets (Set.member entity . (.declared))
   unless yes do
     tell $ Set.singleton (Undefined entity)
 
-define :: Entity -> M ()
+define :: NonTerminal -> M ()
 define entity = do
   yes <- gets (Set.member entity . (.defined))
   when yes do
@@ -66,7 +66,7 @@ checkPoint = \case
   T {}       -> pure ()
   E _ entity -> assertExists entity
 
-check :: Set Entity -> Raw.Grammar -> Either (Set Error) Scoped.Grammar
+check :: Set NonTerminal -> Raw.Grammar -> Either (Set Error) Scoped.Grammar
 check starters grammar = do
   let (_, errors) = evalState (runWriterT checker) mempty { declared = declaredEntities grammar }
   if null errors

@@ -13,15 +13,15 @@ import Data.Array qualified as Array
 import Data.Set   qualified as Set
 import Data.Map.Monoidal (type (==>), (==>))
 
-import Symbol (Symbol, Entity(entity), Term, pointTerminals, pointEntities)
+import Symbol (Symbol, NonTerminal(entity), Term, pointTerminals, pointEntities)
 import Data.Text.Position (Pos)
 
 
 {- |
-  Rule in the form of `Entity` ::= {`Symbol`} @Reducer@.
+  Rule in the form of `NonTerminal` ::= {`Symbol`} @Reducer@.
 -}
 data Rule = Rule
-  { entity  :: Entity          -- ^ entity constructed by rule
+  { entity  :: NonTerminal          -- ^ entity constructed by rule
   , type_   :: Maybe Text
   , clauses :: [Clause]
   }
@@ -49,7 +49,7 @@ ruleTerminals rule
 {- |
   Non-terminals, mentioned or declared in the rule.
 -}
-ruleEntities :: Rule -> Set Entity
+ruleEntities :: Rule -> Set NonTerminal
 ruleEntities rule
   =  Set.singleton rule.entity
   <> foldMap (foldMap (foldMap Set.singleton . pointEntities) . (.points)) rule.clauses
@@ -65,7 +65,7 @@ mkClause pointList pos reducer = Clause
 setNumber :: Int -> Clause -> Clause
 setNumber mark clause = clause {mark}
 
-ruleTypes :: Rule -> Entity ==> Set Text
+ruleTypes :: Rule -> NonTerminal ==> Set Text
 ruleTypes rule = rule.entity ==> Set.singleton (fromMaybe rule.entity.entity rule.type_)
 
 forClauses :: (Clause -> Clause) -> Rule -> Rule

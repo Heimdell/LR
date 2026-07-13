@@ -5,6 +5,6 @@ import Symbol
 import Data.Set (Set)
 
 data Grammar = Grammar
-  { starts :: Set Entity
+  { starts :: Set NonTerminal
   , rules  :: [Rule]
   }
