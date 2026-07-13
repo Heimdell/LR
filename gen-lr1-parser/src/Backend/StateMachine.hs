@@ -28,7 +28,7 @@ import LR1State
 import System.Exit (exitFailure)
 import System.FilePath ((</>))
 import Tables
-import Term
+import Symbol
 import Text.Lexer.Default (dieOnLexerError, dieOnParserError)
 import Text.PrettyPrint.HughesPJClass hiding ((<>))
 import Data.Array (listArray)
@@ -322,7 +322,7 @@ gotoEntity target starterType entityType entity Table {actions} = vcat
   > data St :: [Kind.Type] -> Kind.Type where
   >   S0 :: St (a)
   >   S1 :: St (([Text], Set Entity, [Rule]) : a)
-  >   S2 :: St ([Point] : a)
+  >   S2 :: St ([Symbol] : a)
   >   S3 :: St (Clause : a)
   >   S4 :: St (Entity : a)
   >   S5 :: St (Rule : a)
@@ -359,10 +359,10 @@ genState target grammar number state =
       & fsep                              -- ...
       & parens                            -- ...
   where
-    chooseReduce :: LR1Item -> [Point]
+    chooseReduce :: LR1Item -> [Symbol]
     chooseReduce pos = reverse pos.parsed
 
-pointToHaskellType :: Grammar -> Point -> Doc
+pointToHaskellType :: Grammar -> Symbol -> Doc
 pointToHaskellType grammar = \case
   E _   e      -> pPrint (typeOf grammar e)
   T _ "<num>"  -> "Integer"
@@ -380,13 +380,13 @@ positionBinders pos = case pos.locus of
   Nothing -> parens (stackToBinders $ reverse pos.parsed)
   Just {} -> empty
 
-stackToBinders :: [Point] -> Doc
+stackToBinders :: [Symbol] -> Doc
 stackToBinders (start : rest) = parens do
   pointBinder start
     <+> ":>"
     <+> foldr decorate "__stk@(_, __pos, _)" rest
   where
-    decorate :: Point -> Doc -> Doc
+    decorate :: Symbol -> Doc -> Doc
     decorate point k = parens do
       "_, _,"
         <+> pointBinder point
@@ -418,7 +418,7 @@ termIsBinding = \case
   "<pun>"  -> True
   Term _   -> False
 
-pointBinder :: Point -> Doc
+pointBinder :: Symbol -> Doc
 pointBinder pt = case pt.name of
   Nothing   -> "_"
   Just name -> pPrint name

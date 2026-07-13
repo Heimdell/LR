@@ -61,9 +61,9 @@ library
       Tables
       Tables.Pretty
       Tables.Structure
-      Term
-      Term.Pretty
-      Term.Structure
+      Symbol
+      Symbol.Pretty
+      Symbol.Structure
     -- other-modules:
     -- other-extensions:
     build-depends:

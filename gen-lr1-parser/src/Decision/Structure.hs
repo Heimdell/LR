@@ -7,7 +7,7 @@ import Data.Set qualified as Set
 import LR1State             (LR1State)
 import Rule
 import LR1Item
-import Term
+import Symbol
 import Data.Map.Monoidal (type (==>), (==>))
 
 data Decision state

@@ -11,7 +11,7 @@ import Fixpoint          ((>>-), graphClosure)
 import Grammar           (Grammar(rules))
 import LR1Item
 import Rule
-import Term              (Point(E))
+import Symbol              (Symbol(E))
 
 {- |
   Parser state.

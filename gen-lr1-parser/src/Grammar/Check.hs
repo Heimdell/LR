@@ -7,7 +7,7 @@ import Data.Set qualified as Set
 
 import RawGrammar as Raw
 import Grammar as Scoped
-import Term
+import Symbol
 import Rule
 import Control.Monad
 import Data.Foldable
@@ -61,7 +61,7 @@ checkRule Rule {entity, clauses} = do
   for_ clauses \clause -> do
     for_ clause.points checkPoint
 
-checkPoint :: Point -> M ()
+checkPoint :: Symbol -> M ()
 checkPoint = \case
   T {}       -> pure ()
   E _ entity -> assertExists entity

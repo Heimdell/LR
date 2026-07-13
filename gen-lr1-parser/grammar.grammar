@@ -1,6 +1,6 @@
 add
   "import Rule"
-  "import Term"
+  "import Symbol"
   "import Text.Lexer.Default"
   "import Data.Text.Position"
   "import Data.Text (Text)"

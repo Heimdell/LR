@@ -9,7 +9,7 @@ module Frontend.Parser (
 import Data.Text.IO.Utf8 qualified as Text
 import Data.Kind qualified as Kind
 import Rule
-import Term
+import Symbol
 import Text.Lexer.Default
 import Data.Text.Position
 import Data.Text (Text)
@@ -29,18 +29,18 @@ data Stack' st xs where
 data StGrammar :: [Kind.Type] -> Kind.Type where
   SGrammar0 :: StGrammar (a)
   SGrammar1 :: StGrammar (([Text], Set Entity, [Rule]) : a)
-  SGrammar2 :: StGrammar ([Point] : a)
+  SGrammar2 :: StGrammar ([Symbol] : a)
   SGrammar3 :: StGrammar (Clause : a)
   SGrammar4 :: StGrammar (Entity : a)
   SGrammar5 :: StGrammar (Rule : a)
   SGrammar6 :: StGrammar ([Text] : a)
-  SGrammar7 :: StGrammar (() : [Point] : a)
+  SGrammar7 :: StGrammar (() : [Symbol] : a)
   SGrammar8 :: StGrammar (() : Clause : a)
   SGrammar9 :: StGrammar (() : Entity : a)
   SGrammar10 :: StGrammar (() : Entity : a)
   SGrammar11 :: StGrammar ([Rule] : Rule : a)
   SGrammar12 :: StGrammar ([Entity] : [Text] : a)
-  SGrammar13 :: StGrammar (Text : () : [Point] : a)
+  SGrammar13 :: StGrammar (Text : () : [Symbol] : a)
   SGrammar14 :: StGrammar ([Clause] : () : Clause : a)
   SGrammar15 :: StGrammar (Text : () : Entity : a)
   SGrammar16 :: StGrammar ([Clause] : () : Entity : a)
@@ -61,8 +61,8 @@ data StGrammar :: [Kind.Type] -> Kind.Type where
   SGrammar31 :: StGrammar (() : Text : a)
   SGrammar32 :: StGrammar (Term : () : Text : a)
   SGrammar33 :: StGrammar (Entity : () : Text : a)
-  SGrammar34 :: StGrammar (Point : a)
-  SGrammar35 :: StGrammar ([Point] : Point : a)
+  SGrammar34 :: StGrammar (Symbol : a)
+  SGrammar35 :: StGrammar ([Symbol] : Symbol : a)
   SGrammar36 :: StGrammar (() : a)
   SGrammar37 :: StGrammar (Text : a)
   SGrammar38 :: StGrammar ([Text] : () : a)
@@ -113,7 +113,7 @@ __gotoLinesForGrammar toks term stk@(state, _, _) = case state of
   SGrammar37 -> __runGrammar SGrammar39 toks (term :> stk)
   _ -> error ""
 
-__gotoPointForGrammar :: ([Lexeme], Pos) -> Point -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoPointForGrammar :: ([Lexeme], Pos) -> Symbol -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
 __gotoPointForGrammar toks term stk@(state, _, _) = case state of
   SGrammar8 -> __runGrammar SGrammar34 toks (term :> stk)
   SGrammar10 -> __runGrammar SGrammar34 toks (term :> stk)
@@ -121,7 +121,7 @@ __gotoPointForGrammar toks term stk@(state, _, _) = case state of
   SGrammar34 -> __runGrammar SGrammar34 toks (term :> stk)
   _ -> error ""
 
-__gotoPointsForGrammar :: ([Lexeme], Pos) -> [Point] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
+__gotoPointsForGrammar :: ([Lexeme], Pos) -> [Symbol] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set Entity, [Rule])
 __gotoPointsForGrammar toks term stk@(state, _, _) = case state of
   SGrammar8 -> __runGrammar SGrammar2 toks (term :> stk)
   SGrammar10 -> __runGrammar SGrammar2 toks (term :> stk)
@@ -304,36 +304,36 @@ __runGrammar = \cases {
 -- lookahead Just =>, entity Entity
 ; SGrammar28 ((__p,  "=>") : __input, __end) ((e :> __stk@(_, __pos, _))) ->
     __gotoEntityForGrammar ((__p,  "=>") : __input, __end) (action18 __pos e) __stk
--- lookahead Just <name>, entity Point
+-- lookahead Just <name>, entity Symbol
 ; SGrammar30 ((__p, LowercaseName tok) : __input, __end) ((t :> __stk@(_, __pos, _))) ->
     __gotoPointForGrammar ((__p, LowercaseName tok) : __input, __end) (action23 __pos t) __stk
--- lookahead Just <str>, entity Point
+-- lookahead Just <str>, entity Symbol
 ; SGrammar30 ((__p, StringLiteral tok) : __input, __end) ((t :> __stk@(_, __pos, _))) ->
     __gotoPointForGrammar ((__p, StringLiteral tok) : __input, __end) (action23 __pos t) __stk
--- lookahead Just =>, entity Point
+-- lookahead Just =>, entity Symbol
 ; SGrammar30 ((__p,  "=>") : __input, __end) ((t :> __stk@(_, __pos, _))) ->
     __gotoPointForGrammar ((__p,  "=>") : __input, __end) (action23 __pos t) __stk
--- lookahead Just <name>, entity Point
+-- lookahead Just <name>, entity Symbol
 ; SGrammar32 ((__p, LowercaseName tok) : __input, __end) ((t :> (_, _, _ :> (_, _, n :> __stk@(_, __pos, _))))) ->
     __gotoPointForGrammar ((__p, LowercaseName tok) : __input, __end) (action21 __pos n
                                                                                       t) __stk
--- lookahead Just <str>, entity Point
+-- lookahead Just <str>, entity Symbol
 ; SGrammar32 ((__p, StringLiteral tok) : __input, __end) ((t :> (_, _, _ :> (_, _, n :> __stk@(_, __pos, _))))) ->
     __gotoPointForGrammar ((__p, StringLiteral tok) : __input, __end) (action21 __pos n
                                                                                       t) __stk
--- lookahead Just =>, entity Point
+-- lookahead Just =>, entity Symbol
 ; SGrammar32 ((__p,  "=>") : __input, __end) ((t :> (_, _, _ :> (_, _, n :> __stk@(_, __pos, _))))) ->
     __gotoPointForGrammar ((__p,  "=>") : __input, __end) (action21 __pos n
                                                                           t) __stk
--- lookahead Just <name>, entity Point
+-- lookahead Just <name>, entity Symbol
 ; SGrammar33 ((__p, LowercaseName tok) : __input, __end) ((e :> (_, _, _ :> (_, _, n :> __stk@(_, __pos, _))))) ->
     __gotoPointForGrammar ((__p, LowercaseName tok) : __input, __end) (action22 __pos n
                                                                                       e) __stk
--- lookahead Just <str>, entity Point
+-- lookahead Just <str>, entity Symbol
 ; SGrammar33 ((__p, StringLiteral tok) : __input, __end) ((e :> (_, _, _ :> (_, _, n :> __stk@(_, __pos, _))))) ->
     __gotoPointForGrammar ((__p, StringLiteral tok) : __input, __end) (action22 __pos n
                                                                                       e) __stk
--- lookahead Just =>, entity Point
+-- lookahead Just =>, entity Symbol
 ; SGrammar33 ((__p,  "=>") : __input, __end) ((e :> (_, _, _ :> (_, _, n :> __stk@(_, __pos, _))))) ->
     __gotoPointForGrammar ((__p,  "=>") : __input, __end) (action22 __pos n
                                                                           e) __stk

@@ -7,7 +7,7 @@ import Text.PrettyPrint.HughesPJClass (vcat, Doc, Pretty(pPrint))
 
 import Grammar.Structure (Grammar(rules, Grammar))
 import Rule              (Rule)
-import Term              (Entity)
+import Symbol              (Entity)
 
 import qualified Data.Map.Monoidal as Map
 

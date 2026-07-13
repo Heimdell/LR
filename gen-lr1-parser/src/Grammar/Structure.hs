@@ -12,7 +12,7 @@ import Data.Function
 import Data.Map.Monoidal (type (==>), (!), (==>))
 import Fixpoint          (fixpoint)
 import Rule
-import Term              (Point(E, T), Entity, Term)
+import Symbol              (Symbol(E, T), Entity, Term)
 
 import Data.Map.Monoidal qualified as Map
 import Data.Text (Text)

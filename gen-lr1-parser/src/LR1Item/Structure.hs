@@ -14,7 +14,7 @@ import Data.Map.Monoidal (type (==>), (!), (==>))
 import Fixpoint          ((>>-))
 import Grammar           (Grammar(first, Grammar))
 import Rule
-import Term              (Point(..), Entity, Term)
+import Symbol              (Symbol(..), Entity, Term)
 import Data.Foldable
 import Data.Text (Text)
 
@@ -35,7 +35,7 @@ data LR1Item = LR1Item
   >       ^
   Current point of the position.
 -}
-instance HasField "locus" LR1Item (Maybe Point) where
+instance HasField "locus" LR1Item (Maybe Symbol) where
   getField LR1Item {clause, offset} =
     if offset >= length clause.points
     then Nothing
@@ -61,7 +61,7 @@ instance HasField "next" LR1Item (Maybe LR1Item) where
       { offset = offset + 1
       }
 
-instance HasField "parsed" LR1Item [Point] where
+instance HasField "parsed" LR1Item [Symbol] where
   getField LR1Item {offset, clause} = take offset $ toList clause.points
 
 {- |
@@ -98,7 +98,7 @@ lookaheadAfterCurrentPoint Grammar {first} pos = case pos.next >>= (.locus) of
 {- |
   Group a set of position by current point to be parsed.
 -}
-groupPositionsByCurrentPoints :: Set LR1Item -> Point ==> Set LR1Item
+groupPositionsByCurrentPoints :: Set LR1Item -> Symbol ==> Set LR1Item
 groupPositionsByCurrentPoints positions =
   positions >>- \pos ->
   pos.locus >>- \point ->

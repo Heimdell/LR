@@ -1,7 +1,7 @@
 {- |
   Elements of rule.
 -}
-module Term.Structure where
+module Symbol.Structure where
 
 import Data.String (IsString)
 import Data.Text   (Text)
@@ -26,12 +26,12 @@ newtype Entity = Entity
 {- |
   Terminal or non-terminal, used in grammar.
 -}
-data Point
+data Symbol
   = T (Maybe Text) Term
   | E (Maybe Text) Entity
   deriving stock (Eq, Ord)
 
-instance HasField "name" Point (Maybe Text) where
+instance HasField "name" Symbol (Maybe Text) where
   getField = \case
     T name _ -> name
     E name _ -> name
@@ -39,7 +39,7 @@ instance HasField "name" Point (Maybe Text) where
 {- |
   Check it point is a terminal.
 -}
-pointTerminals :: Point -> Maybe Term
+pointTerminals :: Symbol -> Maybe Term
 pointTerminals = \case
   T _ term -> Just term
   _        -> Nothing
@@ -47,7 +47,7 @@ pointTerminals = \case
 {- |
   Check it point is a non-terminal.
 -}
-pointEntities :: Point -> Maybe Entity
+pointEntities :: Symbol -> Maybe Entity
 pointEntities = \case
   E _ entity -> Just entity
   _          -> Nothing

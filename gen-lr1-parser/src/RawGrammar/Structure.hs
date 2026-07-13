@@ -1,7 +1,7 @@
 module RawGrammar.Structure where
 
 import Rule
-import Term
+import Symbol
 import Data.Set (Set)
 
 data Grammar = Grammar

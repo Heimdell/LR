@@ -8,7 +8,7 @@ import Tables.Structure (Action(..), Table(..), Conflict(..))
 import Decision()
 
 import Data.Map.Monoidal qualified as Map
-import Term
+import Symbol
 import LR1Item
 import Rule
 import Data.Text (Text)
@@ -41,7 +41,7 @@ instance Pretty Conflict where
     , "  "
     ]
 
-positionLine :: [Point] -> LR1Item -> Doc
+positionLine :: [Symbol] -> LR1Item -> Doc
 positionLine points pos@LR1Item {offset, clause, lookahead} = do
   let (before, after) = splitAt (length points - offset) points
   let additional = drop offset $ toList clause.points

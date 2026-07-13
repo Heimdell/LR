@@ -16,7 +16,7 @@ import Grammar  (Grammar())
 import LR1Item (LR1Item(..))
 import LR1Item (splitPositionsByCategory, SortedPositions (..))
 import LR1State    (LR1State(positions, LR1State), closure)
-import Term
+import Symbol
 import qualified Data.Map.Monoidal as Monoidal
 import Control.Monad.Reader
 import Control.Monad.State hiding (State, state)
@@ -111,7 +111,7 @@ makeTables grammar firstState =
   graphClosure (adjacentSubgraph grammar) collectTargetStates firstState
 
 data Conflict = Conflict
-  { leading   :: [Point]
+  { leading   :: [Symbol]
   , term      :: Maybe Term
   , positions :: Set LR1Item
   }
@@ -134,7 +134,7 @@ data Discovered = Discovered
   deriving stock (Generic)
   deriving (Semigroup, Monoid) via Generically Discovered
 
-type ConflictM = ReaderT [Point] (StateT Discovered Identity)
+type ConflictM = ReaderT [Symbol] (StateT Discovered Identity)
 
 tableToConflicts :: LR1State -> Table LR1State -> ConflictM ()
 tableToConflicts start Table{actions = Monoidal acts} = go start

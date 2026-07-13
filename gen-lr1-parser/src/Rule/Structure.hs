@@ -13,12 +13,12 @@ import Data.Array qualified as Array
 import Data.Set   qualified as Set
 import Data.Map.Monoidal (type (==>), (==>))
 
-import Term (Point, Entity(entity), Term, pointTerminals, pointEntities)
+import Symbol (Symbol, Entity(entity), Term, pointTerminals, pointEntities)
 import Data.Text.Position (Pos)
 
 
 {- |
-  Rule in the form of `Entity` ::= {`Point`} @Reducer@.
+  Rule in the form of `Entity` ::= {`Symbol`} @Reducer@.
 -}
 data Rule = Rule
   { entity  :: Entity          -- ^ entity constructed by rule
@@ -34,7 +34,7 @@ instance Ord Clause where compare = compare `on` (.mark)
 
 data Clause = Clause
   { mark    :: Int             -- ^ number unique to rule
-  , points  :: Array Int Point  -- ^ sequence of [non]terminals
+  , points  :: Array Int Symbol  -- ^ sequence of [non]terminals
   , pos     :: Pos
   , reducer :: Text            -- ^ action to perform
   }
@@ -54,7 +54,7 @@ ruleEntities rule
   =  Set.singleton rule.entity
   <> foldMap (foldMap (foldMap Set.singleton . pointEntities) . (.points)) rule.clauses
 
-mkClause :: [Point] -> Pos -> Text -> Clause
+mkClause :: [Symbol] -> Pos -> Text -> Clause
 mkClause pointList pos reducer = Clause
   { points = Array.listArray (0, length pointList - 1) pointList
   , mark   = -1

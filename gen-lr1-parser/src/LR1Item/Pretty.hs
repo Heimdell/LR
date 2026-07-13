@@ -11,7 +11,7 @@ import Data.Set qualified as Set
 import Data.Map.Monoidal  ((==>))
 import LR1Item.Structure
 import Rule
-import Term               (Term, Entity)
+import Symbol               (Term, Entity)
 
 import Data.Map.Monoidal qualified as Map
 
