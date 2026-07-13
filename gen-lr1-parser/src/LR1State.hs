@@ -6,17 +6,17 @@ import Text.PrettyPrint.HughesPJClass (vcat, Pretty(pPrint))
 
 -- import Position        (groupPositionsByPrefices)
 import Data.Set      (Set)
-import Data.Function (on)
-import GHC.Generics  (Generic, Generically(..))
 
 import Data.Set qualified as Set
 
-import Data.Map.Monoidal ((!))
+import Data.Map.Monoidal ((!), type (==>), (==>))
 import Control.Fixpoint          ((>>-), graphClosure)
 import Grammar           (Grammar(rules))
 import LR1Item
 import Rule
 import Symbol
+import LR0Item
+import qualified Data.Map.Monoidal as Monoidal
 
 {- |
   Parser state.
@@ -41,15 +41,18 @@ import Symbol
   > T = .number   { ) * + - / }
   > T = ( .E )    {$}
 -}
-data LR1State = LR1State
-  { positions :: Set LR1Item
-  , kernel    :: Set LR1Item
-  }
-  deriving stock (Generic)
-  deriving       (Semigroup, Monoid) via Generically LR1State
+type LR1State = Set LR1Item
 
-instance Eq  LR1State where (==)    = (==)    `on` (.kernel)
-instance Ord LR1State where compare = compare `on` (.kernel)
+type LR1PEMState = LR0Item ==> Set Lookahead
+
+itemsToState :: Set LR1Item -> LR1PEMState
+itemsToState = foldMap \item -> item.lr0item ==> Set.singleton item.lookahead
+
+stateToItems :: LR1PEMState -> Set LR1Item
+stateToItems = Monoidal.foldMapWithKey \lr0item lookaheads ->
+  lookaheads & foldMap \lookahead ->
+    Set.singleton do
+      LR1Item {lr0item, lookahead}
 
 {- |
   Calculate a closure of a kernel, using grammar and included FIRST table.
@@ -72,7 +75,7 @@ instance Ord LR1State where compare = compare `on` (.kernel)
 -}
 closure :: Grammar -> Set LR1Item -> LR1State
 closure grammar kernel = do
-    LR1State {kernel, positions}
+    positions
   where
     {- Grow kernel set, until no new positions can be added.
     -}
@@ -114,12 +117,10 @@ startingState grammar =
 
 -------------------------------------------------------------------------------
 
-instance Pretty LR1State where
-  pPrint LR1State {kernel} =
-    kernel
-  -- pPrint LR1State {positions} =
-  --   positions
-      -- & groupPositionsByPrefices
+instance {-# OVERLAPS #-} Pretty LR1State where
+  pPrint positions =
+    positions
+      & groupPositionsByPrefices
       & toList
       & map pPrint
       & vcat

@@ -350,7 +350,7 @@ genStateType target grammar states = vcat
 genState :: NonTerminal -> Grammar -> StateNum -> LR1State -> Doc
 genState target grammar number state =
   s target number <+> "::" <+> st target <+> do
-    toList state.positions                -- grab all positions from state
+    toList state
       & map chooseReduce                  -- select already parsed points from each of them
       & maximumBy (comparing length)      -- take the longest sequence of points
       & map (pointToHaskellType grammar)  -- make it into a list of required types
@@ -373,7 +373,7 @@ pointToHaskellType grammar = \case
 
 stateBinders :: LR1State -> Doc
 stateBinders state = vcat do
-  map positionBinders (toList state.positions)
+  map positionBinders (toList state)
 
 positionBinders :: LR1Item -> Doc
 positionBinders pos = case pos.locus of
@@ -451,7 +451,7 @@ reduce target state pos = vcat
 
 stateReducers :: NonTerminal -> StateNum -> LR1State -> Doc
 stateReducers target number state =
-  vcat $ state.positions & foldMap \pos -> do
+  vcat $ state & foldMap \pos -> do
     case pos.locus of
       Just {} -> []
       Nothing -> [reduce target number pos]
@@ -465,7 +465,7 @@ stateErrors target number state =
           (fsep $ punctuate "," $ map (doubleQuotes . text . show) stateTerminals))
   where
     stateTerminals :: [Doc]
-    stateTerminals = map pPrint $ Set.toList $ state.positions & foldMap \pos ->
+    stateTerminals = map pPrint $ Set.toList $ state & foldMap \pos ->
       case pos.locus of
         Just (T _ t) -> Set.singleton (LookForTerm t)
         Nothing      -> Set.singleton pos.lookahead

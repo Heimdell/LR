@@ -57,17 +57,6 @@ instance HasField "next" LR0Item (Maybe LR0Item) where
 instance HasField "parsed" LR0Item [Symbol] where
   getField LR0Item {offset, clause} = take offset $ toList clause.points
 
-{- |
-  Start parsing a rule, expecting given `lookahead` term.
--}
-startRule :: NonTerminal -> Maybe Text -> Clause  -> LR0Item
-startRule entity type_ clause = LR0Item
-  { offset = 0
-  , clause
-  , entity
-  , type_
-  }
-
 -------------------------------------------------------------------------------
 
 instance Pretty LR0Item where

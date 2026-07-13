@@ -22,7 +22,7 @@ import Data.Set qualified as Set
 
 import Control.Fixpoint (graphClosure)
 import Grammar  (Grammar())
-import LR1State    (LR1State(positions, LR1State), closure)
+import LR1State    (LR1State, closure)
 import qualified Data.Map.Monoidal as Monoidal
 import Control.Monad.Reader
 import Control.Monad.State hiding (State, state)
@@ -100,9 +100,9 @@ advanceOnePoint grammar
   The (3) generates REDUCEs.
 -}
 adjacentSubgraph :: Grammar -> LR1State -> Table LR1State
-adjacentSubgraph grammar state@LR1State {positions} =
+adjacentSubgraph grammar positions =
   Table do
-    state ==> gotos <> shifts <> reduce
+    positions ==> gotos <> shifts <> reduce
   where
     sorted = splitPositionsByCategory positions
 
@@ -173,7 +173,7 @@ tableToConflicts start Table{actions = Monoidal acts} = go start
     reportConflict :: LR1State -> Lookahead -> ConflictM ()
     reportConflict st term = do
       let
-        positions = st.positions & Set.filter \pos ->
+        positions = st & Set.filter \pos ->
           case pos.locus of
             Just (T _ term') -> term == LookForTerm term'
             Nothing          -> pos.lookahead == term
