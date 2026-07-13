@@ -9,7 +9,7 @@ import Decision()
 
 import Data.Map.Monoidal qualified as Map
 import Term
-import Position
+import LR1Item
 import Rule
 import Data.Text (Text)
 
@@ -41,8 +41,8 @@ instance Pretty Conflict where
     , "  "
     ]
 
-positionLine :: [Point] -> Position -> Doc
-positionLine points pos@Position {offset, clause, lookahead} = do
+positionLine :: [Point] -> LR1Item -> Doc
+positionLine points pos@LR1Item {offset, clause, lookahead} = do
   let (before, after) = splitAt (length points - offset) points
   let additional = drop offset $ toList clause.points
   if null additional

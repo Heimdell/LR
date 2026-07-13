@@ -19,7 +19,7 @@ import Data.Text.Position
 import Decision
 import Frontend.Parser (parseGrammar)
 import Grammar
-import Position
+import LR1Item
 import qualified Data.Set as Set
 import qualified Grammar.Check
 import qualified RawGrammar as Raw
@@ -68,7 +68,7 @@ prepareToolboxes Request {addendum, starts, grammar} =
           }
 
         starterRule = Rule "Start" Nothing [starterClause]
-        startingPosition = Position.startRule
+        startingPosition = LR1Item.startRule
           target
           (Just (typeOf grammar target))
           starterClause
@@ -359,7 +359,7 @@ genState target grammar number state =
       & fsep                              -- ...
       & parens                            -- ...
   where
-    chooseReduce :: Position -> [Point]
+    chooseReduce :: LR1Item -> [Point]
     chooseReduce pos = reverse pos.parsed
 
 pointToHaskellType :: Grammar -> Point -> Doc
@@ -375,7 +375,7 @@ stateBinders :: State -> Doc
 stateBinders state = vcat do
   map positionBinders (toList state.positions)
 
-positionBinders :: Position -> Doc
+positionBinders :: LR1Item -> Doc
 positionBinders pos = case pos.locus of
   Nothing -> parens (stackToBinders $ reverse pos.parsed)
   Just {} -> empty
@@ -428,7 +428,7 @@ pointBinder pt = case pt.name of
   In grammar: store in rules line of reducing action.
               store (line => action) map.
 -}
-reduce :: Entity -> StateNum -> Position -> Doc
+reduce :: Entity -> StateNum -> LR1Item -> Doc
 reduce target state pos = vcat
   [ "-- lookahead " <.> pPrint pos.lookahead <.> ", entity " <.> pPrint pos.entity
   , ";" <+>  do

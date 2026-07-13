@@ -1,7 +1,7 @@
 {- |
   Internal state of parsing a rule.
 -}
-module Position.Structure where
+module LR1Item.Structure where
 
 import Data.Set          (Set)
 import GHC.Generics      (Generically(..), Generic)
@@ -19,9 +19,9 @@ import Data.Foldable
 import Data.Text (Text)
 
 {- |
-  Position in a rule during parsing process.
+  LR1Item in a rule during parsing process.
 -}
-data Position = Position
+data LR1Item = LR1Item
   { lookahead :: Maybe Term     -- ^ term expected right after rule is parsed
   , offset    :: Int      -- ^ mark of the rule
   , clause    :: Clause   -- ^ reference to the rule
@@ -35,14 +35,14 @@ data Position = Position
   >       ^
   Current point of the position.
 -}
-instance HasField "locus" Position (Maybe Point) where
-  getField Position {clause, offset} =
+instance HasField "locus" LR1Item (Maybe Point) where
+  getField LR1Item {clause, offset} =
     if offset >= length clause.points
     then Nothing
     else Just (clause.points Array.! offset)
 
-instance HasField "reducer" Position Text where
-  getField Position {clause} = clause.reducer
+instance HasField "reducer" LR1Item Text where
+  getField LR1Item {clause} = clause.reducer
 
 {- |
   > E = E + T
@@ -53,22 +53,22 @@ instance HasField "reducer" Position Text where
 
   Next position.
 -}
-instance HasField "next" Position (Maybe Position) where
-  getField pos@Position{clause, offset} =
+instance HasField "next" LR1Item (Maybe LR1Item) where
+  getField pos@LR1Item{clause, offset} =
     if offset >= length clause.points
     then Nothing
-    else Just (pos :: Position)
+    else Just (pos :: LR1Item)
       { offset = offset + 1
       }
 
-instance HasField "parsed" Position [Point] where
-  getField Position {offset, clause} = take offset $ toList clause.points
+instance HasField "parsed" LR1Item [Point] where
+  getField LR1Item {offset, clause} = take offset $ toList clause.points
 
 {- |
   Start parsing a rule, expecting given `lookahead` term.
 -}
-startRule :: Entity -> Maybe Text -> Clause -> Maybe Term -> Position
-startRule entity type_ clause lookahead = Position
+startRule :: Entity -> Maybe Text -> Clause -> Maybe Term -> LR1Item
+startRule entity type_ clause lookahead = LR1Item
   { offset = 0
   , lookahead
   , clause
@@ -89,7 +89,7 @@ startRule entity type_ clause lookahead = Position
   >         ^
   > lacp = {)}
 -}
-lookaheadAfterCurrentPoint :: Grammar -> Position -> Set (Maybe Term)
+lookaheadAfterCurrentPoint :: Grammar -> LR1Item -> Set (Maybe Term)
 lookaheadAfterCurrentPoint Grammar {first} pos = case pos.next >>= (.locus) of
   Nothing           -> Set.singleton pos.lookahead
   Just (T _ term)   -> Set.singleton (Just term)
@@ -98,28 +98,28 @@ lookaheadAfterCurrentPoint Grammar {first} pos = case pos.next >>= (.locus) of
 {- |
   Group a set of position by current point to be parsed.
 -}
-groupPositionsByCurrentPoints :: Set Position -> Point ==> Set Position
+groupPositionsByCurrentPoints :: Set LR1Item -> Point ==> Set LR1Item
 groupPositionsByCurrentPoints positions =
   positions >>- \pos ->
   pos.locus >>- \point ->
     point ==> Set.singleton pos
 
 data SortedPositions = SortedPositions
-  { expectsEntity   ::       Entity ==> Set Position
-  , expectsTerminal :: Maybe Term   ==> Set Position
-  , needsReduction  ::            Set Position
+  { expectsEntity   ::       Entity ==> Set LR1Item
+  , expectsTerminal :: Maybe Term   ==> Set LR1Item
+  , needsReduction  ::            Set LR1Item
   }
   deriving stock (Generic)
   deriving       (Semigroup, Monoid) via Generically SortedPositions
 
-splitPositionsByCategory :: Set Position -> SortedPositions
+splitPositionsByCategory :: Set LR1Item -> SortedPositions
 splitPositionsByCategory = foldMap \pos -> do
   case pos.locus of
     Nothing           -> mempty { needsReduction  =                 Set.singleton pos }
     Just (T _ term)   -> mempty { expectsTerminal = Just term   ==> Set.singleton pos }
     Just (E _ entity) -> mempty { expectsEntity   =      entity ==> Set.singleton pos } :: SortedPositions
 
--- examplePosSet :: Set Position
+-- examplePosSet :: Set LR1Item
 -- examplePosSet = Set.fromList
 --   [ fromJust $ (mkRule "T" [T "(", E "E", T ")"] "" `start` "$").next
 --   ,             mkRule "E" [E "E", T "+", E "F"] "" `start` "+"

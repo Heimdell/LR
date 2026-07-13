@@ -9,7 +9,7 @@ import Data.Set qualified as Set
 import Data.Map.Monoidal ((!))
 import Fixpoint          ((>>-), graphClosure)
 import Grammar           (Grammar(rules))
-import Position
+import LR1Item
 import Rule
 import Term              (Point(E))
 
@@ -37,8 +37,8 @@ import Term              (Point(E))
   > T = ( .E )    {$}
 -}
 data State = State
-  { positions :: Set Position
-  , kernel    :: Set Position
+  { positions :: Set LR1Item
+  , kernel    :: Set LR1Item
   }
   deriving stock (Generic)
   deriving       (Semigroup, Monoid) via Generically State
@@ -65,13 +65,13 @@ instance Ord State where compare = compare `on` (.kernel)
   >       T = .( E )    { ) * + - / }
   >       T = .number   { ) * + - / }
 -}
-closure :: Grammar -> Set Position -> State
+closure :: Grammar -> Set LR1Item -> State
 closure grammar kernel = do
     State {kernel, positions}
   where
     {- Grow kernel set, until no new positions can be added.
     -}
-    positions :: Set Position
+    positions :: Set LR1Item
     positions
       =  kernel  -- have to be included manually,
                  -- graphClosure considers it a "vertex"
@@ -82,7 +82,7 @@ closure grammar kernel = do
 
        In terms of `graphClosure` those positions are "adjacentSubgraph".
     -}
-    starts :: Position -> Set Position
+    starts :: LR1Item -> Set LR1Item
     starts pos = case pos.locus of
       {- If position expects entity,
          for each rule producing such entity

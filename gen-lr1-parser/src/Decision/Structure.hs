@@ -6,7 +6,7 @@ import Data.Set qualified as Set
 
 import State             (State)
 import Rule
-import Position
+import LR1Item
 import Term
 import Data.Map.Monoidal (type (==>), (==>))
 
@@ -25,7 +25,7 @@ doReduce = (Set.singleton .) . Reduce
 doAccept :: Set (Decision state)
 doAccept = Set.singleton Accept
 
-reducingDecision :: Position -> Maybe Term ==> Set (Decision state)
+reducingDecision :: LR1Item -> Maybe Term ==> Set (Decision state)
 reducingDecision pos
   | pos.entity == "Start" = Nothing       ==> doAccept
   | otherwise             = pos.lookahead ==> doReduce pos.entity pos.clause

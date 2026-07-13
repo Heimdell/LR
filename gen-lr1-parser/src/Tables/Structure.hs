@@ -13,8 +13,8 @@ import Data.Set qualified as Set
 
 import Fixpoint (graphClosure)
 import Grammar  (Grammar())
-import Position (Position(..))
-import Position (splitPositionsByCategory, SortedPositions (..))
+import LR1Item (LR1Item(..))
+import LR1Item (splitPositionsByCategory, SortedPositions (..))
 import State    (State(positions, State), closure)
 import Term
 import qualified Data.Map.Monoidal as Monoidal
@@ -77,7 +77,7 @@ collectTargetStates Table {actions} = foldMap endpointNodes actions
   > T = ( .E )
   > E = .E + F
 -}
-advanceOnePoint :: Grammar -> Set Position -> State
+advanceOnePoint :: Grammar -> Set LR1Item -> State
 advanceOnePoint grammar
   = closure grammar
   . foldMap (foldMap Set.singleton . (.next))
@@ -113,51 +113,11 @@ makeTables grammar firstState =
 data Conflict = Conflict
   { leading   :: [Point]
   , term      :: Maybe Term
-  , positions :: Set Position
+  , positions :: Set LR1Item
   }
   deriving stock (Eq, Ord)
 
-type Conflicts = Set Position ==> Set Conflict
-
--- instance Pretty Conflict where
---   pPrint Conflict {leading, divergences, positions, term} = do
---     let
---       conflictingLines =
---         divergences & foldMap \case
---           Shifting -> mempty
---           Reducing e len -> e ==> Set.singleton do
---             let (before, after) = splitAt (length leading - len) leading
---             map blank before <> map squiggly after
---     vcat
---       ( hang "At input:" 2 do
---           vcat
---             ( fsep (map pPrint leading <> [pPrint term, "..."])
---             : do
---                 conflictingLines & Monoidal.assocs & foldMap \(e, lines) -> do
---                   lines & foldMap \line -> do
---                     [fsep (map pPrint line) <+> (pPrint e <> "?")]
---             )
---       : "At state:"
---       : foldMap (\pos -> [nest 2 (pPrint' pos)]) (groupPositionsByPrefices positions)
---       )
---     where
---       blank = fill ' '
---       squiggly = fill '~'
---       fill c = \case
---         T n (Term   term)   -> T n (Term   (Text.map (const c) term))
---         E n (Entity entity) -> E n (Entity (Text.map (const c) entity))
-
---       pPrint' :: PrettyPosition -> Doc
---       pPrint' = pPrint . resetNames
-
---       resetNames :: PrettyPosition -> PrettyPosition
---       resetNames pp = pp {clause = pp.clause {points = fmap noName pp.clause.points} }
-
---       noName :: Point -> Point
---       noName = \case
---         T _ term   -> T Nothing term
---         E _ entity -> E Nothing entity
-
+type Conflicts = Set LR1Item ==> Set Conflict
 
 conflicts :: Table State -> State -> Set Conflict
 conflicts table state =
@@ -217,7 +177,7 @@ tableToConflicts start Table{actions = Monoidal acts} = go start
         cutPositions = positions & Set.map \pos ->
           case pos.locus of
             Nothing -> pos
-            Just _  -> (pos :: Position) {lookahead = Just "?"}
+            Just _  -> (pos :: LR1Item) {lookahead = Just "?"}
 
         -- additional
       reported <- gets (Monoidal.member cutPositions . (.foundConflicts))
