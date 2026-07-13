@@ -6,6 +6,7 @@ packages:
   ./lr1-parser-lexeme
   ./lr1-parser-default-lexer
   ./data-map-monoidal
+  ./control-fixpoint
 
 program-options
   ghc-options:

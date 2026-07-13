@@ -32,38 +32,17 @@ library
     import:           warnings
     exposed-modules:
       Backend.StateMachine
-      Frontend.Parser0
       Frontend.Parser
       Decision
-      Decision.Pretty
-      Decision.Structure
-      Fixpoint
       Grammar
       Grammar.Check
-      Grammar.Pretty
-      Grammar.Structure
       RawGrammar
-      RawGrammar.Pretty
-      RawGrammar.Structure
-      Interface.Structure
       LR1Item
-      LR1Item.Pretty
-      LR1Item.Structure
       LR0Item
-      LR0Item.Pretty
-      LR0Item.Structure
       Rule
-      Rule.Pretty
-      Rule.Structure
       LR1State
-      LR1State.Pretty
-      LR1State.Structure
       Tables
-      Tables.Pretty
-      Tables.Structure
       Symbol
-      Symbol.Pretty
-      Symbol.Structure
     -- other-modules:
     -- other-extensions:
     build-depends:
@@ -81,6 +60,7 @@ library
         lr1-parser-lexeme,
         lr1-parser-default-lexer,
         data-map-monoidal,
+        control-fixpoint,
     hs-source-dirs:   src
     default-language: GHC2024
 

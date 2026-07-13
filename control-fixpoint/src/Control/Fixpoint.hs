@@ -1,4 +1,4 @@
-module Fixpoint where
+module Control.Fixpoint where
 
 import Data.Function ((&))
 import Data.Set      (Set)
