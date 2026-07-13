@@ -1,16 +1,16 @@
-module State.Pretty where
+module LR1State.Pretty where
 
 import Data.Foldable                  (toList)
 import Data.Function                  ((&))
 import Text.PrettyPrint.HughesPJClass (vcat, Pretty(pPrint))
 
 -- import Position        (groupPositionsByPrefices)
-import State.Structure (State(..))
+import LR1State.Structure (LR1State(..))
 
-instance Pretty State where
-  pPrint State {kernel} =
+instance Pretty LR1State where
+  pPrint LR1State {kernel} =
     kernel
-  -- pPrint State {positions} =
+  -- pPrint LR1State {positions} =
   --   positions
       -- & groupPositionsByPrefices
       & toList

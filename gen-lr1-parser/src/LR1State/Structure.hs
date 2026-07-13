@@ -1,4 +1,4 @@
-module State.Structure where
+module LR1State.Structure where
 
 import Data.Set      (Set)
 import Data.Function (on, (&))
@@ -16,7 +16,7 @@ import Term              (Point(E))
 {- |
   Parser state.
 
-  State if formed from a set of positions named "kernel", by
+  LR1State if formed from a set of LR1-items named "kernel", by
   calculating the `closure` of the set.
 
   For instance, kernel:
@@ -36,15 +36,15 @@ import Term              (Point(E))
   > T = .number   { ) * + - / }
   > T = ( .E )    {$}
 -}
-data State = State
+data LR1State = LR1State
   { positions :: Set LR1Item
   , kernel    :: Set LR1Item
   }
   deriving stock (Generic)
-  deriving       (Semigroup, Monoid) via Generically State
+  deriving       (Semigroup, Monoid) via Generically LR1State
 
-instance Eq  State where (==)    = (==)    `on` (.kernel)
-instance Ord State where compare = compare `on` (.kernel)
+instance Eq  LR1State where (==)    = (==)    `on` (.kernel)
+instance Ord LR1State where compare = compare `on` (.kernel)
 
 {- |
   Calculate a closure of a kernel, using grammar and included FIRST table.
@@ -65,9 +65,9 @@ instance Ord State where compare = compare `on` (.kernel)
   >       T = .( E )    { ) * + - / }
   >       T = .number   { ) * + - / }
 -}
-closure :: Grammar -> Set LR1Item -> State
+closure :: Grammar -> Set LR1Item -> LR1State
 closure grammar kernel = do
-    State {kernel, positions}
+    LR1State {kernel, positions}
   where
     {- Grow kernel set, until no new positions can be added.
     -}
@@ -100,7 +100,7 @@ closure grammar kernel = do
 {- |
   Starting position for test grammar.
 -}
-startingState :: Grammar -> State
+startingState :: Grammar -> LR1State
 startingState grammar =
   closure grammar do
     (grammar.rules ! "Start") & foldMap \rule -> do

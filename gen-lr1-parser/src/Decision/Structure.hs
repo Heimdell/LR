@@ -4,7 +4,7 @@ import Data.Set (Set)
 
 import Data.Set qualified as Set
 
-import State             (State)
+import LR1State             (LR1State)
 import Rule
 import LR1Item
 import Term
@@ -16,7 +16,7 @@ data Decision state
   | Accept
   deriving stock (Eq, Ord)
 
-doShift :: State -> Set (Decision State)
+doShift :: LR1State -> Set (Decision LR1State)
 doShift = Set.singleton . Shift
 
 doReduce :: Entity -> Clause -> Set (Decision state)
@@ -30,7 +30,7 @@ reducingDecision pos
   | pos.entity == "Start" = Nothing       ==> doAccept
   | otherwise             = pos.lookahead ==> doReduce pos.entity pos.clause
 
-onlyShift :: (Decision State) -> [State]
+onlyShift :: (Decision LR1State) -> [LR1State]
 onlyShift = \case
   Shift state -> [state]
   _           -> []

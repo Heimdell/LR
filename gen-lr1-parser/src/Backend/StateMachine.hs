@@ -24,7 +24,7 @@ import qualified Data.Set as Set
 import qualified Grammar.Check
 import qualified RawGrammar as Raw
 import Rule
-import State
+import LR1State
 import System.Exit (exitFailure)
 import System.FilePath ((</>))
 import Tables
@@ -45,10 +45,10 @@ data Request = Request
 
 data Toolbox = Toolbox
   { grammar  :: Grammar
-  , start    :: State
-  , inverse  :: Map State StateNum
-  , states   :: Map StateNum State
-  , rawTable :: Table State
+  , start    :: LR1State
+  , inverse  :: Map LR1State StateNum
+  , states   :: Map StateNum LR1State
+  , rawTable :: Table LR1State
   , table    :: Table StateNum
   , addendum :: [Text]
   }
@@ -92,7 +92,7 @@ prepareToolboxes Request {addendum, starts, grammar} =
         , addendum
         }
 
-enumerateStates :: Table State -> Map State StateNum
+enumerateStates :: Table LR1State -> Map LR1State StateNum
 enumerateStates Table {actions} =
   Map.fromList do
     zip (Monoidal.keys actions) [0..]
@@ -106,14 +106,14 @@ instance Semigroup StateNum where
 instance Monoid StateNum where
   mempty = error "Monoid Int"
 
-dematerialise :: Table State -> (Table StateNum, Map State StateNum, Map StateNum State)
+dematerialise :: Table LR1State -> (Table StateNum, Map LR1State StateNum, Map StateNum LR1State)
 dematerialise table =
   ( mapTableState (stateNumbers Map.!) table
   , stateNumbers
   , invert stateNumbers
   )
   where
-    stateNumbers :: Map State StateNum
+    stateNumbers :: Map LR1State StateNum
     stateNumbers = enumerateStates table
 
 createParserFile :: FilePath -> FilePath -> [String] -> IO ()
@@ -330,7 +330,7 @@ gotoEntity target starterType entityType entity Table {actions} = vcat
 
   Each name declared in this type will have the entrypoint name as suffix.
 -}
-genStateType :: Entity -> Grammar -> Map StateNum State -> Doc
+genStateType :: Entity -> Grammar -> Map StateNum LR1State -> Doc
 genStateType target grammar states = vcat
   [ "data " <.> st target <.> " :: [Kind.Type] -> Kind.Type where"
   , nest 2 do
@@ -347,7 +347,7 @@ genStateType target grammar states = vcat
 
   Each name declared in this type will have the entrypoint name as suffix.
 -}
-genState :: Entity -> Grammar -> StateNum -> State -> Doc
+genState :: Entity -> Grammar -> StateNum -> LR1State -> Doc
 genState target grammar number state =
   s target number <+> "::" <+> st target <+> do
     toList state.positions                -- grab all positions from state
@@ -371,7 +371,7 @@ pointToHaskellType grammar = \case
   T _ "<Name>" -> "Text"
   T _   _      -> "()"
 
-stateBinders :: State -> Doc
+stateBinders :: LR1State -> Doc
 stateBinders state = vcat do
   map positionBinders (toList state.positions)
 
@@ -449,14 +449,14 @@ reduce target state pos = vcat
 
     params = foldMap (maybeToList . fmap pPrint . (.name)) pos.clause.points
 
-stateReducers :: Entity -> StateNum -> State -> Doc
+stateReducers :: Entity -> StateNum -> LR1State -> Doc
 stateReducers target number state =
   vcat $ state.positions & foldMap \pos -> do
     case pos.locus of
       Just {} -> []
       Nothing -> [reduce target number pos]
 
-stateErrors :: Entity -> StateNum -> State -> Doc
+stateErrors :: Entity -> StateNum -> LR1State -> Doc
 stateErrors target number state =
   ";" <+>  do
     hang (s target number <+> "__input" <+> "_" <+> "->") 2 do

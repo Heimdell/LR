@@ -55,9 +55,9 @@ library
       Rule
       Rule.Pretty
       Rule.Structure
-      State
-      State.Pretty
-      State.Structure
+      LR1State
+      LR1State.Pretty
+      LR1State.Structure
       Tables
       Tables.Pretty
       Tables.Structure

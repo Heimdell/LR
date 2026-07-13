@@ -15,7 +15,7 @@ import Fixpoint (graphClosure)
 import Grammar  (Grammar())
 import LR1Item (LR1Item(..))
 import LR1Item (splitPositionsByCategory, SortedPositions (..))
-import State    (State(positions, State), closure)
+import LR1State    (LR1State(positions, LR1State), closure)
 import Term
 import qualified Data.Map.Monoidal as Monoidal
 import Control.Monad.Reader
@@ -46,7 +46,7 @@ mapActionState f Action {goto, action} = Action
 {- |
   Find nodes the `Action` subtable can lead into.
 -}
-endpointNodes :: Action State -> [State]
+endpointNodes :: Action LR1State -> [LR1State]
 endpointNodes Action {goto, action}
   =  toList goto
   <> (toList action >>= foldMap onlyShift)
@@ -66,7 +66,7 @@ mapTableState f = Table . Monoidal.foldMapWithKey aux . (.actions)
 {- |
   Collect targed nodes of subgraph.
 -}
-collectTargetStates :: Table State -> [State]
+collectTargetStates :: Table LR1State -> [LR1State]
 collectTargetStates Table {actions} = foldMap endpointNodes actions
 
 {- |
@@ -77,7 +77,7 @@ collectTargetStates Table {actions} = foldMap endpointNodes actions
   > T = ( .E )
   > E = .E + F
 -}
-advanceOnePoint :: Grammar -> Set LR1Item -> State
+advanceOnePoint :: Grammar -> Set LR1Item -> LR1State
 advanceOnePoint grammar
   = closure grammar
   . foldMap (foldMap Set.singleton . (.next))
@@ -94,19 +94,19 @@ advanceOnePoint grammar
   The (2) generates SHIFTs.
   The (3) generates REDUCEs.
 -}
-adjacentSubgraph :: Grammar -> State -> Table State
-adjacentSubgraph grammar state@State {positions} =
+adjacentSubgraph :: Grammar -> LR1State -> Table LR1State
+adjacentSubgraph grammar state@LR1State {positions} =
   Table do
     state ==> gotos <> shifts <> reduce
   where
     sorted = splitPositionsByCategory positions
 
-    gotos, shifts, reduce :: Action State
+    gotos, shifts, reduce :: Action LR1State
     gotos  = mempty { goto   =           advanceOnePoint grammar <$> sorted.expectsEntity   }
     shifts = mempty { action = doShift . advanceOnePoint grammar <$> sorted.expectsTerminal }
     reduce = mempty { action =           foldMap reducingDecision    sorted.needsReduction  }
 
-makeTables :: Grammar -> State -> Table State
+makeTables :: Grammar -> LR1State -> Table LR1State
 makeTables grammar firstState =
   graphClosure (adjacentSubgraph grammar) collectTargetStates firstState
 
@@ -119,7 +119,7 @@ data Conflict = Conflict
 
 type Conflicts = Set LR1Item ==> Set Conflict
 
-conflicts :: Table State -> State -> Set Conflict
+conflicts :: Table LR1State -> LR1State -> Set Conflict
 conflicts table state =
   fold $ (.foundConflicts) do
     runIdentity do
@@ -128,7 +128,7 @@ conflicts table state =
           tableToConflicts state table
 
 data Discovered = Discovered
-  { visitedStates :: Set State
+  { visitedStates :: Set LR1State
   , foundConflicts :: Conflicts
   }
   deriving stock (Generic)
@@ -136,10 +136,10 @@ data Discovered = Discovered
 
 type ConflictM = ReaderT [Point] (StateT Discovered Identity)
 
-tableToConflicts :: State -> Table State -> ConflictM ()
+tableToConflicts :: LR1State -> Table LR1State -> ConflictM ()
 tableToConflicts start Table{actions = Monoidal acts} = go start
   where
-    go :: State -> ConflictM ()
+    go :: LR1State -> ConflictM ()
     go st = do
       visited <- gets (Set.member st . (.visitedStates))
       unless visited do
@@ -165,7 +165,7 @@ tableToConflicts start Table{actions = Monoidal acts} = go start
             [_] -> pure ()
             _   -> reportConflict st lookahead
 
-    reportConflict :: State -> Maybe Term -> ConflictM ()
+    reportConflict :: LR1State -> Maybe Term -> ConflictM ()
     reportConflict st term = do
       let
         positions = st.positions & Set.filter \pos ->
