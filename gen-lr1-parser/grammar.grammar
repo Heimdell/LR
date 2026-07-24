@@ -16,38 +16,48 @@ Symbol : "(Pos, NamedSymbol)"
   |                t:Terminal    => "(pos, Nothing :@ t)"
 
 Symbols : "NonEmpty (Pos, NamedSymbol)"
-  = p:Symbol            => "[p]"
-  | p:Symbol ps:Symbols => "NonEmpty.cons p ps"
+  = some Symbol
 
 Clause : "RawClause"
   = symbols:Symbols "=>" reduce:"<string>" => "RawClause {pos, symbols, reduce}"
 
 Clauses : "NonEmpty RawClause"
-  = c:Clause                => "[c]"
-  | c:Clause "|" cs:Clauses => "NonEmpty.cons c cs"
+  = some Clause sep by "|"
 
 Rule : "RawRule"
   = entity:"<Name>" ":" type_:"<string>" "=" clauses:Clauses => "RawRule {pos, entity, type_,          clauses}"
   | entity:"<Name>"                      "=" clauses:Clauses => "RawRule {pos, entity, type_ = entity, clauses}"
 
-Rules : "NonEmpty RawRule"
-  = r:Rule          => "[r]"
-  | r:Rule rs:Rules => "NonEmpty.cons r rs"
+Ref : "(Pos, Symbol)"
+  = nt:"<Name>"   => "(pos, NonTerm nt)"
+  |  t:"<string>" => "(pos, Term t)"
+
+Sep : "RawSep"
+  = entity:"<Name>" ":" type_:"<string>" "=" "some" single:Ref                         => "RawSep {pos, entity, type_, single, sep = Nothing}"
+  | entity:"<Name>" ":" type_:"<string>" "=" "some" single:Ref "sep" "by" t:"<string>" => "RawSep {pos, entity, type_, single, sep = Just t}"
+
+Stmt : "RawStmt"
+  = se:Sep  => "StmtSep se"
+  | ru:Rule => "StmtRule ru"
+
+Stmts : "NonEmpty RawStmt"
+  = some Stmt
 
 Additions : "[Text]"
   = "imports"          => "[]"
-  | "imports" ls:Lines => "ls"
+  | "imports" ls:Lines => "NonEmpty.toList ls"
 
-Lines : "[Text]"
-  = t:"<string>"          => "[t]"
-  | t:"<string>" ts:Lines => " t : ts"
+Lines : "NonEmpty Text"
+  = some "<string>"
+
+Starter : "(Pos, NonTerminal)"
+  = nt:"<Name>" => "(pos, nt)"
 
 Starters : "NonEmpty (Pos, NonTerminal)"
   = "start" es:NonTerminals => "es"
 
 NonTerminals : "NonEmpty (Pos, NonTerminal)"
-  = e:"<Name>"                     => "[(pos, e)]"
-  | e:"<Name>" "," es:NonTerminals => "NonEmpty.cons (pos, e) es"
+  = some Starter sep by ","
 
 Grammar : "RawGrammar"
-  = adds:Additions targets:Starters rules:Rules => "RawGrammar {imports = adds, targets, rules}"
+  = adds:Additions targets:Starters rules:Stmts => "RawGrammar {imports = adds, targets, rules}"
