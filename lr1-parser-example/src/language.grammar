@@ -2,17 +2,20 @@ imports
   "import AST"
   "import Data.Text (Text)"
 
-start Program, TestSuite
+start
+  Program,
+  TestSuite
 
-Program = stmts:Stmts => "Program {stmts}"
+Program
+  = stmts:Stmts => "Program {stmts}"
 
 Stmts : "[Stmt]"
-  = c:Stmt cs:Stmts           => "c : cs"
-  | c:Stmt                    => "[c]"
+  = c:Stmt cs:Stmts => "c : cs"
+  | c:Stmt          => "[c]"
 
 Stmt
-  = c:Clause                  => "StmtClause pos c"
-  | e:Effect                  => "StmtEffect pos e"
+  = c:Clause => "StmtClause pos c"
+  | e:Effect => "StmtEffect pos e"
 
 Effect
   = c:Call               "=>" ds:Changes "."  => "Effect pos c [] ds"
@@ -20,57 +23,57 @@ Effect
   | c:Call "->" cs:Conds                 "."  => "Effect pos c cs []"
 
 Clause
-  = c:Call               "."  => "Clause pos c []"
-  | c:Call "<-" cs:Conds "."  => "Clause pos c cs"
+  = c:Call               "." => "Clause pos c []"
+  | c:Call "<-" cs:Conds "." => "Clause pos c cs"
 
 Changes : "[Change]"
-  = c:Change "," cs:Changes   => "c : cs"
-  | c:Change                  => "[c]"
+  = c:Change "," cs:Changes => "c : cs"
+  | c:Change                => "[c]"
 
 Change
-  = "+" c:Call                => "Assert pos c"
-  | "-" c:Call                => "Refute pos c"
+  = "+" c:Call => "Assert pos c"
+  | "-" c:Call => "Refute pos c"
 
 Conds : "[Cond]"
-  = c:Cond "," cs:Conds       => "c : cs"
-  | c:Cond                    => "[c]"
+  = c:Cond "," cs:Conds => "c : cs"
+  | c:Cond              => "[c]"
 
 Cond
-  =     c:Call                => "CondAssert pos c"
-  | "~" c:Call                => "CondRefute pos c"
-  |     e:Expr                => "CondGuard  pos e"
+  =     c:Call => "CondAssert pos c"
+  | "~" c:Call => "CondRefute pos c"
+  |     e:Expr => "CondGuard  pos e"
 
 Call
-  = pre:"<name>" t:Tuple      => "Call pos pre t"
+  = pre:"<name>" t:Tuple => "Call pos pre t"
 
 Tuple : "[Expr]"
-  = "("           ")"         => "[]"
-  | "(" es:Exprs1 ")"         => "es"
+  = "("           ")" => "[]"
+  | "(" es:Exprs1 ")" => "es"
 
 Exprs1 : "[Expr]"
-  = e:Expr     "," es:Exprs1  => "e : es"
-  | e:Expr                    => "[e]"
+  = e:Expr     "," es:Exprs1 => "e : es"
+  | e:Expr                   => "[e]"
 
 Expr
-  = a:Add "=" b:Add  => "ExprBinary pos a Equals b"
-  | a:Add             => "a"
+  = a:Add "=" b:Add => "ExprBinary pos a Equals b"
+  | a:Add           => "a"
 
 Add: "Expr"
-  = a:Add  "+" b:Mult  => "ExprBinary pos a Add b"
-  | a:Mult             => "a"
+  = a:Add  "+" b:Mult => "ExprBinary pos a Add b"
+  | a:Mult            => "a"
 
 Mult : "Expr"
   = a:Mult "*" b:Term => "ExprBinary pos a Mult b"
   | a:Term            => "a"
 
 Term : "Expr"
-  = "(" e:Expr ")"            => "e"
-  | n:"<Name>"                => "ExprVar   pos n"
-  | n:Const                   => "ExprConst pos n"
+  = "(" e:Expr ")" => "e"
+  | n:"<Name>"     => "ExprVar   pos n"
+  | n:Const        => "ExprConst pos n"
 
 Const
-  = n:"<name>"                => "ConstNamed pos n"
-  | n:"<number>"              => "ConstInt   pos n"
+  = n:"<name>"   => "ConstNamed pos n"
+  | n:"<number>" => "ConstInt   pos n"
 
 Test
   = "expect" c:Call => "Expect pos c"
