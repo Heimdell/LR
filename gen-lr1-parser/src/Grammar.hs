@@ -1,86 +1,89 @@
 module Grammar where
 
-import Data.Foldable                  (toList)
-import Data.Set                       (Set)
-import Text.PrettyPrint.HughesPJClass (vcat, Doc, Pretty(pPrint))
-
-import Symbol              (NonTerminal)
-
-import qualified Data.Map.Monoidal as Map
-
-import Control.Monad.State
-
-import Data.Foldable (fold)
-
-import Data.Array qualified as Array ((!))
-import Data.Set   qualified as Set
-import Data.Function
-
-import Data.Map.Monoidal (type (==>), (!), (==>))
-import Control.Fixpoint          (fixpoint)
-import Rule
-import Symbol              (Symbol(E, T), Terminal)
-
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Data.Function ( (&) )
+import Data.Map.Monoidal (type (==>), (==>), (!?))
 import Data.Text (Text)
-import Data.Traversable (for)
+import Data.Map (Map)
+import Data.Map.Monoidal qualified as Monoidal
+import Data.List.NonEmpty qualified as NonEmpty
+
+import Rule
+import Symbol
 
 data Grammar = Grammar
-  { ruleOrder :: [Rule]
-  , rules     :: NonTerminal ==> Set Rule
-  , terminals :: Set Terminal
-  , entities  :: Set NonTerminal
-  , first     :: NonTerminal ==> Set Terminal
-  -- , starter   :: NonTerminal
-  , types     :: NonTerminal ==> Set Text
+  { imports :: [Text]
+  , rules   :: Set Rule
+  , types   :: Map NonTerminal Text
+  , targets :: Set NonTerminal
   }
 
-makeGrammar :: [Rule] -> Grammar
-makeGrammar ruleOrder = Grammar
-  { ruleOrder
-  , rules
-  , terminals = foldMap ruleTerminals ruleOrder
-  , entities  = foldMap ruleEntities  ruleOrder
-  , first
-  -- , starter
-  , types = foldMap ruleTypes ruleOrder
+data CachedGrammar = CachedGrammar
+  { leadingTerminals :: Entity ==> Set Terminal
+  , rules            :: Entity ==> Set Rule
+  , types            :: Map NonTerminal Text
+  , terminals        :: Set Terminal
   }
+  -- deriving stock (Show)
+
+{- |
+  Memoise calculation of leading terminals for each entity.
+
+  Build index for rules based on the entity they parse.
+-}
+grammarToCachedGrammar :: Grammar -> CachedGrammar
+grammarToCachedGrammar grammar = CachedGrammar
+  { leadingTerminals = memoiseLeadingTerminals grammar
+  , rules            = grammar.rules & foldMap \rule -> rule.entity ==> [rule]
+  , types            = grammar.types
+  , terminals        = grammarTerminals grammar
+  }
+
+grammarTerminals :: Grammar -> Set Terminal
+grammarTerminals grammar =
+  grammar.rules & foldMap \rule ->
+    rule.symbols & foldMap \case
+      _ :@ Term term -> [term]
+      _              -> []
+
+{- |
+  Calculate sets of leading terminals for each entity.
+
+  We need them for the situation like
+
+  > [E ← E • Op F, ⊥]
+
+  Where we need to start all rules for @Op@. For that we need lookahead set,
+  which will be @LEADING-TERMS(F)@ in this case, because after @Op@ in this situation
+  we expect only leading terminals of @F@.
+-}
+memoiseLeadingTerminals :: Grammar -> Entity ==> Set Terminal
+memoiseLeadingTerminals grammar = go Monoidal.empty
   where
-    rules =
-      Map.fromList (map singleRule (evalState (assignNumberToRulesClauses ruleOrder) 0))
-
-    assignNumberToRulesClauses :: [Rule] -> State Int [Rule]
-    assignNumberToRulesClauses ruleset = do
-      for ruleset \rule -> do
-        clauses <- for rule.clauses \clause -> do
-          index <- get <* modify (+ 1)
-          pure (setNumber index clause)
-        pure rule {clauses}
-
-    singleRule :: Rule -> (NonTerminal, Set Rule)
-    singleRule rule = (rule.entity, Set.singleton rule)
-
-    first :: NonTerminal ==> Set Terminal
-    first = fixpoint (foldMap fromRule (fold rules)) mempty
+    go :: Entity ==> Set Terminal -> Entity ==> Set Terminal
+    go cache = do
+        let cache' = renew <> cache
+        if cache == cache'
+        then cache
+        else go cache'
       where
-        fromRule :: Rule -> NonTerminal ==> Set Terminal -> NonTerminal ==> Set Terminal
-        fromRule rule cache = do
-          rule.entity ==> do
-            rule.clauses & foldMap \clause -> do
-              case clause.points Array.! 0 of
-                T _ term   -> Set.singleton term
-                E _ entity -> cache ! entity
+        renew :: Entity ==> Set Terminal
+        renew = grammar.rules & foldMap \rule -> do
+          rule.entity ==> case (NonEmpty.head rule.symbols).symbol of
+            NonTerm entity -> cache !? Named entity
+            Term    term   -> [term]
 
--------------------------------------------------------------------------------
+{- |
+  Grab the set of leading `Terminal`s for a `Symbol`.
 
-instance Pretty Grammar where
-  pPrint Grammar {rules} =
-    rules
-      & Map.assocs
-      & fmap ruleBlock
-      & vcat
-    where
-      ruleBlock :: (NonTerminal, Set Rule) -> Doc
-      ruleBlock (_, ruleset) =
-        vcat (map pPrint (toList ruleset))
+  > LEADING-TERMS("+") = {"+"}
+  > LEADING-TERMS("E") = {"(", "n"}
+-}
+leadingTerminalsOf :: CachedGrammar -> NamedSymbol -> Set Lookahead
+leadingTerminalsOf cache = Set.map LookForTerm . \case
+  _ :@ Term    term   -> [term]
+  _ :@ NonTerm entity -> cache.leadingTerminals !? Named entity
 
-instance Show Grammar where show = show . pPrint
+rulesFor :: CachedGrammar -> Entity -> Set Rule
+rulesFor cache entity = cache.rules !? entity

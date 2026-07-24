@@ -1,80 +1,89 @@
 module Symbol where
 
-import Data.String (IsString)
+import Data.String (IsString (fromString))
 import Data.Text   (Text)
-import GHC.Records
 
-import Text.PrettyPrint.HughesPJClass (text, Pretty(pPrint))
-import Data.Text qualified as Text
+import Pretty
 
 
 {- |
-  Terminal, used in grammar.
+  Name for lexeme class.
+  Represents sequence of a single lexeme.
 -}
-newtype Terminal = Terminal
-  { term :: Text
-  }
-  deriving newtype (Eq, Ord, IsString)
+type Terminal = Text
 
+{- |
+  Name for construct.
+  Represents sequence that is /at least/ one lexeme long.
+-}
+type NonTerminal = Text
+
+{- |
+  Extend `Terminal` with an EOF constructor.
+
+  This is a terminal we expect after some `Rule` finished parsing.
+-}
 data Lookahead
-  = LookForTerm Terminal
-  | LookForEOF
+  = LookForEOF
+  | LookForTerm Terminal
   deriving stock (Eq, Ord)
-
-{- |
-  Non-terminal, used in grammar.
--}
-newtype NonTerminal = NonTerminal
-  { entity :: Text
-  }
-  deriving newtype (Eq, Ord, IsString)
-
-{- |
-  Terminal or non-terminal, used in grammar.
--}
-data Symbol
-  = T (Maybe Text) Terminal
-  | E (Maybe Text) NonTerminal
-  deriving stock (Eq, Ord)
-
-instance HasField "name" Symbol (Maybe Text) where
-  getField = \case
-    T name _ -> name
-    E name _ -> name
-
-{- |
-  Check it point is a terminal.
--}
-pointTerminals :: Symbol -> Maybe Terminal
-pointTerminals = \case
-  T _ term -> Just term
-  _        -> Nothing
-
-{- |
-  Check it point is a non-terminal.
--}
-pointEntities :: Symbol -> Maybe NonTerminal
-pointEntities = \case
-  E _ entity -> Just entity
-  _          -> Nothing
-
--------------------------------------------------------------------------------
-
-instance Pretty Terminal   where pPrint = pPrint . (.term)
-instance Pretty NonTerminal where pPrint = pPrint . (.entity)
-
-instance Pretty Symbol where
-  pPrint = \case
-    T mbName term   -> maybe (pPrint term)   (\name -> pPrint name <> ":" <> pPrint term  ) mbName
-    E mbName entity -> maybe (pPrint entity) (\name -> pPrint name <> ":" <> pPrint entity) mbName
-
-instance Show Terminal   where show = show . pPrint
-instance Show NonTerminal where show = show . pPrint
-
-instance Pretty Text where
-  pPrint = text . Text.unpack
+  deriving (Show) via PP Lookahead
 
 instance Pretty Lookahead where
   pPrint = \case
+    LookForEOF       -> "⊥"
     LookForTerm term -> pPrint term
-    LookForEOF       -> "<eof>"
+
+instance IsString Lookahead where
+  fromString = LookForTerm . fromString
+
+{- |
+  Piece of RHS expression of a rule.
+
+  > E = E '+' F
+  >     ~ ~~~ ~ all 3 are symbols
+
+  Symbol intentionally cannot represent starting non-terminal `S` or terminal `LookForEOF`.
+-}
+data Symbol
+  = Term    Text
+  | NonTerm Text
+  deriving stock (Eq, Ord)
+  deriving (Show) via PP Symbol
+
+instance Pretty Symbol where
+  pPrint = \case
+    Term    term   -> pPrint term
+    NonTerm entity -> pPrint entity
+
+{- |
+  Non-terminal, constructed by some rule.
+
+  This is extension of `NonTerminal` with starting terminal `S`.
+-}
+data Entity
+  = S
+  | Named NonTerminal
+  deriving stock (Eq, Ord)
+  deriving (Show) via PP Entity
+
+instance Pretty Entity where
+  pPrint = \case
+    S       -> "⊤"
+    Named n -> pPrint n
+
+instance IsString Entity where
+  fromString = Named . fromString
+
+data NamedSymbol = (:@)
+  { name   :: Maybe Text
+  , symbol :: Symbol
+  }
+  deriving stock (Eq, Ord)
+  deriving (Show) via PP NamedSymbol
+
+instance IsString NamedSymbol where
+  fromString = (Nothing :@) . Term . fromString
+
+instance Pretty NamedSymbol where
+  pPrint (name :@ symbol) = maybe id (\n -> (pPrint n <.> ":" <.>)) name (pPrint symbol)

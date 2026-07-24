@@ -1,13 +1,16 @@
 module Data.Map.Monoidal.Structure where
 
 import Data.Coerce (coerce)
-
 import Data.Map qualified as Map
+import Data.Set (Set)
 
 infixr 1 ==>
 
 newtype k ==> v = Monoidal { monoidal :: Map.Map k v }
   deriving newtype (Eq, Ord, Functor, Foldable)
+
+instance Traversable ((==>) k) where
+  traverse f (Monoidal m) = Monoidal <$> traverse f m
 
 empty :: forall k v. k ==> v
 empty = coerce (Map.empty @k @v)
@@ -15,7 +18,10 @@ empty = coerce (Map.empty @k @v)
 insert :: (Ord k, Semigroup v) => k -> v -> k ==> v -> k ==> v
 insert k v = coerce $ Map.insertWith (<>) k v
 
-infixl 4 !
+infixl 4 !?
+
+(!?) :: (Ord k, Monoid v) => k ==> v -> k -> v
+Monoidal m !? k = Map.findWithDefault mempty k m
 
 (!) :: (Ord k, Monoid v) => k ==> v -> k -> v
 Monoidal m ! k = Map.findWithDefault mempty k m
@@ -41,6 +47,9 @@ foldMapWithKey = coerce (Map.foldMapWithKey @m @k @v)
 mapWithKey :: forall k v v'. Monoid v' => (k -> v -> v') -> k ==> v -> k ==> v'
 mapWithKey = coerce (Map.mapWithKey @k @v @v')
 
+mapKeys :: forall k v k'. Ord k' => (k -> k') -> k ==> v -> k' ==> v
+mapKeys = coerce (Map.mapKeys @k' @k @v)
+
 selectKeys :: (Ord k', Semigroup v) => (k -> Maybe k') -> k ==> v -> k' ==> v
 selectKeys choose = foldMapWithKey \k v -> foldMap (==> v) (choose k)
 
@@ -49,3 +58,9 @@ member = coerce (Map.member @k @v)
 
 keys :: forall k v. (Ord k) => k ==> v -> [k]
 keys = coerce (Map.keys @k @v)
+
+keysSet :: forall k v. (Ord k) => k ==> v -> Set k
+keysSet = coerce (Map.keysSet @k @v)
+
+unionWith :: forall k v. (Ord k) => (v -> v -> v) -> k ==> v -> k ==> v -> k ==> v
+unionWith = coerce (Map.unionWith @k @v)

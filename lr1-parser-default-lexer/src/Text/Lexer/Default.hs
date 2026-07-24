@@ -14,11 +14,11 @@ import Control.Monad (void)
 import System.Exit (exitFailure)
 import Data.Text.Position
 import Data.Lexeme
+import Pretty (pPrint, Pretty, text, (<+>), ($$))
 
 data Context__ = Context__
   { column, line ::  Int
   , filename     ::  FilePath
-  , sourceLines  :: [Text]
   , source       ::  Text
   , chars        ::  Int
   }
@@ -29,7 +29,6 @@ openContext filename source = Context__
   , line   = 1
   , filename
   , source
-  , sourceLines = Text.lines source
   , chars = 0
   }
 
@@ -47,7 +46,6 @@ advanceChar c rest ctx = case c of
     { column      = 1
     , line        = 1 + ctx.line
     , source      = rest
-    , sourceLines = drop 1 ctx.sourceLines
     , chars       = 1 + ctx.chars
     }
   _ -> ctx
@@ -62,21 +60,21 @@ advance ctx = do
   pure (c, advanceChar c rest ctx)
 
 currentPosition :: Context__ -> Pos
-currentPosition Context__{line, column, filename} = Pos
+currentPosition Context__{line, column, filename, source} = Pos
   { column
   , line
   , filename
-  -- , sourceLine = fold (take 1 sourceLines)
+  , source
   }
 
 data LexerError
   = Expected String Pos
   | None
 
-showLexerError :: LexerError -> Text -> String
-showLexerError = \cases
-  (Expected msg pos) text -> "expected " <> msg <> " at\n" <> showPos pos text
-  (None)             _    -> "???"
+instance Pretty LexerError where
+  pPrint = \case
+    Expected msg pos -> "expected" <+> text msg $$ "at" <+> pPrint pos
+    None             -> "???"
 
 type M = ExceptT LexerError (State Context__)
 
@@ -218,18 +216,15 @@ lexText filename source keywords =
 
 dieOnLexerError :: Either LexerError a -> IO a
 dieOnLexerError = \case
-  Left le@(Expected _ pos) -> do
-    text <- Text.readFile pos.filename
-    putStrLn $ showLexerError le text
+  Left le -> do
+    print $ pPrint le
     exitFailure
-  Left None -> error "impossible: LexerError is None"
   Right a -> pure a
 
 dieOnParserError :: Either (Pos, [String]) a -> IO a
 dieOnParserError = \case
   Left (pos, expected) -> do
-    text <- Text.readFile pos.filename
-    putStrLn $ showPos pos text
+    print $ pPrint pos
     putStrLn $ "expected one of " <> show expected
     exitFailure
   Right a -> pure a

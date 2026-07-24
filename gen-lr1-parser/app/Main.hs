@@ -2,7 +2,8 @@ module Main where
 
 import Data.List.Split (splitOn)
 import Options.Applicative
-import Backend.StateMachine
+
+import Render (produceParser)
 
 data Config = Config
   { pathToSrc   :: FilePath
@@ -41,4 +42,4 @@ parser = info (config <**> helper)
 main :: IO ()
 main = do
   Config {pathToSrc, moduleName, grammarFile} <- execParser parser
-  createParserFile grammarFile pathToSrc moduleName
+  produceParser grammarFile pathToSrc moduleName

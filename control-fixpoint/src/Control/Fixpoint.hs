@@ -2,7 +2,6 @@ module Control.Fixpoint where
 
 import Data.Function ((&))
 import Data.Set      (Set)
-
 import Data.Set qualified as Set
 
 {- |

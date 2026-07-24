@@ -1,89 +1,32 @@
 module Rule where
 
-import Data.Array    (Array)
-import Data.Function (on)
-import Data.Set      (Set)
 import Data.Text     (Text)
-import Data.Maybe    (fromMaybe)
 
-import Data.Array qualified as Array
-import Data.Set   qualified as Set
-import Data.Map.Monoidal (type (==>), (==>))
-
-import Symbol (Symbol, NonTerminal(entity), Terminal, pointTerminals, pointEntities)
-import Data.Text.Position (Pos)
+import Symbol (Entity, NamedSymbol)
 import Data.Foldable                  (toList)
 import Text.PrettyPrint.HughesPJClass hiding ((<>))
+import Data.List.NonEmpty (NonEmpty)
+import Pretty
 
 {- |
-  Rule in the form of `NonTerminal` ::= {`Symbol`} @Reducer@.
+  Grammar rule.
+
+  > entity = symbols... { reduce }
+
+  Field `symbols` is non-empty. This greatly simplifies calculation of
+  lookahead.
 -}
 data Rule = Rule
-  { entity  :: NonTerminal          -- ^ entity constructed by rule
-  , type_   :: Maybe Text
-  , clauses :: [Clause]
+  { entity  :: Entity
+  , symbols :: NonEmpty NamedSymbol
+  , reduce  :: Text
   }
-
-instance Eq  Rule where (==)    = (==)    `on` (.entity)
-instance Ord Rule where compare = compare `on` (.entity)
-
-instance Eq  Clause where (==)    = (==)    `on` (.mark)
-instance Ord Clause where compare = compare `on` (.mark)
-
-data Clause = Clause
-  { mark    :: Int             -- ^ number unique to rule
-  , points  :: Array Int Symbol  -- ^ sequence of [non]terminals
-  , pos     :: Pos
-  , reducer :: Text            -- ^ action to perform
-  }
-
-{- |
-  Terminals, mentioned in the rule.
--}
-ruleTerminals :: Rule -> Set Terminal
-ruleTerminals rule
-  = foldMap (foldMap (foldMap Set.singleton . pointTerminals) . (.points)) rule.clauses
-
-{- |
-  Non-terminals, mentioned or declared in the rule.
--}
-ruleEntities :: Rule -> Set NonTerminal
-ruleEntities rule
-  =  Set.singleton rule.entity
-  <> foldMap (foldMap (foldMap Set.singleton . pointEntities) . (.points)) rule.clauses
-
-mkClause :: [Symbol] -> Pos -> Text -> Clause
-mkClause pointList pos reducer = Clause
-  { points = Array.listArray (0, length pointList - 1) pointList
-  , mark   = -1
-  , reducer
-  , pos
-  }
-
-setNumber :: Int -> Clause -> Clause
-setNumber mark clause = clause {mark}
-
-ruleTypes :: Rule -> NonTerminal ==> Set Text
-ruleTypes rule = rule.entity ==> Set.singleton (fromMaybe rule.entity.entity rule.type_)
-
-forClauses :: (Clause -> Clause) -> Rule -> Rule
-forClauses f rule = rule {clauses = fmap f rule.clauses}
-
--------------------------------------------------------------------------------
+  deriving stock (Eq, Ord)
+  deriving (Show) via PP Rule
 
 instance Pretty Rule where
-  pPrint Rule {entity, type_, clauses} =
-    hang (pPrint entity <+> ":" <+> pPrint type_) 2 do
-      vcat do
-        zipWith (\c cls -> text c <+> pPrint cls) ("=" : repeat "|") clauses
-
-instance Pretty Clause where
-  pPrint Clause {points, reducer} =
-    hang
-      (hang
-        (fsep (map pPrint (toList points)) <+> "{")
-        2
-        (pPrint reducer)
-      )
-      0
-      "}"
+  pPrint rule = sep
+    [ pPrint rule.entity
+    , "="
+    , sep $ map pPrint $ toList rule.symbols
+    ]

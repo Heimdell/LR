@@ -1,62 +1,53 @@
-add
-  "import Rule"
+imports
+  "import RawGrammar"
   "import Symbol"
-  "import Text.Lexer.Default"
-  "import Data.Text.Position"
   "import Data.Text (Text)"
-  "import Data.Lexeme"
-  "import Data.Array"
-  "import Data.Set qualified as Set"
-  "import Data.Set (Set)"
-
-  "listToArray :: [a] -> Array Int a"
-  "listToArray as = Data.Array.listArray (0, length as - 1) as"
+  "import Data.List.NonEmpty (NonEmpty)"
+  "import Data.List.NonEmpty qualified as NonEmpty"
 
 start Grammar
 
-Terminal    = t:"<str>"  => "Terminal    t"
-NonTerminal = e:"<Name>" => "NonTerminal e"
+Terminal    : "Symbol" = t:"<string>"  => "Term t"
+NonTerminal : "Symbol" = e:"<Name>" => "NonTerm e"
 
-Symbol
-  = n:"<name>" ":" t:Terminal    => "T (Just n) t"
-  | n:"<name>" ":" e:NonTerminal => "E (Just n) e"
-  |                t:Terminal    => "T  Nothing t"
+Symbol : "(Pos, NamedSymbol)"
+  = n:"<name>" ":" t:Terminal    => "(pos, Just n  :@ t)"
+  | n:"<name>" ":" e:NonTerminal => "(pos, Just n  :@ e)"
+  |                t:Terminal    => "(pos, Nothing :@ t)"
 
-Symbols : "[Symbol]"
+Symbols : "NonEmpty (Pos, NamedSymbol)"
   = p:Symbol            => "[p]"
-  | p:Symbol ps:Symbols => " p : ps"
+  | p:Symbol ps:Symbols => "NonEmpty.cons p ps"
 
-Clause
-  = points:Symbols "=>" reducer:"<str>" =>
-    "Clause {mark = 0, pos, points = listToArray points, reducer}"
+Clause : "RawClause"
+  = symbols:Symbols "=>" reduce:"<string>" => "RawClause {pos, symbols, reduce}"
 
-Clauses : "[Clause]"
+Clauses : "NonEmpty RawClause"
   = c:Clause                => "[c]"
-  | c:Clause "|" cs:Clauses => " c : cs"
+  | c:Clause "|" cs:Clauses => "NonEmpty.cons c cs"
 
-Rule
-  = entity:NonTerminal ":" type_:"<str>" "=" clauses:Clauses => "Rule {entity, type_ = Just type_, clauses}"
-  | entity:NonTerminal                   "=" clauses:Clauses => "Rule {entity, type_ = Nothing,    clauses}"
+Rule : "RawRule"
+  = entity:"<Name>" ":" type_:"<string>" "=" clauses:Clauses => "RawRule {pos, entity, type_,          clauses}"
+  | entity:"<Name>"                      "=" clauses:Clauses => "RawRule {pos, entity, type_ = entity, clauses}"
 
-Rules : "[Rule]"
+Rules : "NonEmpty RawRule"
   = r:Rule          => "[r]"
-  | r:Rule rs:Rules => " r : rs"
+  | r:Rule rs:Rules => "NonEmpty.cons r rs"
 
 Additions : "[Text]"
-  = "add"          => "[]"
-  | "add" ls:Lines => "ls"
+  = "imports"          => "[]"
+  | "imports" ls:Lines => "ls"
 
 Lines : "[Text]"
-  = t:"<str>"          => "[t]"
-  | t:"<str>" ts:Lines => " t : ts"
+  = t:"<string>"          => "[t]"
+  | t:"<string>" ts:Lines => " t : ts"
 
-Starters : "[NonTerminal]"
+Starters : "NonEmpty (Pos, NonTerminal)"
   = "start" es:NonTerminals => "es"
 
-NonTerminals : "[NonTerminal]"
-  = e:NonTerminal                 => "[e]"
-  | e:NonTerminal "," es:NonTerminals => " e : es"
+NonTerminals : "NonEmpty (Pos, NonTerminal)"
+  = e:"<Name>"                     => "[(pos, e)]"
+  | e:"<Name>" "," es:NonTerminals => "NonEmpty.cons (pos, e) es"
 
-
-Grammar : "([Text], Set NonTerminal, [Rule])"
-  = a:Additions s:Starters r:Rules => "(a, Set.fromList s, r)"
+Grammar : "RawGrammar"
+  = adds:Additions targets:Starters rules:Rules => "RawGrammar {imports = adds, targets, rules}"

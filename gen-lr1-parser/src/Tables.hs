@@ -1,254 +1,195 @@
 module Tables where
-
-import Data.Foldable                  (toList)
-import Data.Function                  ((&))
-import Text.PrettyPrint.HughesPJClass hiding ((<>))
-
-import Decision()
-
-import Data.Map.Monoidal qualified as Map
-import Symbol
-import LR1Item
-import Rule
-import Data.Text (Text)
-
-import Data.Foldable     (for_, fold)
-import Data.Map.Monoidal (type (==>) (Monoidal), (==>))
-import Data.Map          ((!))
-import Data.Set          (Set)
-import GHC.Generics      (Generic, Generically (..))
-
-import Data.Set qualified as Set
-
-import Control.Fixpoint (graphClosure)
-import Grammar  (Grammar())
-import LR1State    (LR1State, closure)
-import qualified Data.Map.Monoidal as Monoidal
+import Grammar
+import LR1State
+import Transitions
+import Data.Set (Set)
 import Control.Monad.Reader
-import Control.Monad.State hiding (State, state)
-import Control.Monad
-import Decision
-import Control.Monad.Identity (Identity (runIdentity))
+import Control.Monad.State hiding (state)
+import Data.Text (Text)
+import Symbol
+import Data.Map (Map, (!))
+import LR0Item
+import Data.Map.Monoidal (type (==>), (==>), (!?))
+import Data.Foldable
+import Data.Traversable
+import qualified Data.Map as Map
 
 {- |
-  In classic formulation, GOTO and ACTION are somewhat separate tables.
-
-  I decided to join both tables by common dimension of parsing state.
+  Parser automata.
 -}
-data Action state = Action
-  { goto   :: NonTerminal    ==> state         -- ^ move after non-terminal is parsed
-  , action :: Lookahead ==> Set (Decision state)  -- ^ action after terminal is parsed
-  }
-  deriving stock (Eq, Ord, Generic)
-  deriving       (Semigroup, Monoid) via Generically (Action state)
+type Table = Map Int (TransitionsTo Int)
 
-mapActionState :: (Ord b, Semigroup b) => (a -> b) -> Action a -> Action b
-mapActionState f Action {goto, action} = Action
-  { goto   = fmap f goto
-  , action = fmap (Set.map (mapDecisionState f)) action
+data Cache = Cache
+  { table    :: Table
+  , states   :: Map Int LR1State
+  , cores    :: Set LR0Item ==> Set Int -- ^ for PGM compression
+  , lastIx   :: Int
+  , types    :: Map NonTerminal Text
+  }
+
+emptyCache :: Map NonTerminal Text -> Cache
+emptyCache types = Cache
+  { table  = mempty
+  , states = mempty
+  , cores  = mempty
+  , lastIx = 0
+  , types
+  }
+
+type M = ReaderT CachedGrammar (State Cache)
+
+{- |
+  Result of search for similar state.
+-}
+data StateSimilarity
+  = Conflicts                                    -- ^ have conflicts or generate one on merge
+  | Similar LR1State Int (TransitionsTo Kernel)  -- ^ compatible, can merge them
+  | Same Int                                     -- ^ they are exactly the same
+
+{- |
+  `Same`    overrides  all.
+  `Similar` overrides `Conflicts`.
+-}
+instance Semigroup StateSimilarity where
+  Conflicts        <> other   = other
+  Similar _  _  _  <> Same ix = Same ix
+  Similar st ix ts <> _       = Similar st ix ts
+  Same       ix    <> _       = Same ix
+
+instance Monoid StateSimilarity where
+  mempty = Conflicts
+
+{- |
+  Find set if state[ID] with the same LR0-core as given one.
+-}
+findByCore :: LR1State -> M (Set Int)
+findByCore st = do
+  gets ((!? st.lr0state) . (.cores))
+
+{- |
+  Search for mergeable candidate.
+-}
+findCollision :: LR1State -> M StateSimilarity
+findCollision st = do
+  ixs <- findByCore st
+  fold <$> for (toList ixs) \ix -> do
+    st' <- gets ((! ix) . (.states))
+    pure $ similarity (hasConflict st) st st' ix
+
+{- |
+  Calculate if two states are mergeable.
+
+  - If they are exactly the same, the result is `Same`.
+  - If either has conflict, the result is `Conflicts`.
+  - If merged state is equal to right one, the result is `Same`.
+    Note, that due to previous check, the conflict is impossible here.
+  - If merged state has conflict, the result is `Conflicts`.
+  - If none above is true, the result is `Similar`.
+
+  /I believe/ it implements Pager's Weak Compatibility criteria.
+-}
+similarity
+  :: Bool      -- ^ new state has any conflicts
+  -> LR1State  -- ^ new state
+  -> LR1State  -- ^ existing state
+  -> Int       -- ^ ID of existing state
+  -> StateSimilarity
+similarity oneHasConflict one another ix = if
+  | one == another -> Same ix
+  | oneHasConflict || hasConflict another -> Conflicts
+  | otherwise -> do
+    let new = one <> another
+    let transitions = transitionsFrom new
+    if
+      | new == another  -> Same ix
+      | transitionsHaveConflict transitions -> Conflicts
+      | otherwise       -> Similar new ix transitions
+
+{- |
+  Check if the state has internal conflict.
+
+  Conflicts = any lookahead term has more than 1 decision
+-}
+hasConflict :: LR1State -> Bool
+hasConflict = transitionsHaveConflict . transitionsFrom
+
+transitionsHaveConflict :: TransitionsTo Kernel -> Bool
+transitionsHaveConflict = any ((> 1) . length) . (.actions)
+
+data Closure
+  = Done         Int                        -- ^ no more work required
+  | NeedUpdating Int (TransitionsTo Kernel) -- ^ there are graph edges that can be updated
+
+{- |
+  Calculate closure, attempt merge.
+
+  Find if any more work should be done for this kernel.
+-}
+closureWithMerge :: Kernel -> M Closure
+closureWithMerge kernel = do
+  state <- asks (`closure` kernel)
+  findCollision state >>= \case
+    Same knownIndex -> do
+      -- another state is equal to this one
+      -- or /includes/ this one
+      pure (Done knownIndex)
+
+    Similar mergedState ix transitions -> do
+      -- another state can be merged with this one
+      setState ix mergedState
+      pure (NeedUpdating ix transitions)
+
+    Conflicts -> do
+      -- this state is incompatible from all known one
+      ix <- alloc state
+      pure (NeedUpdating ix (transitionsFrom state))
+
+{- |
+  Allocate state with new ID, update global ID counter.
+-}
+alloc :: LR1State -> M Int
+alloc st = do
+  ix <- gets (.lastIx)
+  modify' \cache -> cache {lastIx = cache.lastIx + 1}
+  setState ix st
+  pure ix
+
+{- |
+  Allocate state with new ID, update global ID counter.
+
+  Replaces state at given index with a new one.
+  Registers the state's LR(0)-core with given ID.
+-}
+setState :: Int -> LR1State -> M ()
+setState ix st = modify' \cache -> cache
+  { states   = Map.insert ix st cache.states
+  , cores    = (st.lr0state ==> [ix]) <> cache.cores
   }
 
 {- |
-  Find nodes the `Action` subtable can lead into.
+  Build parsing automata, recursively, starting from a kernel.
 -}
-endpointNodes :: Action LR1State -> [LR1State]
-endpointNodes Action {goto, action}
-  =  toList goto
-  <> (toList action >>= foldMap onlyShift)
+buildGraph :: Kernel -> M Int
+buildGraph kernel = do
+  closureWithMerge kernel >>= \case
+    Done ix -> do
+      -- nothing need to be done
+      pure ix
 
-newtype Table state = Table
-  { actions :: state ==> Action state
-  }
-  deriving stock (Eq, Ord, Generic)
-  deriving       (Semigroup, Monoid) via Generically (Table state)
+    NeedUpdating ix transitions -> do
+      -- recusively build or update outcoming edges of the graph
+      branch <- traverseTransitionsTo buildGraph transitions
+      addTable ix branch
+      pure ix
 
-mapTableState :: forall a b. (Ord b, Semigroup b) => (a -> b) -> Table a -> Table b
-mapTableState f = Table . Monoidal.foldMapWithKey aux . (.actions)
-  where
-    aux :: a -> Action a -> b ==> Action b
-    aux a b = f a ==> mapActionState f b
+addTable :: Int -> TransitionsTo Int -> M ()
+addTable st fan = do
+  modify' \cache -> cache
+    { table = Map.insertWith (<>) st fan cache.table
+    }
 
-{- |
-  Collect targed nodes of subgraph.
--}
-collectTargetStates :: Table LR1State -> [LR1State]
-collectTargetStates Table {actions} = foldMap endpointNodes actions
-
-{- |
-  Advance a set of positions one point each and build a closure of them.
-
-  It is assumed that /all/ positions are at the same point, for instance:
-
-  > T = ( .E )
-  > E = .E + F
--}
-advanceOnePoint :: Grammar -> Set LR1Item -> LR1State
-advanceOnePoint grammar
-  = closure grammar
-  . foldMap (foldMap Set.singleton . (.next))
-
-{- |
-  Construct part of parser transition graph, adjacentSubgraph to given state.
-
-  There are 3 kinds of positions in state:
-  1) Expects nonterminal: E = E  + .F
-  2) Expects terminal:    E = E .+  F
-  3) Requies reduction:   E = E  +  F .
-
-  The (1) generates GOTO part of the table.
-  The (2) generates SHIFTs.
-  The (3) generates REDUCEs.
--}
-adjacentSubgraph :: Grammar -> LR1State -> Table LR1State
-adjacentSubgraph grammar positions =
-  Table do
-    positions ==> gotos <> shifts <> reduce
-  where
-    sorted = splitPositionsByCategory positions
-
-    gotos, shifts, reduce :: Action LR1State
-    gotos  = mempty { goto   =           advanceOnePoint grammar <$> sorted.expectsNonTerminal   }
-    shifts = mempty { action = doShift . advanceOnePoint grammar <$> sorted.expectsTerminal }
-    reduce = mempty { action =           foldMap reducingDecision    sorted.needsReduction  }
-
-makeTables :: Grammar -> LR1State -> Table LR1State
-makeTables grammar firstState =
-  graphClosure (adjacentSubgraph grammar) collectTargetStates firstState
-
-data Conflict = Conflict
-  { leading   :: [Symbol]
-  , term      :: Lookahead
-  , positions :: Set LR1Item
-  }
-  deriving stock (Eq, Ord)
-
-type Conflicts = Set LR1Item ==> Set Conflict
-
-conflicts :: Table LR1State -> LR1State -> Set Conflict
-conflicts table state =
-  fold $ (.foundConflicts) do
-    runIdentity do
-      flip execStateT mempty do
-        flip runReaderT [] do
-          tableToConflicts state table
-
-data Discovered = Discovered
-  { visitedStates :: Set LR1State
-  , foundConflicts :: Conflicts
-  }
-  deriving stock (Generic)
-  deriving (Semigroup, Monoid) via Generically Discovered
-
-type ConflictM = ReaderT [Symbol] (StateT Discovered Identity)
-
-tableToConflicts :: LR1State -> Table LR1State -> ConflictM ()
-tableToConflicts start Table{actions = Monoidal acts} = go start
-  where
-    go :: LR1State -> ConflictM ()
-    go st = do
-      visited <- gets (Set.member st . (.visitedStates))
-      unless visited do
-        modify \disc -> disc {visitedStates = Set.insert st disc.visitedStates}
-        let Action {action, goto} = acts ! st
-        for_ (Monoidal.assocs goto) \(point, st') -> do
-          local (++ [E Nothing point]) do
-            go st'
-
-        for_ (Monoidal.assocs action) \(lookahead, actions) -> do
-          for_ actions \case
-            Shift st' -> do
-              case lookahead of
-                LookForTerm term -> do
-                  local (++ [T Nothing term]) do
-                    go st'
-                LookForEOF -> do
-                  pure ()
-            _ -> do
-              pure ()
-
-          case toList actions of
-            [_] -> pure ()
-            _   -> reportConflict st lookahead
-
-    reportConflict :: LR1State -> Lookahead -> ConflictM ()
-    reportConflict st term = do
-      let
-        positions = st & Set.filter \pos ->
-          case pos.locus of
-            Just (T _ term') -> term == LookForTerm term'
-            Nothing          -> pos.lookahead == term
-            _                -> False
-
-        cutPositions = positions & Set.map \pos ->
-          case pos.locus of
-            Nothing -> pos
-            Just _  -> (pos :: LR1Item) {lookahead = LookForTerm "?"}
-
-        -- additional
-      reported <- gets (Monoidal.member cutPositions . (.foundConflicts))
-      unless reported do
-        leading <- ask
-        modify \desc ->
-          desc {foundConflicts =
-              Monoidal.insert cutPositions
-              (Set.singleton Conflict
-                { leading
-                , positions = cutPositions
-                , term}
-              ) desc.foundConflicts
-          }
-
--------------------------------------------------------------------------------
-
-instance (Pretty state) => Pretty (Action state) where
-  pPrint Action {goto, action} = vcat
-    [ goto
-        & Map.assocs
-        & map (\(node, fan) -> hang (pPrint node) 2 (pPrint fan))
-        & punctuate "\n" & vcat
-    , "   "
-    , action
-        & Map.assocs
-        & map (\(node, fan) -> hang (pPrint node) 2 (vcat (map pPrint (toList fan))))
-        & punctuate "\n" & vcat
-    ]
-
-instance (Pretty state) => Pretty (Table state) where
-  pPrint Table {actions} = pPrint actions
-
-instance Pretty Conflict where
-  pPrint Conflict {leading, positions, term} = vcat
-    [ "There is a conflict for input sequence"
-    , nest 2 do fsep (map pPrint leading) <+> pPrintShaded term <+> pPrintShaded ("..." :: Text)
-    , "  "
-    , hang ("Сonflicting positions of rules for lookahead" <+> pPrintShaded term <+> "in the same parsing state are") 2 do
-      vcat do
-        positions & foldMap \pos ->
-          [positionLine leading pos]
-    , "  "
-    ]
-
-positionLine :: [Symbol] -> LR1Item -> Doc
-positionLine points pos = do
-  let (before, after) = splitAt (length points - pos.offset) points
-  let additional = drop pos.offset $ toList pos.clause.points
-  if null additional
-  then do
-    vcat [fsep
-      [ fsep (map pPrint before)
-      , zeroWidthText "\ESC[4m" <> fsep (map pPrint after) <> zeroWidthText "\ESC[0m"
-      , zeroWidthText "\ESC[0m\ESC[2m" <> pPrint pos.lookahead
-      , "..." <> zeroWidthText "\ESC[0m"
-      ], nest 2 (pPrintShaded pos)]
-  else do
-    vcat [fsep
-      [ fsep (map pPrint before)
-      , zeroWidthText "\ESC[4m" <> fsep (map pPrint after) <> zeroWidthText "\ESC[2;3;4m"
-      , fsep (map pPrint additional) <> zeroWidthText "\ESC[0m"
-      , zeroWidthText "\ESC[0m\ESC[2;3m" <> pPrint pos.lookahead
-      , "..." <> zeroWidthText "\ESC[0m"
-      ], nest 2 (pPrintShaded pos)]
-
-pPrintShaded :: Pretty a => a -> Doc
-pPrintShaded point =
-  zeroWidthText "\ESC[2m" <> pPrint point <> zeroWidthText "\ESC[0m"
+buildTable :: CachedGrammar -> Kernel -> (Int, Cache)
+buildTable cache kernel =
+  flip runState (emptyCache cache.types) do
+    flip runReaderT cache do
+      buildGraph kernel

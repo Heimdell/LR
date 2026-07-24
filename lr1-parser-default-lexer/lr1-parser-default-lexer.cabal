@@ -35,5 +35,6 @@ library
         containers,
         lr1-parser-pos,
         lr1-parser-lexeme,
+        lr1-pretty,
     hs-source-dirs:   src
     default-language: GHC2021

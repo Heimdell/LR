@@ -32,3 +32,8 @@ instance {-# OVERLAPS #-} Show Lexeme where
 
 instance IsString Payload where
   fromString = Reserved . fromString
+
+currentPos :: [Lexeme] -> Pos -> Pos
+currentPos = \cases
+  []             end -> end
+  ((pos, _) : _) _   -> pos

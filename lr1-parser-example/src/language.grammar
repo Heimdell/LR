@@ -1,7 +1,4 @@
-add
-  "import Text.Lexer.Default"
-  "import Data.Text.Position (Pos)"
-  "import Data.Lexeme"
+imports
   "import AST"
   "import Data.Text (Text)"
 
@@ -73,7 +70,7 @@ Term : "Expr"
 
 Const
   = n:"<name>"                => "ConstNamed pos n"
-  | n:"<num>"                 => "ConstInt   pos n"
+  | n:"<number>"              => "ConstInt   pos n"
 
 Test
   = "expect" c:Call => "Expect pos c"

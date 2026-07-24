@@ -1,21 +1,29 @@
 module RawGrammar where
 
-import Data.Function                  ((&))
-import Text.PrettyPrint.HughesPJClass (vcat, Pretty(pPrint))
 
-import Rule
 import Symbol
-import Data.Set (Set)
+import Data.List.NonEmpty (NonEmpty)
+import Data.Text (Text)
+import Data.Text.Position (Pos)
 
-data Grammar = Grammar
-  { starts :: Set NonTerminal
-  , rules  :: [Rule]
+data RawGrammar = RawGrammar
+  { imports :: [Text]
+  , targets :: NonEmpty (Pos, NonTerminal)
+  , rules   :: NonEmpty RawRule
   }
+  deriving stock (Show)
 
-instance Pretty Grammar where
-  pPrint Grammar {rules} =
-    rules
-      & fmap pPrint
-      & vcat
+data RawRule = RawRule
+  { pos     :: Pos
+  , entity  :: NonTerminal
+  , type_   :: Text
+  , clauses :: NonEmpty RawClause
+  }
+  deriving stock (Show)
 
-instance Show Grammar where show = show . pPrint
+data RawClause = RawClause
+  { pos     :: Pos
+  , symbols :: NonEmpty (Pos, NamedSymbol)
+  , reduce  :: Text
+  }
+  deriving stock (Show)

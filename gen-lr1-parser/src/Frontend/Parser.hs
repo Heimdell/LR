@@ -1,479 +1,265 @@
-{-# language PatternSynonyms #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 module Frontend.Parser (
-    parseGrammar
+  parseGrammar
 ) where
 
-import Data.Text.IO.Utf8 qualified as Text
-import Data.Kind qualified as Kind
-import Rule
-import Symbol
-import Text.Lexer.Default
-import Data.Text.Position
-import Data.Text (Text)
+import Data.Text.Position (Pos, startPos)
 import Data.Lexeme
-import Data.Array
-import Data.Set qualified as Set
-import Data.Set (Set)
-listToArray :: [a] -> Array Int a
-listToArray as = Data.Array.listArray (0, length as - 1) as
+import Text.Lexer.Default
+import Data.Text.IO as Text
+import RawGrammar
+import Symbol
+import Data.Text (Text)
+import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty qualified as NonEmpty
 
-type Stack  st xs = (st xs, Pos, Stack' st xs)
-data Stack' st xs where
-  Nil  ::                     Stack' st '[]
-  (:>) :: x -> Stack st xs -> Stack' st (x : xs)
+type Stack st xs =
+  ( st xs
+  , Pos
+  , Split st xs
+  )
 
+data Split st xs where
+  Nil  ::                     Split st '[]
+  (:>) :: x -> Stack st xs -> Split st (x : xs)
+data StGrammar xs where
+  StGrammar_0 :: StGrammar (a)
+  StGrammar_1 :: StGrammar ([Text] : a)
+  StGrammar_2 :: StGrammar (NonEmpty (Pos, NonTerminal) : [Text] : a)
+  StGrammar_3 :: StGrammar (RawRule : a)
+  StGrammar_4 :: StGrammar (NonEmpty RawRule : RawRule : a)
+  StGrammar_5 :: StGrammar (Text : a)
+  StGrammar_6 :: StGrammar (() : Text : a)
+  StGrammar_7 :: StGrammar (Text : () : Text : a)
+  StGrammar_8 :: StGrammar (() : Text : () : Text : a)
+  StGrammar_9 :: StGrammar (RawClause : a)
+  StGrammar_10 :: StGrammar (() : RawClause : a)
+  StGrammar_11 :: StGrammar (NonEmpty RawClause : () : RawClause : a)
+  StGrammar_12 :: StGrammar ((Pos, NamedSymbol) : a)
+  StGrammar_13 :: StGrammar (NonEmpty (Pos, NamedSymbol) : (Pos, NamedSymbol) : a)
+  StGrammar_14 :: StGrammar (Symbol : a)
+  StGrammar_15 :: StGrammar (Text : a)
+  StGrammar_16 :: StGrammar (() : Text : a)
+  StGrammar_17 :: StGrammar (Symbol : () : Text : a)
+  StGrammar_18 :: StGrammar (Symbol : () : Text : a)
+  StGrammar_19 :: StGrammar (Text : a)
+  StGrammar_20 :: StGrammar (Text : a)
+  StGrammar_21 :: StGrammar (NonEmpty (Pos, NamedSymbol) : a)
+  StGrammar_22 :: StGrammar (() : NonEmpty (Pos, NamedSymbol) : a)
+  StGrammar_23 :: StGrammar (Text : () : NonEmpty (Pos, NamedSymbol) : a)
+  StGrammar_24 :: StGrammar (NonEmpty RawClause : () : Text : () : Text : a)
+  StGrammar_25 :: StGrammar (() : Text : a)
+  StGrammar_26 :: StGrammar (NonEmpty RawClause : () : Text : a)
+  StGrammar_27 :: StGrammar (NonEmpty RawRule : NonEmpty (Pos, NonTerminal) : [Text] : a)
+  StGrammar_28 :: StGrammar (() : a)
+  StGrammar_29 :: StGrammar (NonEmpty (Pos, NonTerminal) : () : a)
+  StGrammar_30 :: StGrammar (Text : a)
+  StGrammar_31 :: StGrammar (() : Text : a)
+  StGrammar_32 :: StGrammar (NonEmpty (Pos, NonTerminal) : () : Text : a)
+  StGrammar_33 :: StGrammar (RawGrammar : a)
+  StGrammar_34 :: StGrammar (() : a)
+  StGrammar_35 :: StGrammar ([Text] : () : a)
+  StGrammar_36 :: StGrammar (Text : a)
+  StGrammar_37 :: StGrammar ([Text] : Text : a)
 
-data StGrammar :: [Kind.Type] -> Kind.Type where
-  SGrammar0 :: StGrammar (() : a)
-  SGrammar1 :: StGrammar (() : NonTerminal : a)
-  SGrammar2 :: StGrammar (Text : a)
-  SGrammar3 :: StGrammar (Rule : a)
-  SGrammar4 :: StGrammar ([NonTerminal] : [Text] : a)
-  SGrammar5 :: StGrammar (Text : a)
-  SGrammar6 :: StGrammar (() : Clause : a)
-  SGrammar7 :: StGrammar (() : NonTerminal : a)
-  SGrammar8 :: StGrammar (() : Text : () : NonTerminal : a)
-  SGrammar9 :: StGrammar ([Text] : a)
-  SGrammar10 :: StGrammar ([Symbol] : a)
-  SGrammar11 :: StGrammar (Clause : a)
-  SGrammar12 :: StGrammar (NonTerminal : a)
-  SGrammar13 :: StGrammar (NonTerminal : a)
-  SGrammar14 :: StGrammar (() : [Symbol] : a)
-  SGrammar15 :: StGrammar (() : NonTerminal : a)
-  SGrammar16 :: StGrammar ([NonTerminal] : () : a)
-  SGrammar17 :: StGrammar (Text : () : [Symbol] : a)
-  SGrammar18 :: StGrammar ([Clause] : () : Clause : a)
-  SGrammar19 :: StGrammar (Text : () : NonTerminal : a)
-  SGrammar20 :: StGrammar ([Clause] : () : NonTerminal : a)
-  SGrammar21 :: StGrammar ([NonTerminal] : () : NonTerminal : a)
-  SGrammar22 :: StGrammar ([Clause] : () : Text : () : NonTerminal :
-                           a)
-  SGrammar23 :: StGrammar (() : Text : a)
-  SGrammar24 :: StGrammar (Symbol : a)
-  SGrammar25 :: StGrammar (Text : a)
-  SGrammar26 :: StGrammar (Text : a)
-  SGrammar27 :: StGrammar (Text : a)
-  SGrammar28 :: StGrammar (Terminal : a)
-  SGrammar29 :: StGrammar (Terminal : () : Text : a)
-  SGrammar30 :: StGrammar (NonTerminal : () : Text : a)
-  SGrammar31 :: StGrammar ([Symbol] : Symbol : a)
-  SGrammar32 :: StGrammar (a)
-  SGrammar33 :: StGrammar (() : a)
-  SGrammar34 :: StGrammar (Text : a)
-  SGrammar35 :: StGrammar ([Text] : () : a)
-  SGrammar36 :: StGrammar ([Text] : Text : a)
-  SGrammar37 :: StGrammar (([Text], Set NonTerminal, [Rule]) : a)
-  SGrammar38 :: StGrammar ([Rule] : Rule : a)
-  SGrammar39 :: StGrammar ([Rule] : [NonTerminal] : [Text] : a)
-
-__gotoAdditionsForGrammar :: ([Lexeme], Pos) -> [Text] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoAdditionsForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar32 -> __runGrammar SGrammar9 toks (term :> stk)
+gotoAdditionsForGrammar :: Stack StGrammar xs -> ([Text]) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoAdditionsForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_0 -> actionForGrammar(StGrammar_1, pos, (parsed :> stack))
   _ -> error ""
 
-__gotoClauseForGrammar :: ([Lexeme], Pos) -> Clause -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoClauseForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar6 -> __runGrammar SGrammar11 toks (term :> stk)
-  SGrammar7 -> __runGrammar SGrammar11 toks (term :> stk)
-  SGrammar8 -> __runGrammar SGrammar11 toks (term :> stk)
+gotoClauseForGrammar :: Stack StGrammar xs -> (RawClause) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoClauseForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_8 -> actionForGrammar(StGrammar_9, pos, (parsed :> stack))
+  StGrammar_10 -> actionForGrammar(StGrammar_9, pos, (parsed :> stack))
+  StGrammar_25 -> actionForGrammar(StGrammar_9, pos, (parsed :> stack))
   _ -> error ""
 
-__gotoClausesForGrammar :: ([Lexeme], Pos) -> [Clause] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoClausesForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar6 -> __runGrammar SGrammar18 toks (term :> stk)
-  SGrammar7 -> __runGrammar SGrammar20 toks (term :> stk)
-  SGrammar8 -> __runGrammar SGrammar22 toks (term :> stk)
+gotoClausesForGrammar :: Stack StGrammar xs -> (NonEmpty RawClause) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoClausesForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_8 -> actionForGrammar(StGrammar_24, pos, (parsed :> stack))
+  StGrammar_10 -> actionForGrammar(StGrammar_11, pos, (parsed :> stack))
+  StGrammar_25 -> actionForGrammar(StGrammar_26, pos, (parsed :> stack))
   _ -> error ""
 
-__gotoGrammarForGrammar :: ([Lexeme], Pos) -> ([Text], Set NonTerminal, [Rule]) -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoGrammarForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar32 -> __runGrammar SGrammar37 toks (term :> stk)
+gotoGrammarForGrammar :: Stack StGrammar xs -> (RawGrammar) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoGrammarForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_0 -> actionForGrammar(StGrammar_33, pos, (parsed :> stack))
   _ -> error ""
 
-__gotoLinesForGrammar :: ([Lexeme], Pos) -> [Text] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoLinesForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar33 -> __runGrammar SGrammar35 toks (term :> stk)
-  SGrammar34 -> __runGrammar SGrammar36 toks (term :> stk)
+gotoLinesForGrammar :: Stack StGrammar xs -> ([Text]) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoLinesForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_34 -> actionForGrammar(StGrammar_35, pos, (parsed :> stack))
+  StGrammar_36 -> actionForGrammar(StGrammar_37, pos, (parsed :> stack))
   _ -> error ""
 
-__gotoNonTerminalForGrammar :: ([Lexeme], Pos) -> NonTerminal -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoNonTerminalForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar0 -> __runGrammar SGrammar13 toks (term :> stk)
-  SGrammar1 -> __runGrammar SGrammar13 toks (term :> stk)
-  SGrammar3 -> __runGrammar SGrammar12 toks (term :> stk)
-  SGrammar4 -> __runGrammar SGrammar12 toks (term :> stk)
-  SGrammar23 -> __runGrammar SGrammar30 toks (term :> stk)
+gotoNonTerminalForGrammar :: Stack StGrammar xs -> (Symbol) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoNonTerminalForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_16 -> actionForGrammar(StGrammar_17, pos, (parsed :> stack))
   _ -> error ""
 
-__gotoNonTerminalsForGrammar :: ([Lexeme], Pos) -> [NonTerminal] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoNonTerminalsForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar0 -> __runGrammar SGrammar16 toks (term :> stk)
-  SGrammar1 -> __runGrammar SGrammar21 toks (term :> stk)
+gotoNonTerminalsForGrammar :: Stack StGrammar xs -> (NonEmpty (Pos, NonTerminal)) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoNonTerminalsForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_28 -> actionForGrammar(StGrammar_29, pos, (parsed :> stack))
+  StGrammar_31 -> actionForGrammar(StGrammar_32, pos, (parsed :> stack))
   _ -> error ""
 
-__gotoRuleForGrammar :: ([Lexeme], Pos) -> Rule -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoRuleForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar3 -> __runGrammar SGrammar3 toks (term :> stk)
-  SGrammar4 -> __runGrammar SGrammar3 toks (term :> stk)
+gotoRuleForGrammar :: Stack StGrammar xs -> (RawRule) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoRuleForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_2 -> actionForGrammar(StGrammar_3, pos, (parsed :> stack))
+  StGrammar_3 -> actionForGrammar(StGrammar_3, pos, (parsed :> stack))
   _ -> error ""
 
-__gotoRulesForGrammar :: ([Lexeme], Pos) -> [Rule] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoRulesForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar3 -> __runGrammar SGrammar38 toks (term :> stk)
-  SGrammar4 -> __runGrammar SGrammar39 toks (term :> stk)
+gotoRulesForGrammar :: Stack StGrammar xs -> (NonEmpty RawRule) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoRulesForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_2 -> actionForGrammar(StGrammar_27, pos, (parsed :> stack))
+  StGrammar_3 -> actionForGrammar(StGrammar_4, pos, (parsed :> stack))
   _ -> error ""
 
-__gotoStartersForGrammar :: ([Lexeme], Pos) -> [NonTerminal] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoStartersForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar9 -> __runGrammar SGrammar4 toks (term :> stk)
+gotoStartersForGrammar :: Stack StGrammar xs -> (NonEmpty (Pos, NonTerminal)) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoStartersForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_1 -> actionForGrammar(StGrammar_2, pos, (parsed :> stack))
   _ -> error ""
 
-__gotoSymbolForGrammar :: ([Lexeme], Pos) -> Symbol -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoSymbolForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar6 -> __runGrammar SGrammar24 toks (term :> stk)
-  SGrammar7 -> __runGrammar SGrammar24 toks (term :> stk)
-  SGrammar8 -> __runGrammar SGrammar24 toks (term :> stk)
-  SGrammar24 -> __runGrammar SGrammar24 toks (term :> stk)
+gotoSymbolForGrammar :: Stack StGrammar xs -> ((Pos, NamedSymbol)) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoSymbolForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_8 -> actionForGrammar(StGrammar_12, pos, (parsed :> stack))
+  StGrammar_10 -> actionForGrammar(StGrammar_12, pos, (parsed :> stack))
+  StGrammar_12 -> actionForGrammar(StGrammar_12, pos, (parsed :> stack))
+  StGrammar_25 -> actionForGrammar(StGrammar_12, pos, (parsed :> stack))
   _ -> error ""
 
-__gotoSymbolsForGrammar :: ([Lexeme], Pos) -> [Symbol] -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoSymbolsForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar6 -> __runGrammar SGrammar10 toks (term :> stk)
-  SGrammar7 -> __runGrammar SGrammar10 toks (term :> stk)
-  SGrammar8 -> __runGrammar SGrammar10 toks (term :> stk)
-  SGrammar24 -> __runGrammar SGrammar31 toks (term :> stk)
+gotoSymbolsForGrammar :: Stack StGrammar xs -> (NonEmpty (Pos, NamedSymbol)) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoSymbolsForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_8 -> actionForGrammar(StGrammar_21, pos, (parsed :> stack))
+  StGrammar_10 -> actionForGrammar(StGrammar_21, pos, (parsed :> stack))
+  StGrammar_12 -> actionForGrammar(StGrammar_13, pos, (parsed :> stack))
+  StGrammar_25 -> actionForGrammar(StGrammar_21, pos, (parsed :> stack))
   _ -> error ""
 
-__gotoTerminalForGrammar :: ([Lexeme], Pos) -> Terminal -> Stack StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__gotoTerminalForGrammar toks term stk@(state, _, _) = case state of
-  SGrammar6 -> __runGrammar SGrammar28 toks (term :> stk)
-  SGrammar7 -> __runGrammar SGrammar28 toks (term :> stk)
-  SGrammar8 -> __runGrammar SGrammar28 toks (term :> stk)
-  SGrammar23 -> __runGrammar SGrammar29 toks (term :> stk)
-  SGrammar24 -> __runGrammar SGrammar28 toks (term :> stk)
+gotoTerminalForGrammar :: Stack StGrammar xs -> (Symbol) -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+gotoTerminalForGrammar stack@(state, pos, _) parsed = case state of
+  StGrammar_8 -> actionForGrammar(StGrammar_14, pos, (parsed :> stack))
+  StGrammar_10 -> actionForGrammar(StGrammar_14, pos, (parsed :> stack))
+  StGrammar_12 -> actionForGrammar(StGrammar_14, pos, (parsed :> stack))
+  StGrammar_16 -> actionForGrammar(StGrammar_18, pos, (parsed :> stack))
+  StGrammar_25 -> actionForGrammar(StGrammar_14, pos, (parsed :> stack))
   _ -> error ""
 
-__runGrammar :: StGrammar a -> ([Lexeme], Pos) -> Stack' StGrammar a -> Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])
-__runGrammar = \cases {
-; SGrammar0 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar SGrammar2 (__input, __end) (n :> (SGrammar0, __p, __stk))
-; SGrammar1 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar SGrammar2 (__input, __end) (n :> (SGrammar1, __p, __stk))
-; SGrammar3 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar SGrammar5 (__input, __end) (n :> (SGrammar3, __p, __stk))
-; SGrammar4 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar SGrammar5 (__input, __end) (n :> (SGrammar4, __p, __stk))
-; SGrammar6 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runGrammar SGrammar27 (__input, __end) (n :> (SGrammar6, __p, __stk))
-; SGrammar6 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar SGrammar25 (__input, __end) (n :> (SGrammar6, __p, __stk))
-; SGrammar7 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runGrammar SGrammar27 (__input, __end) (n :> (SGrammar7, __p, __stk))
-; SGrammar7 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar SGrammar25 (__input, __end) (n :> (SGrammar7, __p, __stk))
-; SGrammar8 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runGrammar SGrammar27 (__input, __end) (n :> (SGrammar8, __p, __stk))
-; SGrammar8 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar SGrammar25 (__input, __end) (n :> (SGrammar8, __p, __stk))
-; SGrammar9 ((__p,  "start") : __input, __end) __stk ->
-    __runGrammar SGrammar0 (__input, __end) (() :> (SGrammar9, __p, __stk))
-; SGrammar10 ((__p,  "=>") : __input, __end) __stk ->
-    __runGrammar SGrammar14 (__input, __end) (() :> (SGrammar10, __p, __stk))
-; SGrammar11 ((__p,  "|") : __input, __end) __stk ->
-    __runGrammar SGrammar6 (__input, __end) (() :> (SGrammar11, __p, __stk))
-; SGrammar12 ((__p,  ":") : __input, __end) __stk ->
-    __runGrammar SGrammar15 (__input, __end) (() :> (SGrammar12, __p, __stk))
-; SGrammar12 ((__p,  "=") : __input, __end) __stk ->
-    __runGrammar SGrammar7 (__input, __end) (() :> (SGrammar12, __p, __stk))
-; SGrammar13 ((__p,  ",") : __input, __end) __stk ->
-    __runGrammar SGrammar1 (__input, __end) (() :> (SGrammar13, __p, __stk))
-; SGrammar14 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar SGrammar17 (__input, __end) (n :> (SGrammar14, __p, __stk))
-; SGrammar15 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar SGrammar19 (__input, __end) (n :> (SGrammar15, __p, __stk))
-; SGrammar19 ((__p,  "=") : __input, __end) __stk ->
-    __runGrammar SGrammar8 (__input, __end) (() :> (SGrammar19, __p, __stk))
-; SGrammar23 ((__p, UppercaseName n) : __input, __end) __stk ->
-    __runGrammar SGrammar26 (__input, __end) (n :> (SGrammar23, __p, __stk))
-; SGrammar23 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar SGrammar25 (__input, __end) (n :> (SGrammar23, __p, __stk))
-; SGrammar24 ((__p, LowercaseName n) : __input, __end) __stk ->
-    __runGrammar SGrammar27 (__input, __end) (n :> (SGrammar24, __p, __stk))
-; SGrammar24 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar SGrammar25 (__input, __end) (n :> (SGrammar24, __p, __stk))
-; SGrammar27 ((__p,  ":") : __input, __end) __stk ->
-    __runGrammar SGrammar23 (__input, __end) (() :> (SGrammar27, __p, __stk))
-; SGrammar32 ((__p,  "add") : __input, __end) __stk ->
-    __runGrammar SGrammar33 (__input, __end) (() :> (SGrammar32, __p, __stk))
-; SGrammar33 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar SGrammar34 (__input, __end) (n :> (SGrammar33, __p, __stk))
-; SGrammar34 ((__p, StringLiteral n) : __input, __end) __stk ->
-    __runGrammar SGrammar34 (__input, __end) (n :> (SGrammar34, __p, __stk))
--- lookahead ,, entity NonTerminal
-; SGrammar2 ((__p,  ",") : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoNonTerminalForGrammar ((__p,  ",") : __input, __end) (action18 __pos e) __stk
--- lookahead <Name>, entity NonTerminal
-; SGrammar2 ((__p, UppercaseName tok) : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoNonTerminalForGrammar ((__p, UppercaseName tok) : __input, __end) (action18 __pos e) __stk
--- lookahead <eof>, entity Rules
-; SGrammar3 ([], __end) ((r :> __stk@(_, __pos, _))) ->
-    __gotoRulesForGrammar ([], __end) (action42 __pos r) __stk
--- lookahead :, entity NonTerminal
-; SGrammar5 ((__p,  ":") : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoNonTerminalForGrammar ((__p,  ":") : __input, __end) (action18 __pos e) __stk
--- lookahead =, entity NonTerminal
-; SGrammar5 ((__p,  "=") : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoNonTerminalForGrammar ((__p,  "=") : __input, __end) (action18 __pos e) __stk
--- lookahead <Name>, entity Clauses
-; SGrammar11 ((__p, UppercaseName tok) : __input, __end) ((c :> __stk@(_, __pos, _))) ->
-    __gotoClausesForGrammar ((__p, UppercaseName tok) : __input, __end) (action34 __pos c) __stk
--- lookahead <eof>, entity Clauses
-; SGrammar11 ([], __end) ((c :> __stk@(_, __pos, _))) ->
-    __gotoClausesForGrammar ([], __end) (action34 __pos c) __stk
--- lookahead <Name>, entity NonTerminals
-; SGrammar13 ((__p, UppercaseName tok) : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoNonTerminalsForGrammar ((__p, UppercaseName tok) : __input, __end) (action57 __pos e) __stk
--- lookahead <Name>, entity Starters
-; SGrammar16 ((__p, UppercaseName tok) : __input, __end) ((es :> (_, _, _ :> __stk@(_, __pos, _)))) ->
-    __gotoStartersForGrammar ((__p, UppercaseName tok) : __input, __end) (action54 __pos es) __stk
--- lookahead <Name>, entity Clause
-; SGrammar17 ((__p, UppercaseName tok) : __input, __end) ((reducer :> (_, _, _ :> (_, _, points :> __stk@(_, __pos, _))))) ->
-    __gotoClauseForGrammar ((__p, UppercaseName tok) : __input, __end) (action30 __pos points
-                                                                                       reducer) __stk
--- lookahead |, entity Clause
-; SGrammar17 ((__p,  "|") : __input, __end) ((reducer :> (_, _, _ :> (_, _, points :> __stk@(_, __pos, _))))) ->
-    __gotoClauseForGrammar ((__p,  "|") : __input, __end) (action30 __pos points
-                                                                          reducer) __stk
--- lookahead <eof>, entity Clause
-; SGrammar17 ([], __end) ((reducer :> (_, _, _ :> (_, _, points :> __stk@(_, __pos, _))))) ->
-    __gotoClauseForGrammar ([], __end) (action30 __pos points
-                                                       reducer) __stk
--- lookahead <Name>, entity Clauses
-; SGrammar18 ((__p, UppercaseName tok) : __input, __end) ((cs :> (_, _, _ :> (_, _, c :> __stk@(_, __pos, _))))) ->
-    __gotoClausesForGrammar ((__p, UppercaseName tok) : __input, __end) (action35 __pos c
-                                                                                        cs) __stk
--- lookahead <eof>, entity Clauses
-; SGrammar18 ([], __end) ((cs :> (_, _, _ :> (_, _, c :> __stk@(_, __pos, _))))) ->
-    __gotoClausesForGrammar ([], __end) (action35 __pos c cs) __stk
--- lookahead <Name>, entity Rule
-; SGrammar20 ((__p, UppercaseName tok) : __input, __end) ((clauses :> (_, _, _ :> (_, _, entity :> __stk@(_, __pos, _))))) ->
-    __gotoRuleForGrammar ((__p, UppercaseName tok) : __input, __end) (action39 __pos entity
-                                                                                     clauses) __stk
--- lookahead <eof>, entity Rule
-; SGrammar20 ([], __end) ((clauses :> (_, _, _ :> (_, _, entity :> __stk@(_, __pos, _))))) ->
-    __gotoRuleForGrammar ([], __end) (action39 __pos entity
-                                                     clauses) __stk
--- lookahead <Name>, entity NonTerminals
-; SGrammar21 ((__p, UppercaseName tok) : __input, __end) ((es :> (_, _, _ :> (_, _, e :> __stk@(_, __pos, _))))) ->
-    __gotoNonTerminalsForGrammar ((__p, UppercaseName tok) : __input, __end) (action58 __pos e
-                                                                                             es) __stk
--- lookahead <Name>, entity Rule
-; SGrammar22 ((__p, UppercaseName tok) : __input, __end) ((clauses :> (_, _, _ :> (_, _, type_ :> (_, _, _ :> (_, _, entity :> __stk@(_, __pos, _))))))) ->
-    __gotoRuleForGrammar ((__p, UppercaseName tok) : __input, __end) (action38 __pos entity
-                                                                                     type_
-                                                                                     clauses) __stk
--- lookahead <eof>, entity Rule
-; SGrammar22 ([], __end) ((clauses :> (_, _, _ :> (_, _, type_ :> (_, _, _ :> (_, _, entity :> __stk@(_, __pos, _))))))) ->
-    __gotoRuleForGrammar ([], __end) (action38 __pos entity type_
-                                                     clauses) __stk
--- lookahead =>, entity Symbols
-; SGrammar24 ((__p,  "=>") : __input, __end) ((p :> __stk@(_, __pos, _))) ->
-    __gotoSymbolsForGrammar ((__p,  "=>") : __input, __end) (action26 __pos p) __stk
--- lookahead <name>, entity Terminal
-; SGrammar25 ((__p, LowercaseName tok) : __input, __end) ((t :> __stk@(_, __pos, _))) ->
-    __gotoTerminalForGrammar ((__p, LowercaseName tok) : __input, __end) (action17 __pos t) __stk
--- lookahead <str>, entity Terminal
-; SGrammar25 ((__p, StringLiteral tok) : __input, __end) ((t :> __stk@(_, __pos, _))) ->
-    __gotoTerminalForGrammar ((__p, StringLiteral tok) : __input, __end) (action17 __pos t) __stk
--- lookahead =>, entity Terminal
-; SGrammar25 ((__p,  "=>") : __input, __end) ((t :> __stk@(_, __pos, _))) ->
-    __gotoTerminalForGrammar ((__p,  "=>") : __input, __end) (action17 __pos t) __stk
--- lookahead <name>, entity NonTerminal
-; SGrammar26 ((__p, LowercaseName tok) : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoNonTerminalForGrammar ((__p, LowercaseName tok) : __input, __end) (action18 __pos e) __stk
--- lookahead <str>, entity NonTerminal
-; SGrammar26 ((__p, StringLiteral tok) : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoNonTerminalForGrammar ((__p, StringLiteral tok) : __input, __end) (action18 __pos e) __stk
--- lookahead =>, entity NonTerminal
-; SGrammar26 ((__p,  "=>") : __input, __end) ((e :> __stk@(_, __pos, _))) ->
-    __gotoNonTerminalForGrammar ((__p,  "=>") : __input, __end) (action18 __pos e) __stk
--- lookahead <name>, entity Symbol
-; SGrammar28 ((__p, LowercaseName tok) : __input, __end) ((t :> __stk@(_, __pos, _))) ->
-    __gotoSymbolForGrammar ((__p, LowercaseName tok) : __input, __end) (action23 __pos t) __stk
--- lookahead <str>, entity Symbol
-; SGrammar28 ((__p, StringLiteral tok) : __input, __end) ((t :> __stk@(_, __pos, _))) ->
-    __gotoSymbolForGrammar ((__p, StringLiteral tok) : __input, __end) (action23 __pos t) __stk
--- lookahead =>, entity Symbol
-; SGrammar28 ((__p,  "=>") : __input, __end) ((t :> __stk@(_, __pos, _))) ->
-    __gotoSymbolForGrammar ((__p,  "=>") : __input, __end) (action23 __pos t) __stk
--- lookahead <name>, entity Symbol
-; SGrammar29 ((__p, LowercaseName tok) : __input, __end) ((t :> (_, _, _ :> (_, _, n :> __stk@(_, __pos, _))))) ->
-    __gotoSymbolForGrammar ((__p, LowercaseName tok) : __input, __end) (action21 __pos n
-                                                                                       t) __stk
--- lookahead <str>, entity Symbol
-; SGrammar29 ((__p, StringLiteral tok) : __input, __end) ((t :> (_, _, _ :> (_, _, n :> __stk@(_, __pos, _))))) ->
-    __gotoSymbolForGrammar ((__p, StringLiteral tok) : __input, __end) (action21 __pos n
-                                                                                       t) __stk
--- lookahead =>, entity Symbol
-; SGrammar29 ((__p,  "=>") : __input, __end) ((t :> (_, _, _ :> (_, _, n :> __stk@(_, __pos, _))))) ->
-    __gotoSymbolForGrammar ((__p,  "=>") : __input, __end) (action21 __pos n
-                                                                           t) __stk
--- lookahead <name>, entity Symbol
-; SGrammar30 ((__p, LowercaseName tok) : __input, __end) ((e :> (_, _, _ :> (_, _, n :> __stk@(_, __pos, _))))) ->
-    __gotoSymbolForGrammar ((__p, LowercaseName tok) : __input, __end) (action22 __pos n
-                                                                                       e) __stk
--- lookahead <str>, entity Symbol
-; SGrammar30 ((__p, StringLiteral tok) : __input, __end) ((e :> (_, _, _ :> (_, _, n :> __stk@(_, __pos, _))))) ->
-    __gotoSymbolForGrammar ((__p, StringLiteral tok) : __input, __end) (action22 __pos n
-                                                                                       e) __stk
--- lookahead =>, entity Symbol
-; SGrammar30 ((__p,  "=>") : __input, __end) ((e :> (_, _, _ :> (_, _, n :> __stk@(_, __pos, _))))) ->
-    __gotoSymbolForGrammar ((__p,  "=>") : __input, __end) (action22 __pos n
-                                                                           e) __stk
--- lookahead =>, entity Symbols
-; SGrammar31 ((__p,  "=>") : __input, __end) ((ps :> (_, _, p :> __stk@(_, __pos, _)))) ->
-    __gotoSymbolsForGrammar ((__p,  "=>") : __input, __end) (action27 __pos p
-                                                                            ps) __stk
--- lookahead start, entity Additions
-; SGrammar33 ((__p,  "start") : __input, __end) ((_ :> __stk@(_, __pos, _))) ->
-    __gotoAdditionsForGrammar ((__p,  "start") : __input, __end) (action46 __pos ) __stk
--- lookahead start, entity Lines
-; SGrammar34 ((__p,  "start") : __input, __end) ((t :> __stk@(_, __pos, _))) ->
-    __gotoLinesForGrammar ((__p,  "start") : __input, __end) (action50 __pos t) __stk
--- lookahead start, entity Additions
-; SGrammar35 ((__p,  "start") : __input, __end) ((ls :> (_, _, _ :> __stk@(_, __pos, _)))) ->
-    __gotoAdditionsForGrammar ((__p,  "start") : __input, __end) (action47 __pos ls) __stk
--- lookahead start, entity Lines
-; SGrammar36 ((__p,  "start") : __input, __end) ((ts :> (_, _, t :> __stk@(_, __pos, _)))) ->
-    __gotoLinesForGrammar ((__p,  "start") : __input, __end) (action51 __pos t
-                                                                             ts) __stk
--- lookahead <eof>, entity Grammar
-; SGrammar37 ([], __end) ((res :> __stk@(_, __pos, _))) -> pure res
--- lookahead <eof>, entity Rules
-; SGrammar38 ([], __end) ((rs :> (_, _, r :> __stk@(_, __pos, _)))) ->
-    __gotoRulesForGrammar ([], __end) (action43 __pos r rs) __stk
--- lookahead <eof>, entity Grammar
-; SGrammar39 ([], __end) ((r :> (_, _, s :> (_, _, a :> __stk@(_, __pos, _))))) ->
-    __gotoGrammarForGrammar ([], __end) (action62 __pos a s r) __stk
-; SGrammar0 __input _ -> Left  (currentPos __input, ["<Name>"])
-; SGrammar1 __input _ -> Left  (currentPos __input, ["<Name>"])
-; SGrammar2 __input _ ->
-    Left  (currentPos __input, [",", "<Name>"])
-; SGrammar3 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<eof>"])
-; SGrammar4 __input _ -> Left  (currentPos __input, ["<Name>"])
-; SGrammar5 __input _ -> Left  (currentPos __input, [":", "="])
-; SGrammar6 __input _ ->
-    Left  (currentPos __input, ["<name>", "<str>"])
-; SGrammar7 __input _ ->
-    Left  (currentPos __input, ["<name>", "<str>"])
-; SGrammar8 __input _ ->
-    Left  (currentPos __input, ["<name>", "<str>"])
-; SGrammar9 __input _ -> Left  (currentPos __input, ["start"])
-; SGrammar10 __input _ -> Left  (currentPos __input, ["=>"])
-; SGrammar11 __input _ ->
-    Left  (currentPos __input, ["<Name>", "|", "<eof>"])
-; SGrammar12 __input _ -> Left  (currentPos __input, [":", "="])
-; SGrammar13 __input _ ->
-    Left  (currentPos __input, [",", "<Name>"])
-; SGrammar14 __input _ -> Left  (currentPos __input, ["<str>"])
-; SGrammar15 __input _ -> Left  (currentPos __input, ["<str>"])
-; SGrammar16 __input _ -> Left  (currentPos __input, ["<Name>"])
-; SGrammar17 __input _ ->
-    Left  (currentPos __input, ["<Name>", "|", "<eof>"])
-; SGrammar18 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<eof>"])
-; SGrammar19 __input _ -> Left  (currentPos __input, ["="])
-; SGrammar20 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<eof>"])
-; SGrammar21 __input _ -> Left  (currentPos __input, ["<Name>"])
-; SGrammar22 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<eof>"])
-; SGrammar23 __input _ ->
-    Left  (currentPos __input, ["<Name>", "<str>"])
-; SGrammar24 __input _ ->
-    Left  (currentPos __input, ["<name>", "<str>", "=>"])
-; SGrammar25 __input _ ->
-    Left  (currentPos __input, ["<name>", "<str>", "=>"])
-; SGrammar26 __input _ ->
-    Left  (currentPos __input, ["<name>", "<str>", "=>"])
-; SGrammar27 __input _ -> Left  (currentPos __input, [":"])
-; SGrammar28 __input _ ->
-    Left  (currentPos __input, ["<name>", "<str>", "=>"])
-; SGrammar29 __input _ ->
-    Left  (currentPos __input, ["<name>", "<str>", "=>"])
-; SGrammar30 __input _ ->
-    Left  (currentPos __input, ["<name>", "<str>", "=>"])
-; SGrammar31 __input _ -> Left  (currentPos __input, ["=>"])
-; SGrammar32 __input _ -> Left  (currentPos __input, ["add"])
-; SGrammar33 __input _ ->
-    Left  (currentPos __input, ["<str>", "start"])
-; SGrammar34 __input _ ->
-    Left  (currentPos __input, ["<str>", "start"])
-; SGrammar35 __input _ -> Left  (currentPos __input, ["start"])
-; SGrammar36 __input _ -> Left  (currentPos __input, ["start"])
-; SGrammar37 __input _ -> Left  (currentPos __input, ["<eof>"])
-; SGrammar38 __input _ -> Left  (currentPos __input, ["<eof>"])
-; SGrammar39 __input _ -> Left  (currentPos __input, ["<eof>"])
-} where {
-; action17 pos t =
-              Terminal    t
-; action18 pos e =
-              NonTerminal e
-; action21 pos n t =
-    T (Just n) t
-; action22 pos n e =
-    E (Just n) e
-; action23 pos t =
-                   T  Nothing t
-; action26 pos p =
-    [p]
-; action27 pos p ps =
-     p : ps
-; action30 pos points reducer =
-    Clause {mark = 0, pos, points = listToArray points, reducer}
-; action34 pos c =
-    [c]
-; action35 pos c cs =
-     c : cs
-; action38 pos entity type_ clauses =
-    Rule {entity, type_ = Just type_, clauses}
-; action39 pos entity clauses =
-    Rule {entity, type_ = Nothing,    clauses}
-; action42 pos r =
-    [r]
-; action43 pos r rs =
-     r : rs
-; action46 pos =
-    []
-; action47 pos ls =
-    ls
-; action50 pos t =
-    [t]
-; action51 pos t ts =
-     t : ts
-; action54 pos es =
-    es
-; action57 pos e =
-    [e]
-; action58 pos e es =
-     e : es
-; action62 pos a s r =
-    (a, Set.fromList s, r)
-}
+actionForGrammar :: Stack StGrammar xs -> [Lexeme] -> Pos -> Either (Pos, [String]) (RawGrammar)
+actionForGrammar = \cases
+  stk@(StGrammar_0, _, _) ((pos, "imports") : input) -> actionForGrammar (StGrammar_34,  pos, () :> stk) input
+  ___@(StGrammar_0, _, _) input -> \end -> Left (currentPos input end, ["imports"])
+  stk@(StGrammar_1, _, _) ((pos, "start") : input) -> actionForGrammar (StGrammar_28,  pos, () :> stk) input
+  ___@(StGrammar_1, _, _) input -> \end -> Left (currentPos input end, ["start"])
+  stk@(StGrammar_2, _, _) ((pos, UppercaseName n) : input) -> actionForGrammar (StGrammar_5,  pos, n :> stk) input
+  ___@(StGrammar_2, _, _) input -> \end -> Left (currentPos input end, ["<Name>"])
+  ___@(StGrammar_3, _, r :> stk@(_, pos, _)) input@[] -> gotoRulesForGrammar stk ([r]) input
+  stk@(StGrammar_3, _, _) ((pos, UppercaseName n) : input) -> actionForGrammar (StGrammar_5,  pos, n :> stk) input
+  ___@(StGrammar_3, _, _) input -> \end -> Left (currentPos input end, ["EOF", "<Name>"])
+  ___@(StGrammar_4, _, rs :> (_, _, r :> stk@(_, pos, _))) input@[] -> gotoRulesForGrammar stk (NonEmpty.cons r rs) input
+  ___@(StGrammar_4, _, _) input -> \end -> Left (currentPos input end, ["EOF"])
+  stk@(StGrammar_5, _, _) ((pos, ":") : input) -> actionForGrammar (StGrammar_6,  pos, () :> stk) input
+  stk@(StGrammar_5, _, _) ((pos, "=") : input) -> actionForGrammar (StGrammar_25,  pos, () :> stk) input
+  ___@(StGrammar_5, _, _) input -> \end -> Left (currentPos input end, [":", "="])
+  stk@(StGrammar_6, _, _) ((pos, StringLiteral n) : input) -> actionForGrammar (StGrammar_7,  pos, n :> stk) input
+  ___@(StGrammar_6, _, _) input -> \end -> Left (currentPos input end, ["<string>"])
+  stk@(StGrammar_7, _, _) ((pos, "=") : input) -> actionForGrammar (StGrammar_8,  pos, () :> stk) input
+  ___@(StGrammar_7, _, _) input -> \end -> Left (currentPos input end, ["="])
+  stk@(StGrammar_8, _, _) ((pos, LowercaseName n) : input) -> actionForGrammar (StGrammar_15,  pos, n :> stk) input
+  stk@(StGrammar_8, _, _) ((pos, StringLiteral n) : input) -> actionForGrammar (StGrammar_20,  pos, n :> stk) input
+  ___@(StGrammar_8, _, _) input -> \end -> Left (currentPos input end, ["<name>", "<string>"])
+  ___@(StGrammar_9, _, c :> stk@(_, pos, _)) input@[] -> gotoClausesForGrammar stk ([c]) input
+  ___@(StGrammar_9, _, c :> stk@(_, pos, _)) input@((_, UppercaseName _) : _) -> gotoClausesForGrammar stk ([c]) input
+  stk@(StGrammar_9, _, _) ((pos, "|") : input) -> actionForGrammar (StGrammar_10,  pos, () :> stk) input
+  ___@(StGrammar_9, _, _) input -> \end -> Left (currentPos input end, ["EOF", "<Name>", "|"])
+  stk@(StGrammar_10, _, _) ((pos, LowercaseName n) : input) -> actionForGrammar (StGrammar_15,  pos, n :> stk) input
+  stk@(StGrammar_10, _, _) ((pos, StringLiteral n) : input) -> actionForGrammar (StGrammar_20,  pos, n :> stk) input
+  ___@(StGrammar_10, _, _) input -> \end -> Left (currentPos input end, ["<name>", "<string>"])
+  ___@(StGrammar_11, _, cs :> (_, _, _ :> (_, _, c :> stk@(_, pos, _)))) input@[] -> gotoClausesForGrammar stk (NonEmpty.cons c cs) input
+  ___@(StGrammar_11, _, cs :> (_, _, _ :> (_, _, c :> stk@(_, pos, _)))) input@((_, UppercaseName _) : _) -> gotoClausesForGrammar stk (NonEmpty.cons c cs) input
+  ___@(StGrammar_11, _, _) input -> \end -> Left (currentPos input end, ["EOF", "<Name>"])
+  stk@(StGrammar_12, _, _) ((pos, LowercaseName n) : input) -> actionForGrammar (StGrammar_15,  pos, n :> stk) input
+  stk@(StGrammar_12, _, _) ((pos, StringLiteral n) : input) -> actionForGrammar (StGrammar_20,  pos, n :> stk) input
+  ___@(StGrammar_12, _, p :> stk@(_, pos, _)) input@((_, "=>") : _) -> gotoSymbolsForGrammar stk ([p]) input
+  ___@(StGrammar_12, _, _) input -> \end -> Left (currentPos input end, ["<name>", "<string>", "=>"])
+  ___@(StGrammar_13, _, ps :> (_, _, p :> stk@(_, pos, _))) input@((_, "=>") : _) -> gotoSymbolsForGrammar stk (NonEmpty.cons p ps) input
+  ___@(StGrammar_13, _, _) input -> \end -> Left (currentPos input end, ["=>"])
+  ___@(StGrammar_14, _, t :> stk@(_, pos, _)) input@((_, LowercaseName _) : _) -> gotoSymbolForGrammar stk ((pos, Nothing :@ t)) input
+  ___@(StGrammar_14, _, t :> stk@(_, pos, _)) input@((_, StringLiteral _) : _) -> gotoSymbolForGrammar stk ((pos, Nothing :@ t)) input
+  ___@(StGrammar_14, _, t :> stk@(_, pos, _)) input@((_, "=>") : _) -> gotoSymbolForGrammar stk ((pos, Nothing :@ t)) input
+  ___@(StGrammar_14, _, _) input -> \end -> Left (currentPos input end, ["<name>", "<string>", "=>"])
+  stk@(StGrammar_15, _, _) ((pos, ":") : input) -> actionForGrammar (StGrammar_16,  pos, () :> stk) input
+  ___@(StGrammar_15, _, _) input -> \end -> Left (currentPos input end, [":"])
+  stk@(StGrammar_16, _, _) ((pos, UppercaseName n) : input) -> actionForGrammar (StGrammar_19,  pos, n :> stk) input
+  stk@(StGrammar_16, _, _) ((pos, StringLiteral n) : input) -> actionForGrammar (StGrammar_20,  pos, n :> stk) input
+  ___@(StGrammar_16, _, _) input -> \end -> Left (currentPos input end, ["<Name>", "<string>"])
+  ___@(StGrammar_17, _, e :> (_, _, _ :> (_, _, n :> stk@(_, pos, _)))) input@((_, LowercaseName _) : _) -> gotoSymbolForGrammar stk ((pos, Just n  :@ e)) input
+  ___@(StGrammar_17, _, e :> (_, _, _ :> (_, _, n :> stk@(_, pos, _)))) input@((_, StringLiteral _) : _) -> gotoSymbolForGrammar stk ((pos, Just n  :@ e)) input
+  ___@(StGrammar_17, _, e :> (_, _, _ :> (_, _, n :> stk@(_, pos, _)))) input@((_, "=>") : _) -> gotoSymbolForGrammar stk ((pos, Just n  :@ e)) input
+  ___@(StGrammar_17, _, _) input -> \end -> Left (currentPos input end, ["<name>", "<string>", "=>"])
+  ___@(StGrammar_18, _, t :> (_, _, _ :> (_, _, n :> stk@(_, pos, _)))) input@((_, LowercaseName _) : _) -> gotoSymbolForGrammar stk ((pos, Just n  :@ t)) input
+  ___@(StGrammar_18, _, t :> (_, _, _ :> (_, _, n :> stk@(_, pos, _)))) input@((_, StringLiteral _) : _) -> gotoSymbolForGrammar stk ((pos, Just n  :@ t)) input
+  ___@(StGrammar_18, _, t :> (_, _, _ :> (_, _, n :> stk@(_, pos, _)))) input@((_, "=>") : _) -> gotoSymbolForGrammar stk ((pos, Just n  :@ t)) input
+  ___@(StGrammar_18, _, _) input -> \end -> Left (currentPos input end, ["<name>", "<string>", "=>"])
+  ___@(StGrammar_19, _, e :> stk@(_, pos, _)) input@((_, LowercaseName _) : _) -> gotoNonTerminalForGrammar stk (NonTerm e) input
+  ___@(StGrammar_19, _, e :> stk@(_, pos, _)) input@((_, StringLiteral _) : _) -> gotoNonTerminalForGrammar stk (NonTerm e) input
+  ___@(StGrammar_19, _, e :> stk@(_, pos, _)) input@((_, "=>") : _) -> gotoNonTerminalForGrammar stk (NonTerm e) input
+  ___@(StGrammar_19, _, _) input -> \end -> Left (currentPos input end, ["<name>", "<string>", "=>"])
+  ___@(StGrammar_20, _, t :> stk@(_, pos, _)) input@((_, LowercaseName _) : _) -> gotoTerminalForGrammar stk (Term t) input
+  ___@(StGrammar_20, _, t :> stk@(_, pos, _)) input@((_, StringLiteral _) : _) -> gotoTerminalForGrammar stk (Term t) input
+  ___@(StGrammar_20, _, t :> stk@(_, pos, _)) input@((_, "=>") : _) -> gotoTerminalForGrammar stk (Term t) input
+  ___@(StGrammar_20, _, _) input -> \end -> Left (currentPos input end, ["<name>", "<string>", "=>"])
+  stk@(StGrammar_21, _, _) ((pos, "=>") : input) -> actionForGrammar (StGrammar_22,  pos, () :> stk) input
+  ___@(StGrammar_21, _, _) input -> \end -> Left (currentPos input end, ["=>"])
+  stk@(StGrammar_22, _, _) ((pos, StringLiteral n) : input) -> actionForGrammar (StGrammar_23,  pos, n :> stk) input
+  ___@(StGrammar_22, _, _) input -> \end -> Left (currentPos input end, ["<string>"])
+  ___@(StGrammar_23, _, reduce :> (_, _, _ :> (_, _, symbols :> stk@(_, pos, _)))) input@[] -> gotoClauseForGrammar stk (RawClause {pos, symbols, reduce}) input
+  ___@(StGrammar_23, _, reduce :> (_, _, _ :> (_, _, symbols :> stk@(_, pos, _)))) input@((_, UppercaseName _) : _) -> gotoClauseForGrammar stk (RawClause {pos, symbols, reduce}) input
+  ___@(StGrammar_23, _, reduce :> (_, _, _ :> (_, _, symbols :> stk@(_, pos, _)))) input@((_, "|") : _) -> gotoClauseForGrammar stk (RawClause {pos, symbols, reduce}) input
+  ___@(StGrammar_23, _, _) input -> \end -> Left (currentPos input end, ["EOF", "<Name>", "|"])
+  ___@(StGrammar_24, _, clauses :> (_, _, _ :> (_, _, type_ :> (_, _, _ :> (_, _, entity :> stk@(_, pos, _)))))) input@[] -> gotoRuleForGrammar stk (RawRule {pos, entity, type_,          clauses}) input
+  ___@(StGrammar_24, _, clauses :> (_, _, _ :> (_, _, type_ :> (_, _, _ :> (_, _, entity :> stk@(_, pos, _)))))) input@((_, UppercaseName _) : _) -> gotoRuleForGrammar stk (RawRule {pos, entity, type_,          clauses}) input
+  ___@(StGrammar_24, _, _) input -> \end -> Left (currentPos input end, ["EOF", "<Name>"])
+  stk@(StGrammar_25, _, _) ((pos, LowercaseName n) : input) -> actionForGrammar (StGrammar_15,  pos, n :> stk) input
+  stk@(StGrammar_25, _, _) ((pos, StringLiteral n) : input) -> actionForGrammar (StGrammar_20,  pos, n :> stk) input
+  ___@(StGrammar_25, _, _) input -> \end -> Left (currentPos input end, ["<name>", "<string>"])
+  ___@(StGrammar_26, _, clauses :> (_, _, _ :> (_, _, entity :> stk@(_, pos, _)))) input@[] -> gotoRuleForGrammar stk (RawRule {pos, entity, type_ = entity, clauses}) input
+  ___@(StGrammar_26, _, clauses :> (_, _, _ :> (_, _, entity :> stk@(_, pos, _)))) input@((_, UppercaseName _) : _) -> gotoRuleForGrammar stk (RawRule {pos, entity, type_ = entity, clauses}) input
+  ___@(StGrammar_26, _, _) input -> \end -> Left (currentPos input end, ["EOF", "<Name>"])
+  ___@(StGrammar_27, _, rules :> (_, _, targets :> (_, _, adds :> stk@(_, pos, _)))) input@[] -> gotoGrammarForGrammar stk (RawGrammar {imports = adds, targets, rules}) input
+  ___@(StGrammar_27, _, _) input -> \end -> Left (currentPos input end, ["EOF"])
+  stk@(StGrammar_28, _, _) ((pos, UppercaseName n) : input) -> actionForGrammar (StGrammar_30,  pos, n :> stk) input
+  ___@(StGrammar_28, _, _) input -> \end -> Left (currentPos input end, ["<Name>"])
+  ___@(StGrammar_29, _, es :> (_, _, _ :> stk@(_, pos, _))) input@((_, UppercaseName _) : _) -> gotoStartersForGrammar stk (es) input
+  ___@(StGrammar_29, _, _) input -> \end -> Left (currentPos input end, ["<Name>"])
+  stk@(StGrammar_30, _, _) ((pos, ",") : input) -> actionForGrammar (StGrammar_31,  pos, () :> stk) input
+  ___@(StGrammar_30, _, e :> stk@(_, pos, _)) input@((_, UppercaseName _) : _) -> gotoNonTerminalsForGrammar stk ([(pos, e)]) input
+  ___@(StGrammar_30, _, _) input -> \end -> Left (currentPos input end, [",", "<Name>"])
+  stk@(StGrammar_31, _, _) ((pos, UppercaseName n) : input) -> actionForGrammar (StGrammar_30,  pos, n :> stk) input
+  ___@(StGrammar_31, _, _) input -> \end -> Left (currentPos input end, ["<Name>"])
+  ___@(StGrammar_32, _, es :> (_, _, _ :> (_, _, e :> stk@(_, pos, _)))) input@((_, UppercaseName _) : _) -> gotoNonTerminalsForGrammar stk (NonEmpty.cons (pos, e) es) input
+  ___@(StGrammar_32, _, _) input -> \end -> Left (currentPos input end, ["<Name>"])
+  ___@(StGrammar_33, _, e :> _) [] -> \_ -> Right e
+  ___@(StGrammar_33, _, _) input -> \end -> Left (currentPos input end, ["EOF"])
+  stk@(StGrammar_34, _, _) ((pos, StringLiteral n) : input) -> actionForGrammar (StGrammar_36,  pos, n :> stk) input
+  ___@(StGrammar_34, _, _ :> stk@(_, pos, _)) input@((_, "start") : _) -> gotoAdditionsForGrammar stk ([]) input
+  ___@(StGrammar_34, _, _) input -> \end -> Left (currentPos input end, ["<string>", "start"])
+  ___@(StGrammar_35, _, ls :> (_, _, _ :> stk@(_, pos, _))) input@((_, "start") : _) -> gotoAdditionsForGrammar stk (ls) input
+  ___@(StGrammar_35, _, _) input -> \end -> Left (currentPos input end, ["start"])
+  stk@(StGrammar_36, _, _) ((pos, StringLiteral n) : input) -> actionForGrammar (StGrammar_36,  pos, n :> stk) input
+  ___@(StGrammar_36, _, t :> stk@(_, pos, _)) input@((_, "start") : _) -> gotoLinesForGrammar stk ([t]) input
+  ___@(StGrammar_36, _, _) input -> \end -> Left (currentPos input end, ["<string>", "start"])
+  ___@(StGrammar_37, _, ts :> (_, _, t :> stk@(_, pos, _))) input@((_, "start") : _) -> gotoLinesForGrammar stk ( t : ts) input
+  ___@(StGrammar_37, _, _) input -> \end -> Left (currentPos input end, ["start"])
 
-parseGrammar :: FilePath -> IO (Either LexerError (Either (Pos, [String]) ([Text], Set NonTerminal, [Rule])))
+parseGrammar :: FilePath -> IO (Either LexerError (Either (Pos, [String]) (RawGrammar)))
 parseGrammar filepath = do
   text <- Text.readFile filepath
-  case lexText filepath text [",", ":", "=", "=>", "add", "start",
-                              "|"] of
+  case lexText filepath text [",", ":", "<Name>", "<name>", "<string>", "=", "=>", "imports", "start", "|"] of
     Left  err   -> pure (Left err)
-    Right input -> pure (Right (__runGrammar SGrammar32 input Nil))
+    Right (input, end) -> 
+      pure (Right (actionForGrammar (StGrammar_0, startPos filepath text, Nil) input end))
 
-currentPos :: ([Lexeme], Pos) -> Pos
-currentPos = \case
-  ([],           end) -> end
-  ((pos, _) : _, _)   -> pos
+

@@ -1,70 +1,77 @@
 module LR0Item where
 
-import Text.PrettyPrint.HughesPJClass (Pretty, pPrint, (<+>), fsep)
 
 import Rule
 
-import GHC.Records       (HasField(..))
 
-import Data.Array qualified as Array
 
 import Symbol
-import Data.Foldable
 import Data.Text (Text)
+import Pretty
+import Data.List.NonEmpty (NonEmpty((:|)))
 
 {- |
-  LR0Item in a rule during parsing process.
+  LR0 Position "in the process".
+
+  > entity = parsed... • locus ahead... { reduce }
+  >                    ~ ~~~~~
+  >                    ^ ^
+  >                    | +-- item to be parsed next
+  >                    +---- current parser position
+
+  "LR0" means we carry no `Lookahead`.
 -}
-data LR0Item = LR0Item
-  { offset    :: Int      -- ^ mark of the rule
-  , clause    :: Clause   -- ^ reference to the rule
-  , type_     :: Maybe Text
-  , entity    :: NonTerminal
+data Shifting = Shifting
+  { entity ::  Entity
+  , parsed :: [NamedSymbol]
+  , locus  ::  NamedSymbol
+  , ahead  :: [NamedSymbol]
+  , reduce ::  Text
   }
   deriving stock (Eq, Ord)
+  deriving (Show) via PP Shifting
+
+instance Pretty Shifting where
+  pPrint sh = sep
+    ( pPrint sh.entity
+    : "="
+    : map pPrint sh.parsed
+    ++ ["•", pPrint sh.locus]
+    ++ map pPrint sh.ahead
+    )
 
 {- |
-  > E = E + T
-  >       ^
-  Current point of the position.
+  LR0-position in general.
+
+  It is either "in process" or some rule ready to reduce.
 -}
-instance HasField "locus" LR0Item (Maybe Symbol) where
-  getField LR0Item {clause, offset} =
-    if offset >= length clause.points
-    then Nothing
-    else Just (clause.points Array.! offset)
-
-instance HasField "reducer" LR0Item Text where
-  getField LR0Item {clause} = clause.reducer
-
-{- |
-  > E = E + T
-  >       ^
-
-  > E = E + T
-  >         ^
-
-  Next position.
--}
-instance HasField "next" LR0Item (Maybe LR0Item) where
-  getField pos@LR0Item{clause, offset} =
-    if offset >= length clause.points
-    then Nothing
-    else Just (pos :: LR0Item)
-      { offset = offset + 1
-      }
-
-instance HasField "parsed" LR0Item [Symbol] where
-  getField LR0Item {offset, clause} = take offset $ toList clause.points
-
--------------------------------------------------------------------------------
+data LR0Item
+  = Shifts  Shifting
+  | Reduces Rule
+  deriving stock (Eq, Ord)
+  deriving (Show) via PP LR0Item
 
 instance Pretty LR0Item where
-  pPrint LR0Item {entity, clause, offset} =
-    pPrint entity <+> "=" <+> fsep (map pPrint front) <+> case rest of
-      [] -> "reducing"
-      locus : other ->
-        ("[" <> pPrint locus <> "]")
-          <+> fsep (map pPrint other)
-    where
-      (front, rest) = splitAt offset (toList clause.points)
+  pPrint = \case
+    Shifts sh -> pPrint sh
+    Reduces rule -> pPrint rule <+> "•"
+
+{- |
+  Start parsing some rule.
+
+  For rule
+
+  > E = E '+' F
+
+  it is
+
+  > [E ← • E '+' F]
+-}
+startLR0 :: Rule -> LR0Item
+startLR0 Rule {entity, symbols = locus :| ahead, reduce} = Shifts Shifting
+  { entity
+  , parsed = []
+  , locus
+  , ahead
+  , reduce
+  }

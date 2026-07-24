@@ -23,6 +23,7 @@ common warnings
       DerivingStrategies
       BlockArguments
       OverloadedStrings
+      OverloadedLists
       DerivingVia
       DeriveAnyClass
       ViewPatterns
@@ -31,7 +32,6 @@ common warnings
 library
     import:           warnings
     exposed-modules:
-      Backend.StateMachine
       Frontend.Parser
       Decision
       Grammar
@@ -43,6 +43,8 @@ library
       LR1State
       Tables
       Symbol
+      Render
+      Transitions
     -- other-modules:
     -- other-extensions:
     build-depends:
@@ -61,6 +63,9 @@ library
         lr1-parser-default-lexer,
         data-map-monoidal,
         control-fixpoint,
+        shower,
+        mainland-pretty,
+        lr1-pretty,
     hs-source-dirs:   src
     default-language: GHC2024
 
@@ -70,6 +75,9 @@ executable gen-lr1-parser
     -- other-modules:
     -- other-extensions:
     build-depends:
+        lr1-parser-default-lexer,
+        text,
+        pretty,
         base,
         LR,
         optparse-applicative,
