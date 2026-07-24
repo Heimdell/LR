@@ -21,6 +21,7 @@ type Stack st xs =
 data Split st xs where
   Nil  ::                     Split st '[]
   (:>) :: x -> Stack st xs -> Split st (x : xs)
+
 data StProgram xs where
   StProgram_0 :: StProgram (a)
   StProgram_1 :: StProgram (Call : a)

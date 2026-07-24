@@ -9,10 +9,14 @@ import Data.Text (Text)
 import Symbol
 import Data.Map (Map, (!))
 import LR0Item
+import LR1Item
 import Data.Map.Monoidal (type (==>), (==>), (!?))
 import Data.Foldable
 import Data.Traversable
 import qualified Data.Map as Map
+import Pretty
+import Data.Function ((&))
+import qualified Data.Map.Monoidal as Monoidal
 
 {- |
   Parser automata.
@@ -37,6 +41,25 @@ emptyCache types = Cache
   }
 
 type M = ReaderT CachedGrammar (State Cache)
+
+reportConflicts :: Cache -> [Doc]
+reportConflicts Cache {table, states} =
+  table & Map.foldMapWithKey \stId fan -> do
+    fan.actions & Monoidal.foldMapWithKey \lookahead decs -> do
+      if length decs < 2 then [] else
+        [ hang ("Conflict (state #" <> pPrint stId <> "):") 2 do
+            vcat
+              [ vcat do
+                  (states ! stId).items & toList & map \item -> do
+                    case item.lr0item of
+                      Shifts sh -> case sh.locus.symbol of
+                        Term t | LookForTerm t == lookahead -> pPrint item
+                        _ -> mempty
+                      Reduces _ | item.lookahead == lookahead -> pPrint item
+                      _ -> mempty
+              ]
+        , ""
+        ]
 
 {- |
   Result of search for similar state.

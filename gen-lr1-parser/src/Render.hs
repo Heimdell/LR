@@ -112,6 +112,7 @@ import Tables
 import Text.Lexer.Default (dieOnLexerError, dieOnParserError)
 import Pretty
 import Transitions
+import Data.Traversable
 
 {- |
   Type of object a non-terminal is parsed into.
@@ -241,7 +242,11 @@ produceParser grammarFile src moduleName = do
 
     Right scopedGrammar -> do
       let pathToParser = src </> intercalate "/" moduleName <> ".hs"
-      Text.writeFile pathToParser (generateParserModule scopedGrammar moduleName)
+      case generateParserModule scopedGrammar moduleName of
+        Right parserModule -> Text.writeFile pathToParser parserModule
+        Left  conflicts -> do
+          for_ conflicts print
+          exitFailure
 
 {- |
   Renders given grammar into @Text@.
@@ -249,17 +254,20 @@ produceParser grammarFile src moduleName = do
 generateParserModule
   :: Grammar
   -> [String] -- ^ module name
-  -> Text
-generateParserModule grammar moduleName = Text.unlines do
-  mconcat
-    [ modulePrefix
-    , [""]
-    , requiredImports
-    , grammar.imports
-    , [""]
-    , stackTypeDecl
-    , generateParserFor grammar <$> toList targets
-    ]
+  -> Either [Doc] Text
+generateParserModule grammar moduleName = do
+  generated <- for (toList targets) $ generateParserFor grammar
+  pure do
+    Text.unlines do
+      mconcat
+        [ modulePrefix
+        , [""]
+        , requiredImports
+        , grammar.imports
+        , [""]
+        , stackTypeDecl
+        , generated
+        ]
   where
     targets :: [Target]
     targets = foldMap (pure . Target) grammar.targets
@@ -302,7 +310,7 @@ generateParserModule grammar moduleName = Text.unlines do
   Gives state type, GOTO-functions, ACTION-function and parse-function
   specific for that entity.
 -}
-generateParserFor :: Grammar -> Target -> Text
+generateParserFor :: Grammar -> Target -> Either [Doc] Text
 generateParserFor grammar target = do
   let
     startingRule = Rule
@@ -319,14 +327,17 @@ generateParserFor grammar target = do
     starting = startingKernel cachedGrammar
     (startingState, cache) = buildTable cachedGrammar starting
 
-  Text.unlines do
-    mconcat
-      [ [stateTypeDecl cache target]
-      , gotoTableFor cache cachedGrammar target
-      , [actionTableFor cache target]
-      , [parseFunction cache target startingState cachedGrammar.terminals]
-      ]
-
+  case reportConflicts cache of
+    [] -> do
+      pure do
+        Text.unlines do
+          mconcat
+            [ [stateTypeDecl cache target]
+            , gotoTableFor cache cachedGrammar target
+            , [actionTableFor cache target]
+            , [parseFunction cache target startingState cachedGrammar.terminals]
+            ]
+    conflicts -> Left conflicts
 {- |
   Generate parse-function for this target entity.
 -}
