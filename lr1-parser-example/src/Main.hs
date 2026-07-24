@@ -1,8 +1,8 @@
 
 import Parser (parseProgram, parseTestSuite)
-import Text.Lexer.Default
+import Text.Lexer.Default (dieOnLexerError, dieOnParserError)
 import System.Environment (getArgs)
-import System.Exit
+import System.Exit (exitFailure)
 
 main :: IO ()
 main = do
